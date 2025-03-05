@@ -9,25 +9,21 @@
 
 const fs = require('fs');
 const path = require('path');
+const { DateTime } = require('luxon');
 
 const envManager = require('./security/envManager');
 
 const LOGS_FOLDER_PATH = envManager.readLogsPath(); 
-
 const DEBUG_MODE = envManager.readDebugMode() === 'true'; // true or false
+const TIMEZONE = envManager.readTimeZone();
 
 function getTimestamp() {
-    const now = new Date();
-    return `${now.toISOString()}`;
+    return DateTime.now().setZone(TIMEZONE).toISO();
 }
 
 function getDateFormatted() {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-
-    return `${day}-${month}-${year}`;
+    const now = DateTime.now().setZone(TIMEZONE);
+    return now.toFormat('dd-MM-yyyy');
 }
 
 function getLogFilePath() {

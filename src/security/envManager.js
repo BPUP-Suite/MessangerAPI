@@ -62,6 +62,10 @@ function readDebugMode() {
     return readVariable("DEBUG_MODE");
 }
 
+function readTimeZone() {
+    return readVariable("TIMEZONE") || 'Europe/Rome';
+}
+
 
 module.exports = {
     readPostgresqlDb,
@@ -74,5 +78,6 @@ module.exports = {
     readWSPort,
     readSALTPath,
     readLogsPath,
-    readDebugMode
+    readDebugMode,
+    readTimeZone
 };
