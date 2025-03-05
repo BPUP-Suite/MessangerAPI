@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres
+    container_name: local_pgdb
+    restart: always
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+      - ./postgresql:/docker-entrypoint-initdb.d 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready","-d","${POSTGRES_DB}","-h","db","-U","${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    ports:
+      - 8000:80
+    env_file:
+      - .env
+    volumes:
+      - ./data/api/logs:/usr/src/app/logs
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
