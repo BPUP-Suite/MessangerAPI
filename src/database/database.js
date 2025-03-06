@@ -2,6 +2,7 @@
 // This module provides a simple way to connect to a PostgreSQL database and execute queries.
 
 const { Pool } = require('pg');
+const { SignupUser} = require('./object');
 
 const logger = require('../logger');
 
@@ -58,6 +59,13 @@ async function check_email_existence(email) {
     }
 
     return confirmation;
+}
+
+async function add_user_to_db(signupUser) {
+    const QUERY = "";
+
+    let confirmation = true;
+    return true;
 }
 
 module.exports = {

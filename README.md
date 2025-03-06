@@ -8,3 +8,22 @@ npm install --save-dev typescript
 npx tsc --init
 // quelli sopra in teoria servono solo per inizializzare e installare quindi chill non serve
 npx tsc
+
+
+
+da checkare che i parametri effettivamente esistono
+
+
+
+da sistemare la docs di questi codici di errore
+
+{
+    "200": "Success",
+    "201": "Created",
+    "304": "Not Modified",
+    "400": "Bad Request",
+    "401": "Unauthorized",
+    "403": "Forbidden",
+    "404": "Not Found",
+    "500": "Internal Server Error"
+}

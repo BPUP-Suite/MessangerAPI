@@ -32,15 +32,41 @@ export class AccessResponse extends Response {
   constructor(type: string, access_type: string, error_code?: number, error_message?: string) {
     super(type, access_type, error_code, error_message);
   }
+}
 
-  override logResponse(): void {
-    logger.log(
-      `[RESPONSE] Risposta inviata: ${this.type} ${this.type_response} ${this.error_code} ${this.error_message}`
-    );
+export class SignupResponse extends Response {
+  constructor(type: string, signed_up: string, error_code?: number, error_message?: string) {
+    super(type, signed_up, error_code, error_message);
   }
 }
 
+export class SignupUser{
 
+  email: string;
+  name: string;
+  surname: string;
+  handle: string;
+  password: string;
+
+  constructor(email: string, name: string, surname: string, handle: string, password: string) {
+    this.email = email;
+    this.name = name;
+    this.surname = surname;
+    this.handle = handle;
+    this.password = password;
+  }
+
+  toJson(): Record<string, any> {
+    return {
+      email: this.email,
+      name: this.name,
+      surname: this.surname,
+      handle: this.handle,
+      password: this.password,
+    };
+  }
+
+}
 // TUTTO QUELLO CHE STA SOTTO È DA CAMBIARE FA SCHIFO
 // TUTTO QUELLO CHE STA SOTTO È DA CAMBIARE FA SCHIFO   
 // TUTTO QUELLO CHE STA SOTTO È DA CAMBIARE FA SCHIFO
