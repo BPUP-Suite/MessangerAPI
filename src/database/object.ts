@@ -1,4 +1,4 @@
-import logger from '../logger';
+// Objective: Define the classes for the objects used in the database.
 
 class Response {
   type: string;
@@ -13,17 +13,11 @@ class Response {
     this.error_message = error_message;
   }
 
-  logResponse(): void {
-    logger.log(
-      `[RESPONSE] Risposta inviata: ${this.type} ${this.type_response} ${this.error_code} ${this.error_message}`
-    );
-  }
-
   toJson(): Record<string, any> {
     return {
-      [this.type]: this.type_response,
-      error_code: this.error_code,
-      error_message: this.error_message,
+      [this.type]: [this.type_response],
+      error_code: [this.error_code],
+      error_message: [this.error_message],
     };
   }
 }
@@ -58,15 +52,56 @@ export class SignupUser{
 
   toJson(): Record<string, any> {
     return {
-      email: this.email,
-      name: this.name,
-      surname: this.surname,
-      handle: this.handle,
-      password: this.password,
+      email: [this.email],
+      name: [this.name],
+      surname: [this.surname],
+      handle: [this.handle],
+      password: [this.password],
     };
   }
-
 }
+
+export class LoginResponse extends Response {
+
+  api_key: string;
+
+  constructor(type: string, logged_in: string,api_key: string, error_code?: number, error_message?: string) {
+    super(type, logged_in, error_code, error_message);
+    this.api_key = api_key;
+  }
+}
+
+export class LoginUser {
+  email: string;
+  password: string;
+
+  constructor(email: string, password: string) {
+    this.email = email;
+    this.password = password;
+  }
+
+  toJson(): Record<string, any> {
+    return {
+      email: [this.email],
+      password: [this.password],
+    };
+  }
+}
+
+export class HandleResponse extends Response {
+
+  constructor(type: string, handle_available: string, error_code?: number, error_message?: string) {
+    super(type, handle_available, error_code, error_message);
+  }
+}
+
+export class UserIDResponse extends Response {
+
+  constructor(type: string, user_id: string, error_code?: number, error_message?: string) {
+    super(type, user_id, error_code, error_message);
+  }
+} 
+
 // TUTTO QUELLO CHE STA SOTTO È DA CAMBIARE FA SCHIFO
 // TUTTO QUELLO CHE STA SOTTO È DA CAMBIARE FA SCHIFO   
 // TUTTO QUELLO CHE STA SOTTO È DA CAMBIARE FA SCHIFO
@@ -83,16 +118,6 @@ export class User {
     this.name = name;
     this.surname = surname;
     this.handle = handle;
-    this.password = password;
-  }
-}
-
-export class LoginUser {
-  email: string;
-  password: string;
-
-  constructor(email: string, password: string) {
-    this.email = email;
     this.password = password;
   }
 }

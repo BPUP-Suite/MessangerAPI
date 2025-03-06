@@ -28,7 +28,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'root';
-CREATE ROLE bpup WITH LOGIN SUPERUSER PASSWORD 'bpup';
+CREATE DATABASE root;
 
 --
 -- Name: channels; Type: TABLE; Schema: public; Owner: bpup

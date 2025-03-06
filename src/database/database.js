@@ -2,7 +2,7 @@
 // This module provides a simple way to connect to a PostgreSQL database and execute queries.
 
 const { Pool } = require('pg');
-const { SignupUser} = require('./object');
+const { SignupUser, LoginUser} = require('./object');
 
 const logger = require('../logger');
 
@@ -24,7 +24,7 @@ async function query(text, params) {
   const client = await pool.connect();
   try {
     const res = await client.query(text, params);
-    logger.debug(`Query executed: ${text} with parameters: ${JSON.stringify(params)}`);
+    logger.debug(`Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows)}`);
     return res.rows;
   } catch (err) {
     logger.error(`Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${err}`);
@@ -39,11 +39,14 @@ async function testConnection() {
       const result = await query('SELECT 1', []);
       if (result && result.length > 0) {
         logger.log('Database connection is healthy.');
+        return true;
       } else {
         logger.error('Database connection test failed: no result.');
+        return false;
       }
     } catch (err) {
       logger.error('Database connection test failed.', err);
+      return false;
     }
   }
 
@@ -53,10 +56,15 @@ async function check_email_existence(email) {
     
     let confirmation = true;
 
-    const result = await query(QUERY, [email]);
-    if (result.length === 0) {
-        confirmation = false;
+    try{
+      const result = await query(QUERY, [email]);
+      if (result.length === 0) {
+          confirmation = false;
+      }
+    }catch(err){
+      logger.error("database.check_email_existence: " + err);
     }
+
 
     return confirmation;
 }
@@ -67,6 +75,29 @@ async function add_user_to_db(signupUser) {
     let confirmation = true;
     return true;
 }
+
+async function login(loginUser) {
+    const QUERY = "";
+
+    let api_key = null;
+    return api_key;
+}
+
+async function get_user_id(api_key) {
+    const QUERY = "";
+
+    let user_id = null;
+    return user_id;
+}
+
+async function check_handle_availability(handle) {
+    const QUERY = "";
+
+    let confirmation = true;
+    return confirmation;
+}
+
+
 
 module.exports = {
   testConnection,

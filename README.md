@@ -1,7 +1,7 @@
 # Messanger_API
 
 INIT, inizio a riscrivere l'API (già iniziata in python) usando NODE.JS
-
+node index.js
 
 ricordati di compilare object.ts ogni volta con
 npm install --save-dev typescript
@@ -25,5 +25,6 @@ da sistemare la docs di questi codici di errore
     "401": "Unauthorized",
     "403": "Forbidden",
     "404": "Not Found",
+    "429": "Too Many Requests",
     "500": "Internal Server Error"
 }
