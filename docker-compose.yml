@@ -26,6 +26,7 @@ services:
       - .env
     volumes:
       - ./data/api/logs:/logs
+      - ./data/api/security:/security
     restart: unless-stopped
     depends_on:
       db:

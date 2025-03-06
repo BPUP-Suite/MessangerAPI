@@ -5,6 +5,7 @@ const { Pool } = require('pg');
 const { SignupUser, LoginUser} = require('./object');
 
 const logger = require('../logger');
+const encrypter = require('../security/encrypter');
 
 const envManager = require('../security/envManager');
 
@@ -70,11 +71,41 @@ async function check_email_existence(email) {
 }
 
 async function add_user_to_db(signupUser) {
-    const QUERY = "";
+    
+    let confirmation = false
 
-    let confirmation = true;
-    return true;
+    let api_key = encrypter.generateApiKey()
+    const API_KEY_QUERY = "SELECT api_key FROM public.apiKeys WHERE api_key = $1";
+    while (await query(API_KEY_QUERY, [api_key]).length > 0) {
+      logger.error("Duplicated api_key, generating a new one");
+      api_key = encrypter.generateApiKey()
+    }
+    
+    const password = encrypter.generatePasswordHash(signupUser.password)
+
+    const QUERY = `
+    WITH new_user AS (
+      INSERT INTO public.users(email, name, surname, password)
+      VALUES($1, $2, $3, $4)
+      RETURNING user_id
+    ), new_handle AS (
+      INSERT INTO public.handles(user_id, handle)
+      VALUES((SELECT user_id FROM new_user), $5)
+    )
+    INSERT INTO public.apiKeys(user_id, api_key)
+    VALUES((SELECT user_id FROM new_user), $6)
+    `
+    logger.debug(QUERY)
+    try {
+      await query(QUERY, [signupUser.email, signupUser.name, signupUser.surname, password, signupUser.handle, api_key])
+      confirmation = true
+    } catch (err) {
+      logger.error("database.add_user_to_db: " + err)
+      confirmation = false
+    }
+    return confirmation
 }
+
 
 async function login(loginUser) {
     const QUERY = "";
@@ -91,9 +122,21 @@ async function get_user_id(api_key) {
 }
 
 async function check_handle_availability(handle) {
-    const QUERY = "";
+    const QUERY = "SELECT handle FROM public.handles WHERE handle = $1";
 
     let confirmation = true;
+
+    try{
+      const result = await query(QUERY, [handle]);
+      if (result.length > 0) {
+          confirmation = false;
+      }
+    }
+    catch(err){
+      logger.error("database.check_handle_availability: " + err);
+      confirmation = null;
+    }
+
     return confirmation;
 }
 
@@ -101,5 +144,9 @@ async function check_handle_availability(handle) {
 
 module.exports = {
   testConnection,
-  check_email_existence
+  check_email_existence,
+  add_user_to_db,
+  login,
+  get_user_id,
+  check_handle_availability
 };

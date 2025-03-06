@@ -2,7 +2,6 @@ example.env
 README.md
 docker/
 .gitignore
-*/node_modules
 */package-lock.json
 */data
 

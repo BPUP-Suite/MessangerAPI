@@ -8,10 +8,10 @@ const dotenv = require('dotenv');
 const envFilePath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envFilePath });
 
-function readVariable(name) {
+function readVariable(name,needed) {
     const VARIABLE = process.env[name];
 
-    if (!VARIABLE) {
+    if(needed && !VARIABLE){
         throw new Error(`${name} must be provided (${name} variable) (check .env file)`); 
     }
 
@@ -19,52 +19,64 @@ function readVariable(name) {
 }
 
 function readPostgresqlDb() {
-    return readVariable("POSTGRES_DB");
+    return readVariable("POSTGRES_DB",false) || 'postgres';
 }
 
 function readPostgresqlUser() {
-    return readVariable("POSTGRES_USER");
+    return readVariable("POSTGRES_USER",true);
 }
 
 function readPostgresqlPassword() {
-    return readVariable("POSTGRES_PASSWORD");
+    return readVariable("POSTGRES_PASSWORD",true);
 }
 
 function readPostgresqlHost() {
-    return readVariable("POSTGRES_HOST");
+    return readVariable("POSTGRES_HOST",false) || 'local_pgdb';
 }
 
 function readPostgresqlPort() {
-    return readVariable("POSTGRES_PORT");
+    return readVariable("POSTGRES_PORT",false) || '5432';
 }
 
 function readServerIP() {
-    return readVariable("SERVER_IP");
+    return readVariable("SERVER_IP",false) || '0.0.0.0';
 }
 
 function readAPIPort() {
-    return readVariable("API_PORT");
+    return readVariable("API_PORT",false) || '80';
 }
 
 function readWSPort() {
-    return readVariable("WS_PORT");
+    return readVariable("WS_PORT",false) || '8080';
 }
 
-function readSALTPath() {
-    return readVariable("SALT_PATH");
+function readSaltFolderPath() {
+    return readVariable("SALT_FOLDER_PATH",false) || '/security';
 }
 
 function readLogsPath() {
-    return readVariable("LOGS_FOLDER_PATH");
+    return readVariable("LOGS_FOLDER_PATH",false) || '/logs';
 }
 
 function readDebugMode() {
-    return readVariable("DEBUG_MODE");
+    return readVariable("DEBUG_MODE",false) || 'false';
 }
 
 function readTimeZone() {
-    return readVariable("TIMEZONE") || 'Europe/Rome';
+    return readVariable("TIMEZONE",false) || 'Europe/Rome';
 }
+
+function readProxyAddress() {
+    return readVariable("PROXY_ADDRESS",false) || '127.0.0.1';
+}
+
+function readRateLimiterNumber() {
+    return readVariable("RATE_LIMITER_NUMBER",false) || '100';
+}
+
+function readRateLimiterMilliseconds() {
+    return readVariable("RATE_LIMITER_MILLISECONDS",false) || '10000';
+} 
 
 
 module.exports = {
@@ -76,8 +88,11 @@ module.exports = {
     readServerIP,
     readAPIPort,
     readWSPort,
-    readSALTPath,
+    readSaltFolderPath,
     readLogsPath,
     readDebugMode,
-    readTimeZone
+    readTimeZone,
+    readProxyAddress,
+    readRateLimiterNumber,
+    readRateLimiterMilliseconds
 };

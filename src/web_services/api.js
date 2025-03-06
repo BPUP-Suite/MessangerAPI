@@ -22,11 +22,15 @@ logger.debug(`HOST: ${HOST}`);
 
 // api configurations
 
-api.set('trust proxy', 'loopback','172.16.0.0/16'); // da mettere nella configurazione env
+const proxy_address = envManager.readProxyAddress();
+api.set('trust proxy', 'loopback',proxy_address);
+
+const rate_limiter_milliseconds = envManager.readRateLimiterMilliseconds();
+const rate_limiter_number = envManager.readRateLimiterNumber();
 
 const limiter = rateLimit({
-  windowMs: 10000,
-  max: 100,
+  windowMs: rate_limiter_milliseconds,
+  max: rate_limiter_number,
   handler: (req, res, next) => {
     logger.log(`[API] [ALERT] IP ${req.ip} has exceeded the rate limit on path: ${req.path}`);
 
@@ -57,7 +61,6 @@ const limiter = rateLimit({
 });
 
 api.use(limiter);
-
 
 
 // starting methods
@@ -104,27 +107,44 @@ api.get('/user/action/access', async (req, res) => {
 });
 
 // da sistemare tutto il sottostante
-api.get('/user/action/signup', (req, res) => {
-
-  // da fare prima stampa della req raw, dopo check che tutti i parametri esistano e siano validi e dopo parte
-  logger.debug("Signup request received -> email: " + req.query.email + " name: " + req.query.name + " surname: " + req.query.surname + " handle: " + req.query.handle + " password: " + req.query.password);
+api.get('/user/action/signup', async (req, res) => {
+  
   const email = req.query.email;
   const name = req.query.name;
-  const surnace = req.query.surname;
+  const surname = req.query.surname;
   const handle = req.query.handle;
   const password = req.query.password;
 
-  const type = "signed_up";
-  const code = 500;
-  const confirmation = null;
-  const errorDescription = "Generic error";
+  logger.debug("[API] [REQUEST] Signup request received -> email: " + email + " name: " + name + " surname: " + surname + " handle: " + handle + " password: " + password);
 
-  const validated = true;
+  const type = "signed_up";
+  let code = 500;
+  let confirmation = null;
+  let errorDescription = "Generic error";
+  let validated = true;
 
   // check if every parameter is valid
   if(!(validator.email(email))){
     code = 400;
     errorDescription = "Email not valid";
+    validated = false;
+  }
+
+  if(!(validator.name(name))){
+    code = 400;
+    errorDescription = "Name not valid";
+    validated = false;
+  }
+
+  if(!(validator.surname(surname))){
+    code = 400;
+    errorDescription = "Surname not valid";
+    validated = false;
+  }
+  
+  if(!(validator.handle(handle))){
+    code = 400;
+    errorDescription = "Handle not valid";
     validated = false;
   }
 
@@ -134,11 +154,12 @@ api.get('/user/action/signup', (req, res) => {
     validated = false;
   }
 
+
   // only if everything is valid, try to sign up 
   if(validated){
     const signupUser = new SignupUser(email, name, surname, handle, password);
     try{
-      confirmation = database.add_user_to_db(signupUser)
+      confirmation = await database.add_user_to_db(signupUser)
       if(confirmation){
         code = 200;
         errorDescription = "";
@@ -146,13 +167,13 @@ api.get('/user/action/signup', (req, res) => {
         code = 500;
       }
     }catch(err){ 
-      logger.error("Error in database.add_user_to_db");
+      logger.error("Error in database.add_user_to_db: "+ err); 
     }
   }
 
   const signupResponse = new SignupResponse(type, confirmation, code, errorDescription);
-  signupResponse.logResponse;
-  return res.json(signupResponse.toJson);
+  logger.debug("[API] [RESPONSE] "+ JSON.stringify(signupResponse.toJson()));
+  return res.json(signupResponse.toJson());
 
 });
 
@@ -228,8 +249,11 @@ api.get('/user/action/check-handle-availability', (req, res) => {
   if(validated){
     try{
       confirmation = database.check_handle_availability(handle);
-      code = 200;
-      errorDescription = "";
+
+      if(confirmation != null){
+        code = 200;
+        errorDescription = "";
+      }
     }catch(err){
       logger.error("Error in database.check_handle_availability");
     }
