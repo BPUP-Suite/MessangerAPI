@@ -1,6 +1,7 @@
 const express = require('express');
 const api = express();
 const logger = require('../logger');
+const errorJson = require('./json/error_code');
 
 const validator = require('../database/validator');
 const database = require('../database/database');
@@ -18,6 +19,11 @@ const HOST = envManager.readServerIP();
 logger.debug(`PORT: ${PORT}`);
 logger.debug(`HOST: ${HOST}`);
 
+
+// returns the access type of the user (login -> already registered, signup -> not registered)
+// if the email is not valid, returns 404
+// if there is an error, returns 500
+// all good = returns 200
 api.get('/user/action/access', (req, res) => {
 
   const email = req.query.email;
@@ -39,7 +45,7 @@ api.get('/user/action/access', (req, res) => {
       logger.error("Error in database.check_email_existence");
     }
   }
-  const accessResponse = new AccessResponse(type, confirmation, code, "errore");
+  const accessResponse = new AccessResponse(type, confirmation, code, errorJson.getErrorDescription(code));
 
   return res.json(accessResponse.toJson);
 });
