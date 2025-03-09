@@ -54,13 +54,17 @@ function email(emailStr) {
     return notNull(surname);
   }
 
-  function handle(handle){
+  async function handle(handle){
     if(notNull(handle)){
-      return database.check_handle_availability(handle);
+      return await database.check_handle_availability(handle);
     }else{
       return false;
     }
   }
+
+  function api_key(api_key){
+    return notNull(api_key);
+  }
   
-  module.exports = { email, password,name,surname,handle };
+  module.exports = { email, password,name,surname,handle,api_key };
   

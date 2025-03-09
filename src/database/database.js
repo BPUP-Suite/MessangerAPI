@@ -75,6 +75,7 @@ async function add_user_to_db(signupUser) {
     let confirmation = false
 
     let api_key = encrypter.generateApiKey()
+    
     const API_KEY_QUERY = "SELECT api_key FROM public.apiKeys WHERE api_key = $1";
     while (await query(API_KEY_QUERY, [api_key]).length > 0) {
       logger.error("Duplicated api_key, generating a new one");
@@ -108,16 +109,38 @@ async function add_user_to_db(signupUser) {
 
 
 async function login(loginUser) {
-    const QUERY = "";
 
+    const QUERY = "SELECT user_id, password FROM public.users WHERE email = $1";
     let api_key = null;
+
+    try{
+      const result = await query(QUERY, [loginUser.email]);
+      password = result[0].password;
+  
+      if(encrypter.checkPasswordHash(loginUser.password, password)){
+        const QUERY_2 = "SELECT api_key FROM public.apiKeys WHERE user_id = $1";
+        const result_2 = await query(QUERY_2, [result[0].user_id]);
+        api_key = result_2[0].api_key;
+      }
+    }catch(err){
+      logger.error("database.login: " + err);
+    }
+
     return api_key;
 }
 
 async function get_user_id(api_key) {
-    const QUERY = "";
-
+  
+    const QUERY = "SELECT user_id FROM public.apiKeys WHERE api_key = $1";
     let user_id = null;
+
+    try{
+      const result = await query(QUERY, [api_key]);
+      user_id = result[0].user_id;
+    }catch(err){
+      logger.error("database.get_user_id: " + err);
+    }
+    
     return user_id;
 }
 

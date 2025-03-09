@@ -142,7 +142,7 @@ api.get('/user/action/signup', async (req, res) => {
     validated = false;
   }
   
-  if(!(validator.handle(handle))){
+  if(!(await validator.handle(handle))){
     code = 400;
     errorDescription = "Handle not valid";
     validated = false;
@@ -177,22 +177,21 @@ api.get('/user/action/signup', async (req, res) => {
 
 });
 
-api.get('/user/action/login', (req, res) => {
+api.get('/user/action/login', async (req, res) => {
 
-  // da fare prima stampa della req raw, dopo check che tutti i parametri esistano e siano validi e dopo parte
-  logger.debug("Login request received -> email: " + req.query.email  + " password: " + req.query.password);
-  const email = req.query.email;
+  const email = req.query.email;  
   const password = req.query.password;
 
+  logger.debug("[API] [REQUEST] Login request received -> email: " + email + " password: " + password);
+
   const type = "logged_in";
-  const code = 500;
-  const confirmation = null;
-  const errorDescription = "Generic error";
-  const api_key = null;
+  let code = 500;
+  let confirmation = null;
+  let errorDescription = "Generic error";
+  let validated = true;
 
-  const validated = true;
+  let api_key = null;
 
-  // check if every parameter is valid
   if(!(validator.email(email))){
     code = 400;
     errorDescription = "Email not valid";
@@ -205,11 +204,10 @@ api.get('/user/action/login', (req, res) => {
     validated = false;
   }
 
-  // only if everything is valid, try to sign up 
   if(validated){
     const loginUser = new LoginUser(email, password);
     try{
-      api_key = database.login(loginUser);
+      api_key = await database.login(loginUser);
       if(api_key != null){
         confirmation = true;
         errorDescription = "";
@@ -224,23 +222,24 @@ api.get('/user/action/login', (req, res) => {
   }
 
   const loginResponse = new LoginResponse(type, confirmation,api_key, code, errorDescription);
-  loginResponse.logResponse;
-  return res.json(loginResponse.toJson);
+  logger.debug("[API] [RESPONSE] "+ JSON.stringify(loginResponse.toJson()));
+  return res.json(loginResponse.toJson());
 
 });
 
-api.get('/user/action/check-handle-availability', (req, res) => {
-
-  logger.debug("Check handle availability request received -> handle: " + req.query.handle);
+api.get('/user/action/check-handle-availability', async (req, res) => {
 
   const handle = req.query.handle;
-  const type = "handle_available";
-  const code = 500;
-  const confirmation = "error";
-  const errorDescription = "Generic error";
-  const validated = true;
 
-  if(handle == null){
+  logger.debug("[API] [REQUEST] Check handle availability request received -> handle: " + handle);
+
+  const type = "handle_available";
+  let code = 500;
+  let confirmation = null;
+  let errorDescription = "Generic error";
+  let validated = true;
+
+  if(handle == null || handle == ""){
     code = 400;
     errorDescription = "Handle not valid";
     validated = false;
@@ -248,7 +247,7 @@ api.get('/user/action/check-handle-availability', (req, res) => {
 
   if(validated){
     try{
-      confirmation = database.check_handle_availability(handle);
+      confirmation = await database.check_handle_availability(handle);
 
       if(confirmation != null){
         code = 200;
@@ -260,31 +259,32 @@ api.get('/user/action/check-handle-availability', (req, res) => {
   }
 
   const handleResponse = new HandleResponse(type, confirmation, code, errorDescription);
-  handleResponse.logResponse;
-  return res.json(handleResponse.toJson);
+  logger.debug("[API] [RESPONSE] "+ JSON.stringify(handleResponse.toJson()));
+  return res.json(handleResponse.toJson());
 
 });
 
-api.get('/user/action/get-user-id', (req, res) => {
-
-  logger.debug("Get user id request received -> api_key: " + req.query.api_key);
+api.get('/user/action/get-user-id', async (req, res) => {
 
   const api_key = req.query.api_key;
-  const type = "user_id";
-  const code = 500;
-  const confirmation = null;
-  const errorDescription = "Generic error";
-  const validated = true;
 
-  if(handle == null){
+  logger.debug("[API] [REQUEST] Get user id request received -> api_key: " + api_key);
+
+  const type = "user_id";
+  let code = 500;
+  let confirmation = null;
+  let errorDescription = "Generic error";
+  let validated = true;
+
+  if(!validator.api_key(api_key)){
     code = 400;
-    errorDescription = "Handle not valid";
+    errorDescription = "Api_key not valid";
     validated = false;
   }
 
   if(validated){
     try{
-      confirmation = database.get_user_id(api_key); // user_id if exists, null otherwise
+      confirmation = await database.get_user_id(api_key); // user_id if exists, null otherwise
       code = 200;
       errorDescription = "";
     }catch(err){
@@ -293,8 +293,8 @@ api.get('/user/action/get-user-id', (req, res) => {
   }
 
   const userIDResponse = new UserIDResponse(type, confirmation, code, errorDescription);
-  userIDResponse.logResponse;
-  return res.json(userIDResponse.toJson);
+  logger.debug("[API] [RESPONSE] "+ JSON.stringify(userIDResponse.toJson()));
+  return res.json(userIDResponse.toJson());
 
 });
 

@@ -46,6 +46,15 @@ class Response {
       super(type, type_response, code, error_message);
       this.api_key = api_key;
     }
+
+    toJson() {
+      return {
+        [this.type]: this.type_response,
+        api_key: this.api_key,
+        code: this.code,
+        error_message: this.error_message
+      };
+    }
   }
   class LoginUser {
     constructor(email, password) {
