@@ -51,6 +51,8 @@ async function testConnection() {
     }
   }
 
+// API Methods
+
 async function check_email_existence(email) {
 
     const QUERY = "SELECT email FROM public.users WHERE email = $1";
@@ -163,7 +165,113 @@ async function check_handle_availability(handle) {
     return confirmation;
 }
 
+// IO Methods
 
+async function client_init(user_id) {
+
+  const handle = await get_handle_from_id(user_id);
+
+  // Get user info
+
+  const QUERY_INFO = "SELECT name, surname, email FROM public.users WHERE user_id = $1";
+  let user_info = null;
+
+  try{
+    const result = await query(QUERY_INFO, [user_id]);
+    user_info = result[0];
+  }
+  catch(err){
+    logger.error("database.client_init: " + err);
+  }
+
+  // if no data are found, return the empty json
+  if(user_info === null || user_info === undefined |  user_info.length === 0){
+    return null;
+  }
+
+  const email = user_info.email;
+  const name  = user_info.name;
+  const surname = user_info.surname;
+
+  let json = {
+    "handle": handle,
+    "email": email,
+    "name": name,
+    "surname": surname
+  };
+
+  // Get user chats
+
+  const QUERY_CHATS = "SELECT chat_id FROM public.chats WHERE user1 = $1 OR user2 = $1";
+  let chats = null;
+
+  try{
+    const result = await query(QUERY_CHATS, [user_id]);
+    chats = result;
+  }
+  catch(err){
+    logger.error("database.client_init: " + err);
+  }
+
+  // if no data are found, return only the info json
+  if(chats === null || chats === undefined |  chats.length === 0){
+    logger.debug("No chats found for user: " + user_id);
+    return json;
+  }
+
+  json["chats"] = chats;
+  
+  // Get user messages
+
+  let messages = null;
+
+  for(let i = 0; i < chats.length; i++){
+    const QUERY_MESSAGES = "SELECT message_id, message FROM public.messages WHERE chat_id = $1";
+    try{
+      const result = await query(QUERY_MESSAGES, [chats[i].chat_id]);
+      messages = result;
+    }
+    catch(err){
+      logger.error("database.client_init: " + err);
+    }
+
+    if(messages != null && messages != undefined &&  messages.length != 0){
+      json["chats"][i]["messages"] = messages;
+    }
+  }
+
+  return json;
+}
+
+// Utilities
+
+async function get_user_id_from_handle(handle) {
+  const QUERY = "SELECT user_id FROM public.handles WHERE handle = $1";
+  let user_id = null;
+
+  try{
+    const result = await query(QUERY, [handle]);
+    user_id = result[0].user_id;
+  }catch(err){
+    logger.error("database.get_user_id_from_handle: " + err);
+  }
+  
+  return user_id;
+}
+
+async function get_handle_from_id(id) {
+  const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
+  let handle = null;
+
+  try{
+    const result = await query(QUERY, [id]);
+    handle = result[0].handle;
+  }catch(err){
+    logger.error("database.get_handle_from_id: " + err);
+  }
+  
+  return handle;
+}
 
 module.exports = {
   testConnection,
@@ -171,5 +279,6 @@ module.exports = {
   add_user_to_db,
   login,
   get_user_id,
-  check_handle_availability
+  check_handle_availability,
+  client_init
 };
