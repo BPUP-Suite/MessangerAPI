@@ -46,8 +46,8 @@ function readAPIPort() {
     return readVariable("API_PORT",false) || '80';
 }
 
-function readWSPort() {
-    return readVariable("WS_PORT",false) || '8080';
+function readIOPort() {
+    return readVariable("IO_PORT",false) || '81';
 }
 
 function readSaltFolderPath() {
@@ -87,7 +87,7 @@ module.exports = {
     readPostgresqlPort,
     readServerIP,
     readAPIPort,
-    readWSPort,
+    readIOPort,
     readSaltFolderPath,
     readLogsPath,
     readDebugMode,

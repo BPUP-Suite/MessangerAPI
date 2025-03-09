@@ -10,15 +10,7 @@ const { AccessResponse , SignupResponse, SignupUser,LoginResponse,LoginUser,Hand
  
 api.use(express.json());
 
-logger.log('API Server starting...');
-logger.debug('Getting PORT and HOST...');
-
 const envManager = require('../security/envManager');
-const PORT = envManager.readAPIPort();
-const HOST = envManager.readServerIP();
-
-logger.debug(`PORT: ${PORT}`);
-logger.debug(`HOST: ${HOST}`);
 
 // api configurations
 
@@ -297,20 +289,5 @@ api.get('/user/action/get-user-id', async (req, res) => {
   return res.json(userIDResponse.toJson());
 
 });
-
-async function startServer() {
-  // Check database connection if it is healthy then start the api else exit
-  if(await database.testConnection()){
-    api.listen(PORT, HOST, () => {
-      logger.log(`API Server listening on http://${HOST}:${PORT}`);
-      logger.log('=+----------------------------------------------------------------Server started!----------------------------------------------------------------+=');
-    });
-  }else{
-    logger.log('Server could not start. Exiting...');
-    process.exit(1);	
-  }
-}
-
-startServer();
 
 module.exports = api;
