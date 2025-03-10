@@ -87,7 +87,7 @@ io.on('connection', (socket) => {
     const chat_id = data.chat_id;
 
     // validate data
-    if(text.lenght > 2056 || text.lenght == 0 || text == null){
+    if(text.length > 2056 || text.length == 0 || text == null){
       logger.error('[IO] Message too long or missing. Text: ' + text);
 
       let response_data = {
@@ -100,7 +100,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if(chat_id.lenght == 0 || chat_id == null){
+    if(chat_id.length == 0 || chat_id == null){
       logger.error('[IO] No chat id found');
 
       let response_data = {
