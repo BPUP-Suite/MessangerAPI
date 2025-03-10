@@ -178,7 +178,7 @@ api.get('/user/action/login', async (req, res) => {
 
   const type = "logged_in";
   let code = 500;
-  let confirmation = null;
+  let confirmation = false;
   let errorDescription = "Generic error";
   let validated = true;
 
