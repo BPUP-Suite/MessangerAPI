@@ -194,7 +194,7 @@ async function client_init(user_id) {
   const surname = user_info.surname;
 
   let json = {
-    localUser: {
+    "localUser": {
       "handle": handle,
       "email": email,
       "name": name,
