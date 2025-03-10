@@ -194,10 +194,12 @@ async function client_init(user_id) {
   const surname = user_info.surname;
 
   let json = {
-    "handle": handle,
-    "email": email,
-    "name": name,
-    "surname": surname
+    localUser: {
+      "handle": handle,
+      "email": email,
+      "name": name,
+      "surname": surname
+    }
   };
 
   // Get user chats
@@ -220,7 +222,7 @@ async function client_init(user_id) {
   }
 
   // Remap of the chats array to a json object using a list for users 
-  
+
   json["chats"] = chats.map(chat => {
     return {
       chat_id: chat.chat_id,

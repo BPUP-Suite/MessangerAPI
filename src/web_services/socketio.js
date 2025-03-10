@@ -144,7 +144,7 @@ io.on('connection', (socket) => {
 
   // When a user disconnects
   socket.on('disconnect', () => {
-    logger.debug('User on IO disconnected'+ socket.user_id);
+    logger.debug('User on IO disconnected: '+ socket.user_id);
   });
 });
 
