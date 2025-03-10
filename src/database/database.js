@@ -222,13 +222,15 @@ async function client_init(user_id) {
   }
 
   // Remap of the chats array to a json object using a list for users 
+  const handle_user1 = await get_handle_from_id(chat.user1);
+  const handle_user2 = await get_handle_from_id(chat.user2);
 
   json["chats"] = chats.map(chat => {
     return {
       chat_id: chat.chat_id,
       users: [
-        get_handle_from_id(chat.user1),
-        get_handle_from_id(chat.user2)
+        handle_user1,
+        handle_user2
       ]
     }
   }
