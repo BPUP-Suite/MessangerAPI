@@ -190,7 +190,7 @@ api.get('/user/action/login', async (req, res) => {
     validated = false;
   }
 
-  if(!(validator.password(password))){
+  if(password == null || password == ""){
     code = 400;
     errorDescription = "Password not valid";
     validated = false;
