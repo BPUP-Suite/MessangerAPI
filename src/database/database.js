@@ -2,7 +2,7 @@
 // This module provides a simple way to connect to a PostgreSQL database and execute queries.
 
 const { Pool } = require('pg');
-const { SignupUser, LoginUser} = require('./object');
+const { SignupUser, LoginUser, Message} = require('./object');
 
 const logger = require('../logger');
 const encrypter = require('../security/encrypter');
@@ -243,6 +243,68 @@ async function client_init(user_id) {
   return json;
 }
 
+async function send_message(message){
+
+  const chat_id= message.chat_id;
+  const sender = message.sender;
+  const text = message.text;
+  const date = new Date();
+
+  let QUERY = "";
+  let recipient_list = [sender];
+
+  switch(get_chat_type(chat_id)){
+    case "personal":
+      QUERY = 'INSERT INTO public.messages (chat_id, text, sender, date) VALUES ($1, $2, $3, $4) RETURNING message_id';
+
+      const recipient = await get_recipient(chat_id, sender);
+
+      if(recipient === null){
+        return { response_data: null, message_data: null, recipient_list: null };
+      }
+
+      recipient_list.push(recipient);
+      break;
+
+    case "group": // not implemented yet
+    return { response_data: null, message_data: null, recipient_list: null };
+    case "channel":
+      return { response_data: null, message_data: null, recipient_list: null };
+    default:
+      return { response_data: null, message_data: null, recipient_list: null };
+  }
+
+  let message_id = null;
+
+  try{
+    const result = await query(QUERY, [chat_id, text, sender, date]);
+    message_id = result[0].message_id;
+
+  }catch(err){
+    logger.error("database.send_message: " + err);
+    return { response_data: null, message_data: null, recipient_list: null };
+  }
+
+  if(message_id != null || message_id != undefined){
+    
+    const response_data = {
+      date: date,
+      message_id: message_id
+    };
+
+    const message_data = { 
+      chat_id: chat_id,
+      message_id: message_id,
+      sender: sender,
+      text: text,
+      date: date
+    };
+
+    return {response_data, message_data, recipient_list};
+  }
+
+}
+
 // Utilities
 
 async function get_user_id_from_handle(handle) {
@@ -273,6 +335,42 @@ async function get_handle_from_id(id) {
   return handle;
 }
 
+async function get_recipient(chat_id, sender) {
+
+  const QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND (user1 = $2 OR user2 = $2)";
+  let recipient = null;
+
+  try{
+    const result = await query(QUERY, [chat_id, sender]);
+    if(result[0].user1 === sender){
+      recipient = result[0].user2;
+    }else{
+      recipient = result[0].user1;
+    }
+
+  }catch(err){
+    logger.error("database.get_recipient: " + err);
+  }
+
+  return recipient;
+
+}
+
+function get_chat_type(id){
+
+  if (id.charAt(0) === '2') {
+    return "personal"; 
+  }
+  if (id.charAt(0) === '3') {
+    return "group";
+  }
+  if (id.charAt(0) === '4') {
+    return "channel";
+  }
+  
+  return null;
+}
+
 module.exports = {
   testConnection,
   check_email_existence,
@@ -280,5 +378,6 @@ module.exports = {
   login,
   get_user_id,
   check_handle_availability,
-  client_init
+  client_init,
+  send_message
 };

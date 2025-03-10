@@ -4,8 +4,8 @@ const { Server } = require('socket.io');
 
 const logger = require('../logger');
 const database = require('../database/database');
-const { SocketAddress } = require('net');
-const { init } = require('./api');
+const encrypter = require('../security/encrypter');
+const { Message } = require('../database/object');
 
 const app = express();
 const server = http.createServer(app);
@@ -61,9 +61,9 @@ io.on('connection', (socket) => {
       let init_data = await database.client_init(user_id);
 
       if(init_data === null){
-        init_data = {init:false};
+        init_data = {init:false, code: 500, error_message: 'Internal server error'};
       }else{
-        init_data = { ...init_data, init: true };
+        init_data = { ...init_data, init: true, code: 200, error_message: '' };
       }
 
       logger.log(`[IO] [RESPONSE] Event init response: ${JSON.stringify(init_data)}`);
@@ -76,27 +76,70 @@ io.on('connection', (socket) => {
   });
   	
 
-  // DA RIVEDERE
+  // Let users send message to every socket associated to their account and recipients
   socket.on('send_message', async (data) => {
-    logger.debug(`[IO] [RECEIVED] Event send_message received: ${data}`);
+    logger.log(`[IO] [RECEIVED] Event send_message received`);
+    logger.debug(`-->  ${JSON.stringify(data)}`);
+
     const user_id = socket.user_id;
-    
-    try {
-      const handle = await database.get_user_id_from_handle(user_id);
-      const message = data.message;
-      const recipient = data.recipient;
 
-      const recipient_id = await database.get_user_id_from_handle(recipient);
+    const text = data.text;
+    const chat_id = data.chat_id;
 
-      if (recipient_id) {
-        io.to(recipient_id).emit('receive_message', { handle, message });
-        logger.debug(`[IO] [RESPONSE] Event receive_message sent to ${recipient_id}`);
-      } else {
-        logger.debug(`[IO] [RESPONSE] Event receive_message not sent to ${recipient_id}`);
-      }
-    } catch (error) {
-      logger.error(`database.get_user_id_from_handle: ${error}`);
+    // validate data
+    if(text.lenght > 2056 || text.lenght == 0 || text == null){
+      logger.error('[IO] Message too long or missing. Text: ' + text);
+
+      let response_data = {
+        send_message: false,
+        code: 400,
+        error_message: 'Message too long or missing'
+      };
+
+      socket.emit('send_message',response_data);
+      return;
     }
+
+    if(chat_id.lenght == 0 || chat_id == null){
+      logger.error('[IO] No chat id found');
+
+      let response_data = {
+        send_message: false,
+        code: 400,
+        error_message: 'No chat id found'
+      };
+
+      socket.emit('send_message',response_data);
+      return;
+    }
+
+    // then try sending message
+
+    const message = new Message(chat_id,user_id, text);
+    let {response_data, message_data, recipient_list} = await database.send_message(message);
+
+    if(response_data != null && message_data != null && recipient_list != null){
+
+      const salt = data.salt;
+
+      if(salt != null){
+        const hash = encrypter.generateHash(text,salt);
+        logger.debug('[IO] Salt found, generated hash: ' + JSON.stringify(hash));
+        response_data = { ...response_data, hash: hash };
+      }
+
+      response_data = { ...response_data, send_message: true, code: 200, error_message: '' };
+      logger.log(`[IO] [RESPONSE] Event send_message response: ${JSON.stringify(response_data)}`);
+      socket.emit('send_message', response_data);
+
+      for (const recipient of recipient_list) {
+        // send message to everyone on the group except the sender socket
+        socket.broadcast.to(recipient).emit('receive_message', message_data);
+        logger.log(`[IO] [RESPONSE] Event receive_message sent to ${recipient}`);
+      }
+    }
+
+
   });
 
   // When a user disconnects

@@ -79,6 +79,14 @@ class Response {
     }
   }
 
+  class Message{
+    constructor(chat_id,sender,text){
+      this.chat_id = chat_id;
+      this.sender = sender;
+      this.text = text;
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
@@ -86,5 +94,6 @@ class Response {
     LoginResponse, 
     LoginUser, 
     HandleResponse, 
-    UserIDResponse
+    UserIDResponse,
+    Message
   };
