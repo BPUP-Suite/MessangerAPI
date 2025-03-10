@@ -14,6 +14,12 @@ const envManager = require('../security/envManager');
 
 // api configurations
 
+api.use(cors({
+  origin: '*', 
+  methods: ['GET'], 
+  allowedHeaders: ['Content-Type', 'Authorization'] 
+}));
+
 const proxy_address = envManager.readProxyAddress();
 api.set('trust proxy', 'loopback',proxy_address);
 
