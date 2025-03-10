@@ -202,7 +202,7 @@ async function client_init(user_id) {
 
   // Get user chats
 
-  const QUERY_CHATS = "SELECT chat_id FROM public.chats WHERE user1 = $1 OR user2 = $1";
+  const QUERY_CHATS = "SELECT chat_id,user1,user2 FROM public.chats WHERE user1 = $1 OR user2 = $1";
   let chats = null;
 
   try{
@@ -219,14 +219,25 @@ async function client_init(user_id) {
     return json;
   }
 
-  json["chats"] = chats;
+  // Remap of the chats array to a json object using a list for users 
+  
+  json["chats"] = chats.map(chat => {
+    return {
+      chat_id: chat.chat_id,
+      users: [
+        chat.user1,
+        chat.user2
+      ]
+    }
+  }
+  );
   
   // Get user messages
 
   let messages = null;
 
   for(let i = 0; i < chats.length; i++){
-    const QUERY_MESSAGES = "SELECT message_id, message FROM public.messages WHERE chat_id = $1";
+    const QUERY_MESSAGES = "SELECT message_id,text,sender,date FROM public.messages WHERE chat_id = $1";
     try{
       const result = await query(QUERY_MESSAGES, [chats[i].chat_id]);
       messages = result;
