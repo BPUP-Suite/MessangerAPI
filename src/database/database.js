@@ -227,8 +227,8 @@ async function client_init(user_id) {
     return {
       chat_id: chat.chat_id,
       users: [
-        chat.user1,
-        chat.user2
+        get_handle_from_id(chat.user1),
+        get_handle_from_id(chat.user2)
       ]
     }
   }
