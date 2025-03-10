@@ -226,8 +226,12 @@ async function client_init(user_id) {
     return {
       chat_id: chat.chat_id,
       users: [
-        await get_handle_from_id(chat.user1),
-        await get_handle_from_id(chat.user2)
+        {
+          "handle": await get_handle_from_id(chat.user1)
+        },
+        {
+          "handle": await get_handle_from_id(chat.user2)
+        }
       ]
     };
   });
