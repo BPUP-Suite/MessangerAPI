@@ -29,3 +29,5 @@ da sistemare la docs di questi codici di errore
     "500": "Internal Server Error"
 }
 
+immagine su docker:
+https://hub.docker.com/repository/docker/samueleoraziodurante/messanger_api/general
