@@ -135,7 +135,7 @@ io.on('connection', (socket) => {
       for (const recipient of recipient_list) {
         // send message to everyone on the group except the sender socket
         socket.broadcast.to(recipient).emit('receive_message', message_data);
-        logger.log(`[IO] [RESPONSE] Event receive_message sent to ${recipient}`);
+        logger.log(`[IO] [RESPONSE] Event receive_message sent to ${recipient}: ${JSON.stringify(message_data)}`);
       }
     }
 
