@@ -305,6 +305,7 @@ async function send_message(message){
   if(message_id != null || message_id != undefined){
     
     const response_data = {
+      chat_id: chat_id,
       date: date,
       message_id: message_id
     };
