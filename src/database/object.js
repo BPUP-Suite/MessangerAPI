@@ -79,6 +79,12 @@ class Response {
     }
   }
 
+  class SearchResponse extends Response{
+    constructor(type, list, code, error_message) {
+      super(type, list, code, error_message);
+    }
+  }
+
   class Message{
     constructor(chat_id,sender,text){
       this.chat_id = chat_id;
@@ -95,5 +101,6 @@ class Response {
     LoginUser, 
     HandleResponse, 
     UserIDResponse,
+    SearchResponse,
     Message
   };

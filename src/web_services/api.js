@@ -7,7 +7,7 @@ const logger = require('../logger');
 
 const validator = require('../database/validator');
 const database = require('../database/database');
-const { AccessResponse , SignupResponse, SignupUser,LoginResponse,LoginUser,HandleResponse,UserIDResponse} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser,LoginResponse,LoginUser,HandleResponse,UserIDResponse,SearchResponse} = require('../database/object');
  
 api.use(express.json());
 
@@ -53,6 +53,9 @@ const limiter = rateLimit({
     }
     if(req.path == "/user/action/get-user-id"){
       type = "user_id";
+    }
+    if(req.path == "/user/action/get-user-id"){
+      type = "search";
     }
     
     res.status(429).json({[type]:null,code:code,errorDescription:errorDescription});
@@ -197,7 +200,7 @@ api.get('/user/action/login', async (req, res) => {
     validated = false;
   }
 
-  if(password == null || password == ""){
+  if(!(validator.generic(password))){
     code = 400;
     errorDescription = "Password not valid";
     validated = false;
@@ -238,7 +241,7 @@ api.get('/user/action/check-handle-availability', async (req, res) => {
   let errorDescription = "Generic error";
   let validated = true;
 
-  if(handle == null || handle == ""){
+  if(!(validator.generic(handle))){
     code = 400;
     errorDescription = "Handle not valid";
     validated = false;
@@ -275,7 +278,7 @@ api.get('/user/action/get-user-id', async (req, res) => {
   let errorDescription = "Generic error";
   let validated = true;
 
-  if(!validator.api_key(api_key)){
+  if(!(validator.api_key(api_key))){
     code = 400;
     errorDescription = "Api_key not valid";
     validated = false;
@@ -294,6 +297,47 @@ api.get('/user/action/get-user-id', async (req, res) => {
   const userIDResponse = new UserIDResponse(type, confirmation, code, errorDescription);
   logger.debug("[API] [RESPONSE] "+ JSON.stringify(userIDResponse.toJson()));
   return res.json(userIDResponse.toJson());
+
+});
+
+api.get('/user/action/search', async (req, res) => {
+
+  const api_key = req.query.api_key;
+  const handle = req.query.handle;
+
+  logger.debug("[API] [REQUEST] Search request received -> handle: " + handle + " api_key: " + api_key);
+
+  const type = "searched_list";
+  let code = 500;
+  let searched_list = null;
+  let errorDescription = "Generic error";
+  let validated = true;
+
+  if(!(validator.api_key(api_key))){
+    code = 400;
+    errorDescription = "Api_key not valid";
+    validated = false;
+  }
+
+  if(!(validator.generic(handle))){
+    code = 400;
+    errorDescription = "Search parameter (handle) not valid";
+    validated = false;
+  }
+
+  if(validated){
+    try{
+      searched_list = await database.search(handle); // a list of similar handles are returned
+      code = 200;
+      errorDescription = "";
+    }catch(err){
+      logger.error("Error in database.search");
+    }
+  }
+
+  const searchResponse = new SearchResponse(type, searched_list, code, errorDescription);
+  logger.debug("[API] [RESPONSE] "+ JSON.stringify(searchResponse.toJson()));
+  return res.json(searchResponse.toJson());
 
 });
 

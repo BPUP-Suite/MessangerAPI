@@ -139,8 +139,8 @@ io.on('connection', (socket) => {
       }
     }
 
-
   });
+
 
   // When a user disconnects
   socket.on('disconnect', () => {

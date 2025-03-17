@@ -165,6 +165,27 @@ async function check_handle_availability(handle) {
     return confirmation;
 }
 
+async function search(handle){
+  const QUERY = "SELECT handle FROM handles WHERE handle ILIKE $1 ORDER BY similarity(handle, $1) DESC LIMIT 10;";
+
+  let list = [];
+
+  try{
+    const result = await query(QUERY, [handle]);
+    // transfrom result in a handle list 
+    // TBD: get images of users (or another method that passes images on request by socket managed by client)
+    // TBD: CREATE EXTENSION IF NOT EXISTS pg_trgm;
+    // TBD: result to list
+
+    list = result.rows; // to test
+
+  }catch(err){
+    logger.error("database.search: " + err);
+  }
+
+  return list;
+}
+
 // IO Methods
 
 async function client_init(user_id) {
@@ -397,5 +418,6 @@ module.exports = {
   get_user_id,
   check_handle_availability,
   client_init,
-  send_message
+  send_message,
+  search
 };

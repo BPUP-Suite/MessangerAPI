@@ -66,5 +66,8 @@ function email(emailStr) {
     return notNull(api_key);
   }
   
-  module.exports = { email, password,name,surname,handle,api_key };
+  function generic(text){
+    return (text != null && text != '');
+  }
+  module.exports = { email, password,name,surname,handle,api_key,generic};
   
