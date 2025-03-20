@@ -27,6 +27,7 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'root';
 CREATE DATABASE root;
 

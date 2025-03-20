@@ -165,6 +165,8 @@ async function check_handle_availability(handle) {
     return confirmation;
 }
 
+
+// needs this to work: CREATE EXTENSION IF NOT EXISTS pg_trgm;
 async function search(handle){
   const QUERY = "SELECT handle FROM handles WHERE handle ILIKE $1 ORDER BY similarity(handle, $1) DESC LIMIT 10;";
 
@@ -174,10 +176,8 @@ async function search(handle){
     const result = await query(QUERY, [handle]);
     // transfrom result in a handle list 
     // TBD: get images of users (or another method that passes images on request by socket managed by client)
-    // TBD: CREATE EXTENSION IF NOT EXISTS pg_trgm;
-    // TBD: result to list
 
-    list = result.rows; // to test
+    list = result.map(row => row.handle); 
 
   }catch(err){
     logger.error("database.search: " + err);
