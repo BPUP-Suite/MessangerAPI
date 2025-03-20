@@ -168,7 +168,7 @@ async function check_handle_availability(handle) {
 
 // needs this to work: CREATE EXTENSION IF NOT EXISTS pg_trgm;
 async function search(handle){
-  const QUERY = "SELECT handle FROM handles WHERE handle ILIKE $1 ORDER BY similarity(handle, $1) DESC LIMIT 10;";
+  const QUERY = "SELECT handle FROM handles WHERE handle ILIKE '%' || $1 || '%' ORDER BY similarity(handle, $1) DESC LIMIT 10;";
 
   let list = [];
 
