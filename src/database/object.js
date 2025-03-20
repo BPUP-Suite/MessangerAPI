@@ -85,6 +85,22 @@ class Response {
     }
   }
 
+  class InitResponse extends Response{
+    constructor(type, confirmation, code, error_message,init_data) {
+      super(type, confirmation, code, error_message);
+      this.init_data = init_data;
+    }
+
+    toJson() {
+      return {
+        [this.type]: this.type_response,
+        code: this.code,
+        error_message: this.error_message,
+        ...this.init_data
+      };
+    }
+  }
+
   class Message{
     constructor(chat_id,sender,text){
       this.chat_id = chat_id;
@@ -102,5 +118,6 @@ class Response {
     HandleResponse, 
     UserIDResponse,
     SearchResponse,
+    InitResponse,
     Message
   };

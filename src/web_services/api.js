@@ -7,7 +7,7 @@ const logger = require('../logger');
 
 const validator = require('../database/validator');
 const database = require('../database/database');
-const { AccessResponse, SignupResponse, SignupUser,LoginResponse,LoginUser,HandleResponse,UserIDResponse,SearchResponse} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser,LoginResponse,LoginUser,HandleResponse,UserIDResponse,SearchResponse,InitResponse} = require('../database/object');
  
 api.use(express.json());
 
@@ -59,7 +59,7 @@ const login_response_type = 'logged_in';
 const handle_availability_response_type = 'handle_available';
 
 const user_id_response_type = 'user_id';
-const init_response_type = '';
+const init_response_type = 'init';
 const update_response_type = '';
 
 const message_response_type = '';
@@ -118,6 +118,9 @@ const rate_limiter_number = envManager.readRateLimiterNumber();
           break;
         case search_path:
           type = search_response_type;
+          break;
+        case init_path:
+          type = init_response_type;
           break;
         default:
           type = "unknown";
@@ -378,6 +381,48 @@ api.use(limiter);
         logger.debug("[API] [RESPONSE] "+ JSON.stringify(userIDResponse.toJson()));
         return res.json(userIDResponse.toJson());
 
+      });
+
+      api.post(init_path, async (req, res) => {
+
+        const api_key = req.query.api_key;
+
+        logger.debug("[API] [REQUEST] Get init request received -> api_key: " + api_key);
+
+        const type = init_response_type;
+        let code = 500;
+        let confirmation = false;
+        let errorDescription = "Generic error";
+        let validated = true;
+        let init_data = null;
+
+        if(!(validator.api_key(api_key))){
+          code = 400;
+          errorDescription = "Api_key not valid";
+          validated = false;
+        }
+        
+        if(validated){
+          try{
+
+            const user_id = await database.get_user_id(api_key);          
+            init_data = await database.client_init(user_id);
+    
+            if(init_data != null){
+              confirmation = true;
+              code = 200;
+              errorDescription = '';
+            }
+
+          }catch(error){
+            logger.error(`database.client_init: ${error}`);
+          }
+        }
+
+        const initResponse = new InitResponse(type, confirmation, code, errorDescription,init_data);
+        logger.debug("[API] [RESPONSE] "+ JSON.stringify(initResponse.toJson()));
+        return res.json(initResponse.toJson());
+        
       });
 
     api.post(search_path, async (req, res) => {
