@@ -3,7 +3,7 @@ const logger = require('./logger'); // Logger
 const envManager = require('./security/envManager'); // Environment Variables Manager
 
 const api = require('./web_services/api'); // API Server
-const io = require('./web_services/socketio'); // Socket.IO Server
+const { server: io } = require('./web_services/socketio'); // Socket.IO Server
 
 async function startServer() {
     // Check database connection if it is healthy then start the api else exit
