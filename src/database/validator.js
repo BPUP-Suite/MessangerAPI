@@ -65,9 +65,22 @@ function email(emailStr) {
   function api_key(api_key){
     return notNull(api_key);
   }
+
+  function message(text){
+    if(notNull(handle)){
+      return !(text.length > 2056);
+    }else{
+      return false;
+    }
+  }
+
+  function chat_id(chat_id){
+    // da modificare usando regex e vedere se il formato corrisponse
+    return notNull(chat_id);
+  }
   
   function generic(text){
-    return (text != null && text != '');
+    return notNull(text);
   }
-  module.exports = { email, password,name,surname,handle,api_key,generic};
+  module.exports = { email, password,name,surname,handle,api_key,message,chat_id,generic};
   

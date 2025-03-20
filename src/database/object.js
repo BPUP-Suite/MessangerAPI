@@ -85,10 +85,10 @@ class Response {
     }
   }
 
-  class InitResponse extends Response{
-    constructor(type, confirmation, code, error_message,init_data) {
+  class ExtraJsonData_Response extends Response{
+    constructor(type, confirmation, code, error_message,data) {
       super(type, confirmation, code, error_message);
-      this.init_data = init_data;
+      this.data = data;
     }
 
     toJson() {
@@ -96,8 +96,20 @@ class Response {
         [this.type]: this.type_response,
         code: this.code,
         error_message: this.error_message,
-        ...this.init_data
+        ...this.data
       };
+    }
+  }
+
+  class InitResponse extends ExtraJsonData_Response{
+    constructor(type, confirmation, code, error_message,init_data) {
+      super(type, confirmation, code, error_message, init_data);
+    }
+  }
+
+  class MessageResponse extends ExtraJsonData_Response{
+    constructor(type, confirmation, code, error_message,message_data) {
+      super(type, confirmation, code, error_message, message_data);
     }
   }
 
@@ -119,5 +131,6 @@ class Response {
     UserIDResponse,
     SearchResponse,
     InitResponse,
+    MessageResponse,
     Message
   };

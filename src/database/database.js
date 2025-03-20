@@ -298,18 +298,18 @@ async function send_message(message){
       const recipient = await get_recipient(chat_id, sender);
 
       if(recipient === null){
-        return { response_data: null, message_data: null, recipient_list: null };
+        return { message_data: null, recipient_list: null };
       }
 
       recipient_list.push(recipient);
       break;
 
     case "group": // not implemented yet
-    return { response_data: null, message_data: null, recipient_list: null };
+    return { message_data: null, recipient_list: null };
     case "channel":
-      return { response_data: null, message_data: null, recipient_list: null };
+      return { message_data: null, recipient_list: null };
     default:
-      return { response_data: null, message_data: null, recipient_list: null };
+      return { message_data: null, recipient_list: null };
   }
 
   let message_id = null;
@@ -320,17 +320,12 @@ async function send_message(message){
 
   }catch(err){
     logger.error("database.send_message: " + err);
-    return { response_data: null, message_data: null, recipient_list: null };
+    return { message_data: null, recipient_list: null };
   }
 
-  if(message_id != null || message_id != undefined){
-    
-    const response_data = {
-      chat_id: chat_id,
-      date: date,
-      message_id: message_id
-    };
+  if(message_id != null && message_id != undefined && message_id != ''){
 
+    logger.debug("Creazione della risposta in corso... message_id: "+ message_id + " chat_id: "+chat_id );
     const message_data = { 
       chat_id: chat_id,
       message_id: message_id,
@@ -339,9 +334,10 @@ async function send_message(message){
       date: date
     };
 
-    return {response_data, message_data, recipient_list};
+    return { message_data, recipient_list};
   }
 
+  return { message_data: null, recipient_list: null };
 }
 
 // Utilities
