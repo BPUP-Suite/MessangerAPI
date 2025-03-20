@@ -4,8 +4,6 @@ const { Server } = require('socket.io');
 
 const logger = require('../logger');
 const database = require('../database/database');
-const encrypter = require('../security/encrypter');
-const { Message } = require('../database/object');
 
 const app = express();
 const server = http.createServer(app);

@@ -1,26 +1,29 @@
 class Response {
-    constructor(type, type_response, code, error_message) {
+    constructor(type, type_response, error_message) {
       this.type = type;
       this.type_response = type_response;
-      this.code = code;
       this.error_message = error_message;
     }
     toJson() {
+      if(this.error_message == ''){
+        return {
+          [this.type]: this.type_response
+        };
+      }
       return {
         [this.type]: this.type_response,
-        code: this.code,
         error_message: this.error_message
       };
     }
   }
   class AccessResponse extends Response {
-    constructor(type, access_type, code, error_message) {
-      super(type, access_type, code, error_message);
+    constructor(type, access_type, error_message) {
+      super(type, access_type, error_message);
     }
   }
   class SignupResponse extends Response {
-    constructor(type, type_response, code, error_message) {
-      super(type, type_response, code, error_message);
+    constructor(type, type_response, error_message) {
+      super(type, type_response, error_message);
     }
   }
   class SignupUser {
@@ -42,17 +45,15 @@ class Response {
     }
   }
   class LoginResponse extends Response {
-    constructor(type, type_response, api_key, code, error_message) {
-      super(type, type_response, code, error_message);
+    constructor(type, type_response, api_key, error_message) {
+      super(type, type_response, error_message);
       this.api_key = api_key;
     }
 
     toJson() {
       return {
-        [this.type]: this.type_response,
-        api_key: this.api_key,
-        code: this.code,
-        error_message: this.error_message
+        ...super.toJson(),
+        api_key: this.api_key
       };
     }
   }
@@ -69,47 +70,45 @@ class Response {
     }
   }
   class HandleResponse extends Response {
-    constructor(type, handle_available, code, error_message) {
-      super(type, handle_available, code, error_message);
+    constructor(type, handle_available, error_message) {
+      super(type, handle_available, error_message);
     }
   }
   class UserIDResponse extends Response {
-    constructor(type, user_id, code, error_message) {
-      super(type, user_id, code, error_message);
+    constructor(type, user_id, error_message) {
+      super(type, user_id, error_message);
     }
   }
 
   class SearchResponse extends Response{
-    constructor(type, list, code, error_message) {
-      super(type, list, code, error_message);
+    constructor(type, list, error_message) {
+      super(type, list, error_message);
     }
   }
 
   class ExtraJsonData_Response extends Response{
-    constructor(type, confirmation, code, error_message,data) {
-      super(type, confirmation, code, error_message);
+    constructor(type, confirmation, error_message,data) {
+      super(type, confirmation, error_message);
       this.data = data;
     }
 
     toJson() {
       return {
-        [this.type]: this.type_response,
-        code: this.code,
-        error_message: this.error_message,
+        ...super.toJson(),
         ...this.data
       };
     }
   }
 
   class InitResponse extends ExtraJsonData_Response{
-    constructor(type, confirmation, code, error_message,init_data) {
-      super(type, confirmation, code, error_message, init_data);
+    constructor(type, confirmation, error_message,init_data) {
+      super(type, confirmation, error_message, init_data);
     }
   }
 
   class MessageResponse extends ExtraJsonData_Response{
-    constructor(type, confirmation, code, error_message,message_data) {
-      super(type, confirmation, code, error_message, message_data);
+    constructor(type, confirmation, error_message,message_data) {
+      super(type, confirmation, error_message, message_data);
     }
   }
 

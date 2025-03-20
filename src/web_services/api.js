@@ -182,9 +182,9 @@ api.post(access_path, async (req, res) => {
     }
   }
 
-  const accessResponse = new AccessResponse(type, confirmation, code, errorDescription);
+  const accessResponse = new AccessResponse(type, confirmation, errorDescription);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(accessResponse.toJson()));
-  return res.json(accessResponse.toJson());
+  return res.status(code).json(accessResponse.toJson());
 });
 
 // returns the status of signup request (true = signed_up successfully, false = error [see error code/description])
@@ -255,9 +255,9 @@ api.post(signup_path, async (req, res) => {
     }
   }
 
-  const signupResponse = new SignupResponse(type, confirmation, code, errorDescription);
+  const signupResponse = new SignupResponse(type, confirmation, errorDescription);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(signupResponse.toJson()));
-  return res.json(signupResponse.toJson());
+  return res.status(code).json(signupResponse.toJson());
 
 });
 
@@ -309,9 +309,9 @@ api.post(login_path, async (req, res) => {
     }
   }
 
-  const loginResponse = new LoginResponse(type, confirmation, api_key, code, errorDescription);
+  const loginResponse = new LoginResponse(type, confirmation, api_key, errorDescription);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(loginResponse.toJson()));
-  return res.json(loginResponse.toJson());
+  return res.status(code).json(loginResponse.toJson());
 
 });
 
@@ -352,9 +352,9 @@ api.post(handle_availability_path, async (req, res) => {
     }
   }
 
-  const handleResponse = new HandleResponse(type, confirmation, code, errorDescription);
+  const handleResponse = new HandleResponse(type, confirmation, errorDescription);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(handleResponse.toJson()));
-  return res.json(handleResponse.toJson());
+  return res.status(code).json(handleResponse.toJson());
 
 });
 // Path: .../get
@@ -387,9 +387,9 @@ api.post(user_id_path, async (req, res) => {
     }
   }
 
-  const userIDResponse = new UserIDResponse(type, confirmation, code, errorDescription);
+  const userIDResponse = new UserIDResponse(type, confirmation, errorDescription);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(userIDResponse.toJson()));
-  return res.json(userIDResponse.toJson());
+  return res.status(code).json(userIDResponse.toJson());
 
 });
 
@@ -430,9 +430,9 @@ api.post(init_path, async (req, res) => {
     }
   }
 
-  const initResponse = new InitResponse(type, confirmation, code, errorDescription, init_data);
+  const initResponse = new InitResponse(type, confirmation, errorDescription, init_data);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(initResponse.toJson()));
-  return res.json(initResponse.toJson());
+  return res.status(code).json(initResponse.toJson());
 
 });
 
@@ -494,9 +494,9 @@ api.post(message_path, async (req, res) => {
     }
   }
 
-  const messageResponse = new MessageResponse(type, confirmation, code, errorDescription, message_data);
+  const messageResponse = new MessageResponse(type, confirmation, errorDescription, message_data);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(messageResponse.toJson()));
-  res.json(messageResponse.toJson());
+  res.status(code).json(messageResponse.toJson());
 
   // Send messages to recipients after sending the response to sender
   if (message_data != null && recipient_list != null) {
@@ -545,9 +545,9 @@ api.post(search_path, async (req, res) => {
     }
   }
 
-  const searchResponse = new SearchResponse(type, searched_list, code, errorDescription);
+  const searchResponse = new SearchResponse(type, searched_list, errorDescription);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(searchResponse.toJson()));
-  return res.json(searchResponse.toJson());
+  return res.status(code).json(searchResponse.toJson());
 
 });
 
