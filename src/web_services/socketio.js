@@ -38,7 +38,7 @@ io.use(async (socket, next) => {
     }
 
     logger.error(`IO authentication error: user_id ${user_id} and api_key REDACTED do not match`);
-    logger.debug('REDATED = ' + api_key);
+    logger.debug('REDACTED = ' + api_key);
     return next(new Error('Authentication error - Invalid credentials'));
   } catch (error) {
     logger.error(`IO server authentication error: ${error.message}`);
