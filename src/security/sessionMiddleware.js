@@ -20,8 +20,7 @@ logger.debug(`SESSION KEY: ${SESSION}`);
 
 const sessionMiddleware = session({
   store: new RedisStore({ client: redis }),
-  secret: SESSION, 
-  domain: DOMAIN,
+  secret: SESSION,
   resave: false,            
   saveUninitialized: false, 
   cookie: {
