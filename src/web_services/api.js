@@ -271,72 +271,74 @@ api.get(signup_path, async (req, res) => {
 // if password is wrong return code 401 (Unauthorized)
 
 api.get(login_path, async (req, res) => {
-
   const email = req.query.email;
   const password = req.query.password;
 
   logger.debug('[API] [REQUEST] Login request received ');
-  logger.debug('-> ' + JSON.stringify(req.query))
+  logger.debug('-> ' + JSON.stringify(req.query));
 
   const type = login_response_type;
   let code = 500;
   let confirmation = false;
   let errorDescription = 'Generic error';
   let validated = true;
-
   let user_id = null;
 
-  if (!(validator.email(email))) {
+  if (!validator.email(email)) {
     code = 400;
     errorDescription = 'Email not valid';
     validated = false;
   }
 
-  if (!(validator.generic(password))) {
+  if (!validator.generic(password)) {
     code = 400;
     errorDescription = 'Password not valid';
     validated = false;
   }
 
   if (validated) {
-    
     const loginUser = new LoginUser(email, password);
     try {
-
       user_id = await database.login(loginUser);
-
       if (user_id != null) {
-
         confirmation = true;
         errorDescription = '';
         code = 200;
 
-        logger.debug('[API] [SESSION]  Session opened for : ' + user_id);
+        logger.debug('[API] [SESSION] Session opened for: ' + user_id);
         req.session.user_id = user_id;
 
         req.session.save((error) => {
-          if (error) console.error('[API] [SESSION]  Error while saving session:', error);
-          else logger.debug('[API] [SESSION]  Saved session');
+          if (error) {
+            logger.error('[API] [SESSION] Error while saving session: ' + error.message);
+            code = 500;
+            errorDescription = 'Failed to save session';
+            const loginResponse = new LoginResponse(type, false, errorDescription);
+            res.status(code).json(loginResponse.toJson());
+          } else {
+            logger.debug('[API] [SESSION] Saved session');
+            const loginResponse = new LoginResponse(type, confirmation, errorDescription);
+            logger.debug('[API] [RESPONSE] ' + JSON.stringify(loginResponse.toJson()));
+            res.status(code).json(loginResponse.toJson());
+            logger.debug('[API] [SESSION] Set-Cookie header: ' + res.get('Set-Cookie'));
+          }
         });
-
+        return; // return to avoid sending the response twice
       } else {
-
         code = 401;
         errorDescription = 'Login failed';
-
       }
     } catch (error) {
-      logger.error('Error in database.login: ' + error);
+      logger.error('Error in database.login: ' + error.message);
+      errorDescription = 'Database error';
     }
   }
 
-  const loginResponse = new LoginResponse(type, confirmation, errorDescription);
-  logger.debug('[API] [RESPONSE] ' + JSON.stringify(loginResponse.toJson()));
-  res.status(code).json(loginResponse.toJson());
-
-  logger.debug('[API] [SESSION] Set-Cookie header:', res.get('Set-Cookie')); 
-  return;
-
+  // if the user is not logged in, send the error response
+  if (!confirmation) {
+    const loginResponse = new LoginResponse(type, confirmation, errorDescription);
+    res.status(code).json(loginResponse.toJson());
+  }
 });
 
 // DA MODIFICARE
