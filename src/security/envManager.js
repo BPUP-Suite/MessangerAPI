@@ -50,8 +50,8 @@ function readIOPort() {
     return readVariable("IO_PORT",false) || '81';
 }
 
-function readSaltFolderPath() {
-    return readVariable("SALT_FOLDER_PATH",false) || '/security';
+function readSecurityPath() {
+    return readVariable("SECURITY_FOLDER_PATH",false) || '/security';
 }
 
 function readLogsPath() {
@@ -78,6 +78,10 @@ function readRateLimiterMilliseconds() {
     return readVariable("RATE_LIMITER_MILLISECONDS",false) || '10000';
 } 
 
+function readNodeEnv(){
+    return readVariable("NODE_ENV",true); 
+}
+
 
 module.exports = {
     readPostgresqlDb,
@@ -88,11 +92,12 @@ module.exports = {
     readServerIP,
     readAPIPort,
     readIOPort,
-    readSaltFolderPath,
+    readSecurityPath,
     readLogsPath,
     readDebugMode,
     readTimeZone,
     readProxyAddress,
     readRateLimiterNumber,
-    readRateLimiterMilliseconds
+    readRateLimiterMilliseconds,
+    readNodeEnv
 };

@@ -1,5 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
 const cors = require('cors');
 
 const api = express();
@@ -13,6 +14,7 @@ const { send_messages_to_recipients } = require('./socketio');
 api.use(express.json());
 
 const envManager = require('../security/envManager');
+const fileManager = require('../security/fileManager');
 
 // api path 
 
@@ -75,19 +77,39 @@ const search_response_type = 'searched_list';
 
 // api configurations
 
+// Sessions configuration
+
+const SESSION = fileManager.readSessionKey();
+const NODE_ENV = envManager.readNodeEnv();
+
+app.use(session({
+  secret: SESSION, 
+  resave: false,            
+  saveUninitialized: false, 
+  cookie: {
+    httpOnly: true,      
+    secure: process.env.NODE_ENV === NODE_ENV, // HTTPS only in production
+    maxAge: null  
+  }
+}));
+
+// CORS Rules
+
 api.use(cors({
   origin: '*',
   methods: ['POST'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Allow proxy (nginx) to set the real ip address of the client
 const proxy_address = envManager.readProxyAddress();
 api.set('trust proxy', 'loopback', proxy_address);
 
-const rate_limiter_milliseconds = envManager.readRateLimiterMilliseconds();
-const rate_limiter_number = envManager.readRateLimiterNumber();
 
 // api rate limiter
+
+const rate_limiter_milliseconds = envManager.readRateLimiterMilliseconds();
+const rate_limiter_number = envManager.readRateLimiterNumber();
 
 const limiter = rateLimit({
   windowMs: rate_limiter_milliseconds,
@@ -127,7 +149,7 @@ const limiter = rateLimit({
         type = message_response_type;
         break;
       default:
-        type = 'unknown';
+        break;
     }
 
     res.status(429).json({ [type]: null, code: code, errorDescription: errorDescription });

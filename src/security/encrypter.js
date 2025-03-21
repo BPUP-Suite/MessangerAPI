@@ -1,41 +1,12 @@
 // Description: Module to generate and check password hashes
 // The encrypter.js file contains functions to generate and check password hashes.
 
-const fs = require('fs');
 const crypto = require('crypto');
-const path = require('path');
+const fileManager = require('./fileManager');
 
-const logger = require('../logger');
-const envManager = require('./envManager');
+const SALT = fileManager.getSalt();
 
-// SALT Directory Path
-const SALT_FOLDER_PATH = envManager.readSaltFolderPath();
-const SALT_PATH = path.join(SALT_FOLDER_PATH, 'salt');
-
-function readSalt() {
-    try {
-        logger.debug(`Reading salt from ${SALT_PATH}`);
-        return fs.readFileSync(SALT_PATH, "utf8");
-    } catch (error) {
-        return false;
-    }
-}
-
-function writeSalt(salt) {
-    logger.debug(`Writing salt to ${SALT_PATH}`);
-    fs.mkdirSync(path.dirname(SALT_PATH), { recursive: true }); // Directory creation if it does not exist
-    fs.writeFileSync(SALT_PATH, salt, "utf8"); // Write the hexadecimal string
-}
-
-
-let SALT = readSalt();
-logger.debug(`Salt read: ${SALT}`);
-if (!SALT) {
-    // If the SALT does not exist, generate a new one
-    SALT = crypto.randomBytes(16).toString('hex');
-    writeSalt(SALT);
-    logger.debug(`Salt generated: ${SALT}`);
-}
+// Hashing methods
 
 function generateHash(digest, salt) {
 
@@ -69,13 +40,8 @@ function checkPasswordHash(password, hash) {
     return confirmation;
 }
 
-function generateApiKey(){
-    return crypto.randomBytes(256).toString('base64url');
-}
 
 module.exports = {
-    generateHash,
     generatePasswordHash,
-    checkPasswordHash,
-    generateApiKey
+    checkPasswordHash
 };
