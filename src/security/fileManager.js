@@ -72,7 +72,8 @@ function getSessionKey(){
     let SESSION = readSessionKey();
 
     if (!SESSION) {
-        // If the SALT does not exist, generate a new one
+        logger.debug(`Session_key not found in ${SESSION_PATH}`);	
+        // If the SESSION KEY does not exist, generate a new one
         SESSION = crypto.randomBytes(32).toString('hex');
         writeSessionKey(SESSION);
         logger.debug(`Session_key generated: ${SESSION}`);

@@ -15,7 +15,7 @@ const IO_DOMAIN = envManager.readIODomain();
 
 const io = new Server(server, {
   cors: {
-    origin: [API_DOMAIN, IO_DOMAIN,"moz-extension://1bd9c4db-f3e7-4203-b065-f6a1bf7ce0be"],
+    origin: [API_DOMAIN, IO_DOMAIN],
     methods: ["GET","POST"],
     credentials: true 
   }

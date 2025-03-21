@@ -1,5 +1,8 @@
-const database = require('./database/database'); // Database
 const logger = require('./logger'); // Logger
+
+logger.log('=+----------------------------------------------------------------Server starting!----------------------------------------------------------------+=');
+
+const database = require('./database/database'); // Database
 const envManager = require('./security/envManager'); // Environment Variables Manager
 
 const api = require('./web_services/api'); // API Server

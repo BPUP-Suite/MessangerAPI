@@ -28,6 +28,7 @@ const sessionMiddleware = session({
     httpOnly: true,      
     secure: NODE_ENV === 'production', // HTTPS only in production
     maxAge: 30 * 24 * 60 * 60 * 1000,
+    domain: DOMAIN,
     sameSite: 'lax'
   },
   rolling: true  
