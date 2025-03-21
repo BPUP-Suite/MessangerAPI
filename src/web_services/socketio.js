@@ -3,65 +3,67 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const logger = require('../logger');
+const envManager = require('../security/envManager');
 const database = require('../database/database');
+const sessionMiddleware = require('../security/sessionMiddleware');
 
 const app = express();
 const server = http.createServer(app);
 
+const API_DOMAIN = envManager.readAPIDomain();
+const IO_DOMAIN = envManager.readIODomain();
+
 const io = new Server(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: [API_DOMAIN, IO_DOMAIN,"moz-extension://1bd9c4db-f3e7-4203-b065-f6a1bf7ce0be"],
+    methods: ["GET","POST"],
+    credentials: true 
   }
 });
 
-// Authecation middleware
+const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
+io.use(wrap(sessionMiddleware));
+
 io.use(async (socket, next) => {
   try {
-    const user_id = socket.handshake.auth.user_id;
-    const api_key = socket.handshake.auth.api_key;
-
-    if (!user_id || !api_key) {
-      logger.error('IO authentication error: missing credentials');
-      return next(new Error('Authentication error - Missing credentials'));
+    const session = socket.request.session;
+    
+    if (!session || !session.user_id) {
+      logger.error('[IO] IO authentication error: no active session');
+      const error = new Error('Authentication error - No active session');
+      error.data = { status: 401 };
+      return next(error);
     }
 
-    const userIdFromApiKey = await database.get_user_id(api_key);
+    const user_id = session.user_id;
+    logger.debug(`[IO] IO authentication successful: user_id ${user_id}, added to group`);
+    
+    socket.user_id = user_id;
+    socket.join(user_id);
 
-    if (userIdFromApiKey == user_id) {
-      // Check if user_id and api_key match
-      logger.debug(`IO authentication successful: user_id ${user_id} and api_key, added to his group`);
-      socket.user_id = user_id;
-      socket.join(user_id);
-
-      return next();
-    }
-
-    logger.error(`IO authentication error: user_id ${user_id} and api_key REDACTED do not match`);
-    logger.debug('REDACTED = ' + api_key);
-    return next(new Error('Authentication error - Invalid credentials'));
+    return next();
   } catch (error) {
-    logger.error(`IO server authentication error: ${error.message}`);
-    return next(new Error('Internal authentication error'));
+    logger.error(`[IO] IO server authentication error: ${error.message}`);
+    const authError = new Error('Internal authentication error');
+    authError.data = { status: 401 }; 
+    return next(authError);
   }
 });
 
 io.on('connection', (socket) => {
-  logger.debug('Connetion to IO established');
+  logger.debug(`[IO] User ${socket.user_id} connected to IO`);
 
-  // ..
-
-  // When a user disconnects
   socket.on('disconnect', () => {
-    logger.debug('User on IO disconnected: ' + socket.user_id);
+    logger.debug(`[IO] User ${socket.user_id} disconnected`);
   });
 });
+
 
 
 // Function to send a message to all sockets in a group
 function send_messages_to_recipients(recipient_list,message_data) {
   for (const recipient of recipient_list) {
-    // send message to everyone on the group except the sender socket
+    // send message to everyone on the group
     io.to(recipient).emit('receive_message', message_data);
     logger.log(`[IO] [RESPONSE] Event receive_message sent to ${recipient}: ${JSON.stringify(message_data)}`);
   }

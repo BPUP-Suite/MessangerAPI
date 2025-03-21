@@ -1,6 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const session = require('express-session');
+
 const cors = require('cors');
 
 const api = express();
@@ -8,13 +8,15 @@ const logger = require('../logger');
 
 const validator = require('../database/validator');
 const database = require('../database/database');
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, HandleResponse, UserIDResponse, SearchResponse, InitResponse, Message, MessageResponse } = require('../database/object');
+
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse, HandleResponse, UserIDResponse, SearchResponse, InitResponse, Message, MessageResponse } = require('../database/object');
+
 const { send_messages_to_recipients } = require('./socketio');
 
 api.use(express.json());
 
 const envManager = require('../security/envManager');
-const fileManager = require('../security/fileManager');
+const sessionMiddleware = require('../security/sessionMiddleware');
 
 // api path 
 
@@ -26,6 +28,7 @@ const auth_base = user_base + 'auth/'
 const access_path = auth_base + 'access';
 const signup_path = auth_base + 'signup';
 const login_path = auth_base + 'login';
+const logout_path = auth_base + 'logout';
 
 const data_base = user_base + 'data/';
 
@@ -58,6 +61,7 @@ const search_path = data_base + 'search';
 const access_response_type = 'access_type';
 const signup_response_type = 'signed_up';
 const login_response_type = 'logged_in';
+const logout_response_type = 'logged_out';
 
 const handle_availability_response_type = 'handle_available';
 
@@ -79,26 +83,21 @@ const search_response_type = 'searched_list';
 
 // Sessions configuration
 
-const SESSION = fileManager.readSessionKey();
-const NODE_ENV = envManager.readNodeEnv();
-
-app.use(session({
-  secret: SESSION, 
-  resave: false,            
-  saveUninitialized: false, 
-  cookie: {
-    httpOnly: true,      
-    secure: process.env.NODE_ENV === NODE_ENV, // HTTPS only in production
-    maxAge: null  
-  }
-}));
+api.use(sessionMiddleware);
 
 // CORS Rules
 
+const API_DOMAIN = envManager.readAPIDomain();
+const IO_DOMAIN = envManager.readIODomain();
+
+logger.debug(`API_DOMAIN: ${API_DOMAIN}`);
+logger.debug(`IO_DOMAIN: ${IO_DOMAIN}`);
+
 api.use(cors({
-  origin: '*',
-  methods: ['POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: [API_DOMAIN, IO_DOMAIN],
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 // Allow proxy (nginx) to set the real ip address of the client
@@ -117,42 +116,10 @@ const limiter = rateLimit({
   handler: (req, res, next) => {
     logger.log(`[API] [ALERT] IP ${req.ip} has exceeded the rate limit on path: ${req.path}`);
 
-    let type = 'unknown';
     const errorDescription = 'Too many requests, please try again later.';
     const code = 429;
 
-    // response custom based on the path of the request 
-
-    switch (req.path) {
-      case access_path:
-        type = access_response_type;
-        break;
-      case signup_path:
-        type = signup_response_type;
-        break;
-      case login_path:
-        type = login_response_type;
-        break;
-      case handle_availability_path:
-        type = handle_availability_response_type;
-        break;
-      case user_id_path:
-        type = user_id_response_type;
-        break;
-      case search_path:
-        type = search_response_type;
-        break;
-      case init_path:
-        type = init_response_type;
-        break;
-      case message_path:
-        type = message_response_type;
-        break;
-      default:
-        break;
-    }
-
-    res.status(429).json({ [type]: null, code: code, errorDescription: errorDescription });
+    res.status(code).json({  error_message: errorDescription });
   }
 });
 
@@ -166,12 +133,29 @@ api.use(limiter);
 // all good, returns 200
 // This is valid for every methods in this class
 
+
+// Auth based on session
+
+function isAuthenticated(req, res, next) {
+  logger.debug('[API] [AUTH] Checking if user is authenticated: ' + req.session.user_id);
+  if (req.session.user_id) {
+    next();
+  } else {
+    const code = 401;
+    const errorDescription = 'Non authorized';
+
+    logger.debug(`[API] [AUTH] User not authenticated`);
+
+    res.status(code).json({ errorMessage: errorDescription });
+  }
+}
+
 // Path: /user
 // Path: .../auth
 
 // returns the access type of the user (login -> already registered, signup -> not registered)
 
-api.post(access_path, async (req, res) => {
+api.get(access_path, async (req, res) => {
 
   const email = req.query.email;
 
@@ -211,7 +195,7 @@ api.post(access_path, async (req, res) => {
 
 // returns the status of signup request (true = signed_up successfully, false = error [see error code/description])
 
-api.post(signup_path, async (req, res) => {
+api.get(signup_path, async (req, res) => {
 
   const email = req.query.email;
   const name = req.query.name;
@@ -286,7 +270,7 @@ api.post(signup_path, async (req, res) => {
 // returns the api_key of the requested user if logged_in is true (true = logged_in successfully, false = error [see error code/description])
 // if password is wrong return code 401 (Unauthorized)
 
-api.post(login_path, async (req, res) => {
+api.get(login_path, async (req, res) => {
 
   const email = req.query.email;
   const password = req.query.password;
@@ -300,7 +284,7 @@ api.post(login_path, async (req, res) => {
   let errorDescription = 'Generic error';
   let validated = true;
 
-  let api_key = null;
+  let user_id = null;
 
   if (!(validator.email(email))) {
     code = 400;
@@ -315,26 +299,57 @@ api.post(login_path, async (req, res) => {
   }
 
   if (validated) {
+    
     const loginUser = new LoginUser(email, password);
     try {
-      api_key = await database.login(loginUser);
-      if (api_key != null) {
+
+      user_id = await database.login(loginUser);
+
+      if (user_id != null) {
+
         confirmation = true;
         errorDescription = '';
         code = 200;
+
+        logger.debug('Session opened for : ' + user_id);
+        req.session.user_id = user_id;
       } else {
+
         code = 401;
         errorDescription = 'Login failed';
+
       }
     } catch (error) {
       logger.error('Error in database.login: ' + error);
     }
   }
 
-  const loginResponse = new LoginResponse(type, confirmation, api_key, errorDescription);
+  const loginResponse = new LoginResponse(type, confirmation, errorDescription);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(loginResponse.toJson()));
   return res.status(code).json(loginResponse.toJson());
 
+});
+
+// DA MODIFICARE
+api.get(logout_path, isAuthenticated, (req, res) => {
+  req.session.destroy(error => {
+
+    let type = logout_response_type;
+    let code = 200;
+    let errorDescription = '';
+    let confirmation = true;
+
+    if (error) {
+      code = 500;
+      errorDescription = 'Generic error';
+      confirmation = false;
+      logger.error('Error in session.destroy: ' + error);
+    }
+
+    const logoutResponse = new LogoutResponse(type, confirmation, errorDescription);
+    logger.debug('[API] [RESPONSE] ' + JSON.stringify(logoutResponse.toJson()));
+    return res.status(code).json(logoutResponse.toJson());
+  });
 });
 
 // Path: .../data
@@ -342,7 +357,7 @@ api.post(login_path, async (req, res) => {
 
 // return state of handle (available = true, unavailable = false)
 
-api.post(handle_availability_path, async (req, res) => {
+api.get(handle_availability_path, async (req, res) => {
 
   const handle = req.query.handle;
 
@@ -380,76 +395,31 @@ api.post(handle_availability_path, async (req, res) => {
 
 });
 // Path: .../get
-api.post(user_id_path, async (req, res) => {
 
-  const api_key = req.query.api_key;
+api.get(init_path, isAuthenticated, async (req, res) => {
 
-  logger.debug('[API] [REQUEST] Get user id request received ');
-  logger.debug('-> ' + JSON.stringify(req.query))
+  const user_id = req.session.user_id;
 
-  const type = user_id_response_type;
-  let code = 500;
-  let confirmation = null;
-  let errorDescription = 'Generic error';
-  let validated = true;
-
-  if (!(validator.api_key(api_key))) {
-    code = 400;
-    errorDescription = 'Api_key not valid';
-    validated = false;
-  }
-
-  if (validated) {
-    try {
-      confirmation = await database.get_user_id(api_key); // user_id if exists, null otherwise
-      code = 200;
-      errorDescription = '';
-    } catch (error) {
-      logger.error('Error in database.get_user_id: ' + error);
-    }
-  }
-
-  const userIDResponse = new UserIDResponse(type, confirmation, errorDescription);
-  logger.debug('[API] [RESPONSE] ' + JSON.stringify(userIDResponse.toJson()));
-  return res.status(code).json(userIDResponse.toJson());
-
-});
-
-api.post(init_path, async (req, res) => {
-
-  const api_key = req.query.api_key;
-
-  logger.debug('[API] [REQUEST] Get init request received ');
-  logger.debug('-> ' + JSON.stringify(req.query))
+  logger.debug('[API] [REQUEST] Get init request received from: ' + user_id);
 
   const type = init_response_type;
   let code = 500;
   let confirmation = false;
   let errorDescription = 'Generic error';
-  let validated = true;
   let init_data = null;
 
-  if (!(validator.api_key(api_key))) {
-    code = 400;
-    errorDescription = 'Api_key not valid';
-    validated = false;
-  }
+  try {
 
-  if (validated) {
-    try {
+    init_data = await database.client_init(user_id);
 
-      const user_id = await database.get_user_id(api_key);
-      init_data = await database.client_init(user_id);
-
-      if (init_data != null) {
-        confirmation = true;
-        code = 200;
-        errorDescription = '';
-      }
-
-    } catch (error) {
-      logger.error('database.client_init: ' + error);
+    if (init_data != null) {
+      confirmation = true;
+      code = 200;
+      errorDescription = '';
     }
+
+  } catch (error) {
+    logger.error('database.client_init: ' + error);
   }
 
   const initResponse = new InitResponse(type, confirmation, errorDescription, init_data);
@@ -460,13 +430,14 @@ api.post(init_path, async (req, res) => {
 
 // Path: .../send
 
-api.post(message_path, async (req, res) => {
+api.get(message_path, isAuthenticated, async (req, res) => {
 
-  const api_key = req.query.api_key;
+  const user_id = req.session.user_id;
+
   const text = req.query.text;
   const chat_id = req.query.chat_id;
 
-  logger.debug('[API] [REQUEST] Send message request received ');
+  logger.debug('[API] [REQUEST] Send message request received from: ' + user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
 
   const type = message_response_type;
@@ -476,12 +447,6 @@ api.post(message_path, async (req, res) => {
   let validated = true;
 
   let message_data, recipient_list = null;
-
-  if (!(validator.api_key(api_key))) {
-    code = 400;
-    errorDescription = 'Api_key not valid';
-    validated = false;
-  }
 
   if (!(validator.message(text))) {
     code = 400;
@@ -497,7 +462,6 @@ api.post(message_path, async (req, res) => {
 
   if (validated) {
     try {
-      const user_id = await database.get_user_id(api_key);
       const message = new Message(chat_id, user_id, text)
 
       const response = await database.send_message(message);
@@ -531,12 +495,11 @@ api.post(message_path, async (req, res) => {
 });
 
 
-api.post(search_path, async (req, res) => {
+api.get(search_path, isAuthenticated,async (req, res) => {
 
-  const api_key = req.query.api_key;
   const handle = req.query.handle;
 
-  logger.debug('[API] [REQUEST] Search request received ');
+  logger.debug('[API] [REQUEST] Search request received from: ' + req.session.user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
 
   const type = search_response_type;
@@ -544,12 +507,6 @@ api.post(search_path, async (req, res) => {
   let searched_list = null;
   let errorDescription = 'Generic error';
   let validated = true;
-
-  if (!(validator.api_key(api_key))) {
-    code = 400;
-    errorDescription = 'Api_key not valid';
-    validated = false;
-  }
 
   if (!(validator.generic(handle))) {
     code = 400;
@@ -572,6 +529,9 @@ api.post(search_path, async (req, res) => {
   return res.status(code).json(searchResponse.toJson());
 
 });
+
+// POST methods
+
 
 
 module.exports = api;

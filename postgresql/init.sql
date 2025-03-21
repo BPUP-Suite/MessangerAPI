@@ -148,12 +148,3 @@ CREATE TABLE public.users (
 
 ALTER TABLE public.users ADD CONSTRAINT users_pkey PRIMARY KEY (user_id);
 ALTER TABLE public.users OWNER TO bpup;
-
-
-CREATE TABLE public.apiKeys(
-    user_id bigint NOT NULL,
-    api_key text NOT NULL
-);
-
-ALTER TABLE public.apiKeys ADD CONSTRAINT apiKeys_pkey PRIMARY KEY (api_key);
-ALTER TABLE public.apiKeys OWNER TO bpup;

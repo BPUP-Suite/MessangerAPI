@@ -45,16 +45,8 @@ class Response {
     }
   }
   class LoginResponse extends Response {
-    constructor(type, type_response, api_key, error_message) {
+    constructor(type, type_response, error_message) {
       super(type, type_response, error_message);
-      this.api_key = api_key;
-    }
-
-    toJson() {
-      return {
-        ...super.toJson(),
-        api_key: this.api_key
-      };
     }
   }
   class LoginUser {
@@ -67,6 +59,11 @@ class Response {
         email: this.email,
         password: this.password
       };
+    }
+  }
+  class LogoutResponse extends Response {
+    constructor(type, type_response, error_message) {
+      super(type, type_response, error_message);
     }
   }
   class HandleResponse extends Response {
@@ -126,6 +123,7 @@ class Response {
     SignupUser, 
     LoginResponse, 
     LoginUser, 
+    LogoutResponse,
     HandleResponse, 
     UserIDResponse,
     SearchResponse,

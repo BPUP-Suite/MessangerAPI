@@ -4,6 +4,7 @@
 
 const path = require('path');
 const dotenv = require('dotenv');
+const { read } = require('fs');
 
 const envFilePath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envFilePath });
@@ -36,6 +37,14 @@ function readPostgresqlHost() {
 
 function readPostgresqlPort() {
     return readVariable("POSTGRES_PORT",false) || '5432';
+}
+
+function readRedisHost() {
+    return readVariable("REDIS_HOST",false) || 'local_redis';
+}
+
+function readRedisPort() {
+    return readVariable("REDIS_PORT",false) || '6379';
 }
 
 function readServerIP() {
@@ -82,6 +91,27 @@ function readNodeEnv(){
     return readVariable("NODE_ENV",true); 
 }
 
+function readDomain(){
+    if (readNodeEnv() == "production") {
+        return readVariable("DOMAIN",true); 
+    }
+    return 'localhost';
+}
+
+function readAPIDomain(){
+    if(readDomain() == 'localhost'){
+        return 'http://api.localhost:' + readAPIPort();
+    }
+    return 'https://api.' + readDomain();
+}
+
+function readIODomain(){
+    if(readDomain() == 'localhost'){
+        return 'http://io.localhost:' + readIOPort();
+    }
+    return 'https://io.' + readDomain();
+}
+
 
 module.exports = {
     readPostgresqlDb,
@@ -89,6 +119,8 @@ module.exports = {
     readPostgresqlPassword,
     readPostgresqlHost,
     readPostgresqlPort,
+    readRedisHost,
+    readRedisPort,
     readServerIP,
     readAPIPort,
     readIOPort,
@@ -99,5 +131,8 @@ module.exports = {
     readProxyAddress,
     readRateLimiterNumber,
     readRateLimiterMilliseconds,
-    readNodeEnv
+    readNodeEnv,
+    readDomain,
+    readAPIDomain,
+    readIODomain
 };
