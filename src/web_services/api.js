@@ -311,8 +311,14 @@ api.get(login_path, async (req, res) => {
         errorDescription = '';
         code = 200;
 
-        logger.debug('Session opened for : ' + user_id);
+        logger.debug('[API] [SESSION]  Session opened for : ' + user_id);
         req.session.user_id = user_id;
+
+        req.session.save((error) => {
+          if (error) console.error('[API] [SESSION]  Error while saving session:', error);
+          else logger.debug('[API] [SESSION]  Saved session');
+        });
+
       } else {
 
         code = 401;
@@ -326,7 +332,10 @@ api.get(login_path, async (req, res) => {
 
   const loginResponse = new LoginResponse(type, confirmation, errorDescription);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(loginResponse.toJson()));
-  return res.status(code).json(loginResponse.toJson());
+  res.status(code).json(loginResponse.toJson());
+
+  logger.debug('[API] [SESSION] Set-Cookie header:', res.get('Set-Cookie')); 
+  return;
 
 });
 
