@@ -24,7 +24,9 @@ io.use(wrap(sessionMiddleware));
 io.use(async (socket, next) => {
   try {
     logger.debug('[IO] IO authentication starting... with header: ' + JSON.stringify(socket.request.headers));
-    const session = socket.request.session;
+    const session = socket.handshake.query.sessionId;
+
+    logger.debug(`[IO] IO authentication session: ${session}`);
     
     if (!session || !session.user_id) {
       logger.error('[IO] IO authentication error: no active session');
