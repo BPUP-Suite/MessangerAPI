@@ -70,7 +70,7 @@ const access_response_type = 'access_type';
 const signup_response_type = 'signed_up';
 const login_response_type = 'logged_in';
 const logout_response_type = 'logged_out';
-const session_response_type = 'session';
+const session_response_type = 'session_id';
 
 const handle_availability_response_type = 'handle_available';
 

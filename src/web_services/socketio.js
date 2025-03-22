@@ -23,6 +23,7 @@ io.use(wrap(sessionMiddleware));
 
 io.use(async (socket, next) => {
   try {
+    logger.debug('[IO] IO authentication starting... with header: ' + JSON.stringify(socket.request.headers));
     const session = socket.request.session;
     
     if (!session || !session.user_id) {
