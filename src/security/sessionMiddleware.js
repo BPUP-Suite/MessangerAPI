@@ -13,7 +13,7 @@ logger.log('Session middleware starting...');
 logger.debug('Getting session data...');
 const SESSION = fileManager.getSessionKey();
 const NODE_ENV = envManager.readNodeEnv();
-const DOMAIN = '.' + envManager.readDomain();
+const DOMAIN = envManager.readAPIDomain();
 
 logger.debug(`NODE_ENV: ${NODE_ENV}`);
 logger.debug(`SESSION KEY: ${SESSION}`);
@@ -28,7 +28,8 @@ const sessionMiddleware = session({
     secure: NODE_ENV == 'production', // HTTPS only in production
     maxAge: 30 * 24 * 60 * 60 * 1000,
     domain: DOMAIN,
-    sameSite: 'lax'
+    sameSite: 'none',
+    partitioned: true
   },
   rolling: true  
 });

@@ -92,14 +92,8 @@ api.use(sessionMiddleware);
 
 // CORS Rules
 
-const API_DOMAIN = envManager.readAPIDomain();
-const IO_DOMAIN = envManager.readIODomain();
-
-logger.debug(`API_DOMAIN: ${API_DOMAIN}`);
-logger.debug(`IO_DOMAIN: ${IO_DOMAIN}`);
-
 api.use(cors({
-  origin: [API_DOMAIN, IO_DOMAIN],
+  origin: ['http://localhost:8081'],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

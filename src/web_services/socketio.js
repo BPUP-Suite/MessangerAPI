@@ -10,12 +10,9 @@ const sessionMiddleware = require('../security/sessionMiddleware');
 const app = express();
 const server = http.createServer(app);
 
-const API_DOMAIN = envManager.readAPIDomain();
-const IO_DOMAIN = envManager.readIODomain();
-
 const io = new Server(server, {
   cors: {
-    origin: [API_DOMAIN, IO_DOMAIN],
+    origin: ['http://localhost:8081'],
     methods: ["GET","POST"],
     credentials: true 
   }
