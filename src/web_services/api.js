@@ -91,10 +91,6 @@ const search_response_type = 'searched_list';
 
 // api configurations
 
-// Remove favicon error
-
-api.get('/favicon.ico', (req, res) => res.status(200))
-
 // Sessions configuration
 
 api.use(sessionMiddleware);
