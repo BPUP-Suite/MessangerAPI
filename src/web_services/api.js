@@ -1,5 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const favicon = require('serve-favicon')
 
 const cors = require('cors');
 
@@ -81,6 +82,10 @@ const search_response_type = 'searched_list';
 
 // api configurations
 
+// Remove favicon error
+
+api.get('/favicon.ico', (req, res) => res.status(200))
+
 // Sessions configuration
 
 api.use(sessionMiddleware);
@@ -101,9 +106,7 @@ api.use(cors({
 }));
 
 // Allow proxy (nginx) to set the real ip address of the client
-const proxy_address = envManager.readProxyAddress();
-api.set('trust proxy', 'loopback', proxy_address);
-
+api.set('trust proxy', 1);
 
 // api rate limiter
 
