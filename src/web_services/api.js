@@ -10,7 +10,7 @@ const logger = require('../logger');
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group} = require('../database/object');
 
 const { send_messages_to_recipients } = require('./socketio');
 
@@ -32,6 +32,7 @@ const access_path = auth_base + 'access';
 const signup_path = auth_base + 'signup';
 const login_path = auth_base + 'login';
 const logout_path = auth_base + 'logout';
+const session_path = auth_base + 'session';
 
 const data_base = user_base + 'data/';
 
@@ -70,6 +71,7 @@ const access_response_type = 'access_type';
 const signup_response_type = 'signed_up';
 const login_response_type = 'logged_in';
 const logout_response_type = 'logged_out';
+const session_response_type = 'session';
 
 const handle_availability_response_type = 'handle_available';
 
@@ -100,7 +102,7 @@ api.use(sessionMiddleware);
 // CORS Rules
 
 api.use(cors({
-  origin: ['http://localhost:8081'],
+  origin: ['http://localhost:8081'], //TEMPORARY FOR TESTING PURPUSE 
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -345,7 +347,7 @@ api.get(login_path, async (req, res) => {
   }
 });
 
-// DA MODIFICARE
+
 api.get(logout_path, isAuthenticated, (req, res) => {
   req.session.destroy(error => {
 
@@ -365,6 +367,26 @@ api.get(logout_path, isAuthenticated, (req, res) => {
     logger.debug('[API] [RESPONSE] ' + JSON.stringify(logoutResponse.toJson()));
     return res.status(code).json(logoutResponse.toJson());
   });
+});
+
+api.get(session_path, isAuthenticated, (req, res) => {
+  
+  const type = session_response_type;
+  let code = 500;
+  let session_id = null;
+  let errorDescription = 'Generic error';
+
+  	
+  if (req.session.user_id) {
+    code = 200;
+    errorDescription = '';
+    session_id = req.sessionID;
+  } 
+
+  const sessionResponse = new SessionResponse(type, session_id, errorDescription);
+  logger.debug('[API] [RESPONSE] ' + JSON.stringify(sessionResponse.toJson()));
+  return res.status(code).json(sessionResponse.toJson());
+
 });
 
 // Path: .../data

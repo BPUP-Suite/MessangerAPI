@@ -66,6 +66,11 @@ class Response {
       super(type, type_response, error_message);
     }
   }
+  class SessionResponse extends Response {
+    constructor(type, session_id, error_message) {
+      super(type, session_id, error_message);
+    }
+  }
   class HandleResponse extends Response {
     constructor(type, handle_available, error_message) {
       super(type, handle_available, error_message);
@@ -166,6 +171,7 @@ class Response {
     LoginResponse, 
     LoginUser, 
     LogoutResponse,
+    SessionResponse,
     HandleResponse, 
     UserIDResponse,
     SearchResponse,

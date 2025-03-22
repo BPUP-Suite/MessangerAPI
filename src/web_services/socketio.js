@@ -12,7 +12,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:8081'],
+    origin: ['http://localhost:8081'], //TEMPORARY FOR TESTING PURPUSE 
     methods: ["GET","POST"],
     credentials: true 
   }
