@@ -130,6 +130,35 @@ class Response {
     }
   }
 
+  class Chat{
+    constructor(user1,user2){
+      this.user1 = user1;
+      this.user2 = user2;
+    }
+  }
+
+  class CreateGroupResponse extends Response{
+    constructor(type, confirmation, error_message,chat_id) {
+      super(type, confirmation, error_message);
+      this.chat_id = chat_id;
+    }
+    toJson() {
+      return {
+        ...super.toJson(),
+        ...this.chat_id
+      };
+    }
+  }
+
+  class Group{
+    constructor(name, description, members, admins){
+      this.name = name;
+      this.description = description || ''; // if description is not provided, it will be an empty string
+      this.members = members;
+      this.admins = admins;
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
@@ -143,5 +172,8 @@ class Response {
     InitResponse,
     MessageResponse,
     Message,
-    CreateChatResponse
+    CreateChatResponse,
+    Chat,
+    CreateGroupResponse,
+    Group
   };

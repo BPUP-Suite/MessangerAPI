@@ -325,8 +325,11 @@ async function send_message(message){
 
 // Create new chat
 
-async function create_chat(user1, user2) {
+async function create_chat(chat) {
   
+  const user1 = chat.user1;
+  const user2 = chat.user2;
+
   const QUERY = "INSERT INTO public.chats(user1, user2) VALUES ($1, $2) RETURNING chat_id";
   let chat_id = null;
 
@@ -341,6 +344,31 @@ async function create_chat(user1, user2) {
   return chat_id;
 
 }
+
+// Create new group
+
+async function create_group(group) {
+  
+  const name = group.name;
+  const description = group.description;
+  const members = group.members;
+  const admins = group.admins;
+
+  const QUERY = "INSERT INTO public.groups(name, description, members, admins) VALUES ($1, $2, $3, $4) RETURNING group_id";
+  let group_id = null;
+
+  try{
+    const result = await query(QUERY, [name, description, members, admins]);
+    group_id = result[0].group_id;
+  }
+  catch(err){
+    logger.error("database.create_group: " + err);
+  }
+
+  return group_id;
+
+}
+
 
 // Utilities
 
@@ -357,6 +385,8 @@ async function get_user_id_from_handle(handle) {
   
   return user_id;
 }
+
+
 
 async function get_handle_from_id(id) {
   const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
@@ -417,5 +447,7 @@ module.exports = {
   client_init,
   send_message,
   search,
-  create_chat
+  get_user_id_from_handle,
+  create_chat,
+  create_group
 };

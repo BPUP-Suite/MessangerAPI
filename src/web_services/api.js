@@ -10,7 +10,7 @@ const logger = require('../logger');
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse, HandleResponse, CreateChatResponse, SearchResponse, InitResponse, Message, MessageResponse } = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group} = require('../database/object');
 
 const { send_messages_to_recipients } = require('./socketio');
 
@@ -81,8 +81,8 @@ const message_response_type = 'message_sent';
 const voice_message_response_type = '';
 const file_response_type = '';
 
-const chat_response_type = '';
-const group_response_type = '';
+const chat_response_type = 'chat_created';
+const group_response_type = 'group_created';
 const channel_response_type = '';
 
 const search_response_type = 'searched_list';
@@ -557,7 +557,7 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
 
   const other_handle = req.query.handle;
 
-  const type = message_response_type;
+  const type = chat_response_type;
   let code = 500;
   let confirmation = false;
   let errorDescription = 'Generic error';
@@ -577,7 +577,8 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
 
       if(other_user_id != null){
         try{
-          chat_id = await database.create_chat(user_id, other_user_id);
+          const chat = new Chat(user_id, other_user_id);
+          chat_id = await database.create_chat(chat);
           if (chat_id != null) {
             confirmation = true;
             code = 200;
@@ -598,6 +599,69 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
 
 });
 
+api.get(group_path, isAuthenticated, async (req, res) => {
+
+  logger.debug('[API] [REQUEST] Create group request received from: ' + user_id);
+  logger.debug('-> ' + JSON.stringify(req.query))
+
+  const user_id = req.session.user_id;
+
+  const name = req.query.name;
+
+  // optionals
+  const description = req.query.description;
+  const members_handles = req.query.members;
+  // both can be empty
+
+  // creator of the group is also an admin (and a member)
+  const members = [user_id];
+  const admins = [user_id];
+
+  const type = group_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  let chat_id = null;
+
+  if (!(validator.generic(name))) {
+    code = 400;
+    errorDescription = 'Groups name not valid';
+    validated = false;
+  }
+
+  if (validated) {  
+    // get all members list from their handles
+    for (let i = 0; i < members_handles.length; i++) {
+      try{
+        const other_user_id = await database.get_user_id_from_handle(members_handles[i]);
+        if (other_user_id != null) {
+          members.push(other_user_id);
+        }
+      }catch (error) {
+        logger.error('database.get_user_id_from_handle: ' + error);
+      }
+    }
+
+    try {
+      const group = new Group(name, description, members, admins);
+      chat_id = await database.create_group(group);
+      if (chat_id != null) {
+        confirmation = true;
+        code = 200;
+        errorDescription = '';
+      }
+    } catch (error) {
+      logger.error('database.get_user_id_from_handle: ' + error);
+    }
+  }
+
+  const createGroupResponse = new CreateGroupResponse(type, confirmation, errorDescription, chat_id);
+  logger.debug('[API] [RESPONSE] ' + JSON.stringify(createGroupResponse.toJson()));
+  return res.status(code).json(createGroupResponse.toJson());
+
+});
 
 // POST methods
 
