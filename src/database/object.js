@@ -117,6 +117,19 @@ class Response {
     }
   }
 
+  class CreateChatResponse extends Response{
+    constructor(type, confirmation, error_message,chat_id) {
+      super(type, confirmation, error_message);
+      this.chat_id = chat_id;
+    }
+    toJson() {
+      return {
+        ...super.toJson(),
+        ...this.chat_id
+      };
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
@@ -129,5 +142,6 @@ class Response {
     SearchResponse,
     InitResponse,
     MessageResponse,
-    Message
+    Message,
+    CreateChatResponse
   };

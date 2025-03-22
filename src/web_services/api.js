@@ -10,7 +10,7 @@ const logger = require('../logger');
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse, HandleResponse, UserIDResponse, SearchResponse, InitResponse, Message, MessageResponse } = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse, HandleResponse, CreateChatResponse, SearchResponse, InitResponse, Message, MessageResponse } = require('../database/object');
 
 const { send_messages_to_recipients } = require('./socketio');
 
@@ -22,6 +22,8 @@ const sessionMiddleware = require('../security/sessionMiddleware');
 // api path 
 
 const version = '/v1/';
+
+// /user
 const user_base = version + 'user/';
 
 const auth_base = user_base + 'auth/'
@@ -43,19 +45,24 @@ const user_id_path = get_base + 'user-id'
 const init_path = get_base + 'init'
 const update_path = get_base + 'update'
 
-const send_base = data_base + 'send/';
+const search_path = data_base + 'search';
+
+// /chat
+const chat_base = version + 'chat/';
+
+const send_base = chat_base + 'send/';
 
 const message_path = send_base + 'message';
-const voice_message_path = send_base + 'message';
+const voice_message_path = send_base + 'voice_message';
 const file_path = send_base + 'file';
 
-const create_base = data_base + 'create/';
+const create_base = chat_base + 'create/';
 
 const chat_path = create_base + 'chat';
 const group_path = create_base + 'group';
 const channel_path = create_base + 'channel';
 
-const search_path = data_base + 'search';
+
 
 // api response type
 
@@ -436,6 +443,43 @@ api.get(init_path, isAuthenticated, async (req, res) => {
 
 });
 
+api.get(search_path, isAuthenticated,async (req, res) => {
+
+  const handle = req.query.handle;
+
+  logger.debug('[API] [REQUEST] Search request received from: ' + req.session.user_id);
+  logger.debug('-> ' + JSON.stringify(req.query))
+
+  const type = search_response_type;
+  let code = 500;
+  let searched_list = null;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  if (!(validator.generic(handle))) {
+    code = 400;
+    errorDescription = 'Search parameter (handle) not valid';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      searched_list = await database.search(handle); // a list of similar handles are returned
+      code = 200;
+      errorDescription = '';
+    } catch (error) {
+      logger.error('Error in database.search: ' + error);
+    }
+  }
+
+  const searchResponse = new SearchResponse(type, searched_list, errorDescription);
+  logger.debug('[API] [RESPONSE] ' + JSON.stringify(searchResponse.toJson()));
+  return res.status(code).json(searchResponse.toJson());
+
+});
+
+
+// Path: /chat
 // Path: .../send
 
 api.get(message_path, isAuthenticated, async (req, res) => {
@@ -502,41 +546,58 @@ api.get(message_path, isAuthenticated, async (req, res) => {
   return;
 });
 
+// Path: .../create
 
-api.get(search_path, isAuthenticated,async (req, res) => {
+api.get(chat_path, isAuthenticated, async (req, res) => {
 
-  const handle = req.query.handle;
-
-  logger.debug('[API] [REQUEST] Search request received from: ' + req.session.user_id);
+  logger.debug('[API] [REQUEST] Create chat request received from: ' + user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
 
-  const type = search_response_type;
+  const user_id = req.session.user_id;
+
+  const other_handle = req.query.handle;
+
+  const type = message_response_type;
   let code = 500;
-  let searched_list = null;
+  let confirmation = false;
   let errorDescription = 'Generic error';
   let validated = true;
 
-  if (!(validator.generic(handle))) {
+  let chat_id = null;
+
+  if (!(validator.generic(other_handle))) {
     code = 400;
-    errorDescription = 'Search parameter (handle) not valid';
+    errorDescription = 'Handle not valid';
     validated = false;
   }
 
   if (validated) {
     try {
-      searched_list = await database.search(handle); // a list of similar handles are returned
-      code = 200;
-      errorDescription = '';
+      const other_user_id = await database.get_user_id_from_handle(other_handle);
+
+      if(other_user_id != null){
+        try{
+          chat_id = await database.create_chat(user_id, other_user_id);
+          if (chat_id != null) {
+            confirmation = true;
+            code = 200;
+            errorDescription = '';
+          }
+        }catch (error) {
+          logger.error('database.create_chat: ' + error);
+        }
+      }
     } catch (error) {
-      logger.error('Error in database.search: ' + error);
+      logger.error('database.get_user_id_from_handle: ' + error);
     }
   }
 
-  const searchResponse = new SearchResponse(type, searched_list, errorDescription);
-  logger.debug('[API] [RESPONSE] ' + JSON.stringify(searchResponse.toJson()));
-  return res.status(code).json(searchResponse.toJson());
+  const createChatResponse = new CreateChatResponse(type, confirmation, errorDescription, chat_id);
+  logger.debug('[API] [RESPONSE] ' + JSON.stringify(createChatResponse.toJson()));
+  return res.status(code).json(createChatResponse.toJson());
 
 });
+
 
 // POST methods
 

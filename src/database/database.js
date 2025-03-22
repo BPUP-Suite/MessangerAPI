@@ -323,6 +323,25 @@ async function send_message(message){
   return { message_data: null, recipient_list: null };
 }
 
+// Create new chat
+
+async function create_chat(user1, user2) {
+  
+  const QUERY = "INSERT INTO public.chats(user1, user2) VALUES ($1, $2) RETURNING chat_id";
+  let chat_id = null;
+
+  try{
+    const result = await query(QUERY, [user1, user2]);
+    chat_id = result[0].chat_id;
+  }
+  catch(err){
+    logger.error("database.create_chat: " + err);
+  }
+
+  return chat_id;
+
+}
+
 // Utilities
 
 async function get_user_id_from_handle(handle) {
@@ -397,5 +416,6 @@ module.exports = {
   check_handle_availability,
   client_init,
   send_message,
-  search
+  search,
+  create_chat
 };
