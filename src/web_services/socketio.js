@@ -26,16 +26,17 @@ io.use(async (socket, next) => {
     logger.debug('[IO] IO authentication starting... with header: ' + JSON.stringify(socket.request.headers));
 
     // takes auth header from the socket
-    const authHeader = socket.handshake.headers.authorization;
-    logger.debug(`[IO] Auth header: ${authHeader}`);
+    const session_id = socket.handshake.auth.sessionId;
+    logger.debug(`[IO] Auth header: ${session_id}`);
 
-    if (!authHeader || !authHeader.startsWith('Session ')) {
-      logger.error('[IO] IO authentication error: missing or invalid auth header');
-      return next(new Error('Authentication error - Invalid auth header'));
+    if(!session_id) {
+      logger.error('[IO] IO authentication error: no session_id provided');
+      const error = new Error('Authentication error - No session_id provided');
+      error.data = { status: 401 };
+      return next(error);
     }
 
-    // extract session id from the auth header and verify it returning a session object
-    const session_id = authHeader.substring(8);
+    // verify session_id returning a session object
     const session = await verifySession(session_id);
     
     // if no session is returned, the session id is invalid
