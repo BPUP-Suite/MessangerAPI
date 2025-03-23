@@ -45,7 +45,10 @@ const user_id_path = get_data_base + 'user-id'
 const init_path = get_data_base + 'init'
 const update_path = get_data_base + 'update'
 
-const search_path = data_base + 'search';
+const search_base = data_base + 'search/';
+
+const search_users_path = search_base + 'users';
+const search_all_path = search_base + 'all';
 
 // /chat
 const chat_base = version + 'chat/';
@@ -482,11 +485,48 @@ api.get(init_path, isAuthenticated, async (req, res) => {
 
 });
 
-api.get(search_path, isAuthenticated,async (req, res) => {
+// Path: .../search
+
+api.get(search_users_path, isAuthenticated,async (req, res) => {
 
   const handle = req.query.handle;
 
-  logger.debug('[API] [REQUEST] Search request received from: ' + req.session.user_id);
+  logger.debug('[API] [REQUEST] Search (users) request received from: ' + req.session.user_id);
+  logger.debug('-> ' + JSON.stringify(req.query))
+
+  const type = search_response_type;
+  let code = 500;
+  let searched_list = null;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  if (!(validator.generic(handle))) {
+    code = 400;
+    errorDescription = 'Search parameter (handle) not valid';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      searched_list = await database.search_users(handle); // a list of similar handles are returned (ONLY USERS)
+      code = 200;
+      errorDescription = '';
+    } catch (error) {
+      logger.error('Error in database.search_users: ' + error);
+    }
+  }
+
+  const searchResponse = new SearchResponse(type, searched_list, errorDescription);
+  logger.debug('[API] [RESPONSE] ' + JSON.stringify(searchResponse.toJson()));
+  return res.status(code).json(searchResponse.toJson());
+
+});
+
+api.get(search_all_path, isAuthenticated,async (req, res) => {
+
+  const handle = req.query.handle;
+
+  logger.debug('[API] [REQUEST] Search (all) request received from: ' + req.session.user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
 
   const type = search_response_type;

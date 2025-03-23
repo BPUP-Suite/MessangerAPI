@@ -167,6 +167,24 @@ async function search(handle){
 
   return list;
 }
+async function search_users(handle){
+  const QUERY = "SELECT handle FROM handles WHERE handle ILIKE '%' || $1 || '%' AND user_id IS NOT NULL ORDER BY similarity(handle, $1) DESC LIMIT 10;";
+
+  let list = [];
+
+  try{
+    const result = await query(QUERY, [handle]);
+    // transfrom result in a handle list 
+    // TBD: get images of users (or another method that passes images on request by socket managed by client)
+
+    list = result.map(row => row.handle); 
+
+  }catch(err){
+    logger.error("[POSTGRES] database.search_users: " + err);
+  }
+
+  return list;
+}
 
 async function get_members(chat_id) {
 
@@ -491,6 +509,7 @@ module.exports = {
   client_init,
   send_message,
   search,
+  search_users,
   get_user_id_from_handle,
   create_chat,
   create_group,
