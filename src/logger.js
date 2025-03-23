@@ -66,8 +66,16 @@ function error(message) {
     writeLogToFile(errorMessage);
 }
 
+function warn(message){
+    const timestamp = getTimestamp();
+    const warnMessage = `[WARN] ${timestamp} - ${message}`;
+    console.warn(warnMessage);
+    writeLogToFile(warnMessage);
+}
+
 module.exports = {
     log,
     debug,
-    error
+    error,
+    warn
 };

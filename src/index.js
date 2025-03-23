@@ -14,34 +14,34 @@ async function startServer() {
 
       // Get the PORT and HOST for API from the environment variables
 
-      logger.log('API Server starting...');
-      logger.debug('Getting API_PORT and HOST...');
+      logger.log('[INDEX] API Server starting...');
+      logger.debug('[INDEX] Getting API_PORT and HOST...');
 
       const API_PORT = envManager.readAPIPort();
       const HOST = envManager.readServerIP();
 
-      logger.debug(`API_PORT: ${API_PORT}`);
-      logger.debug(`HOST: ${HOST}`);
+      logger.debug(`[INDEX] API_PORT: ${API_PORT}`);
+      logger.debug(`[INDEX] HOST: ${HOST}`);
 
       // Start the API and Socket.IO servers
       api.listen(API_PORT, HOST, () => {
 
-        logger.log(`API Server listening on http://${HOST}:${API_PORT}`);
+        logger.log(`[INDEX] API Server listening on http://${HOST}:${API_PORT}`);
 
-        logger.log('IO Server starting...');
-        logger.debug('Getting IO_PORT...');
+        logger.log('[INDEX] IO Server starting...');
+        logger.debug('[INDEX] Getting IO_PORT...');
 
         const IO_PORT = envManager.readIOPort();
-        logger.debug(`IO_PORT: ${IO_PORT}`);
+        logger.debug(`[INDEX] IO_PORT: ${IO_PORT}`);
 
         io.listen(IO_PORT, () => {
-            logger.log(`Socket IO Server listening on http://${HOST}:${IO_PORT}`);
+            logger.log(`[INDEX] Socket IO Server listening on http://${HOST}:${IO_PORT}`);
 
             logger.log('=+----------------------------------------------------------------Server started!----------------------------------------------------------------+=');
           });         
       });
     }else{
-      logger.log('Server could not start. Exiting...');
+      logger.log('[INDEX] Server could not start. Exiting...');
       process.exit(1);	
     }
   }

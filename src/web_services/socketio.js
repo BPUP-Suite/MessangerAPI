@@ -10,9 +10,23 @@ const { sessionMiddleware, verifySession } = require('../security/sessionMiddlew
 const app = express();
 const server = http.createServer(app);
 
+// CORS config
+
+let WEB_DOMAIN = envManager.readDomain();
+
+if (WEB_DOMAIN == 'localhost') {
+  WEB_DOMAIN = 'http://localhost' + envManager.readIOPort();
+  logger.warn('[IO] Running on localhost, CORS will be set to localhost');
+} else {
+  WEB_DOMAIN = 'https://web.' + WEB_DOMAIN;
+  logger.debug(`[IO] Running on domain, CORS will be set to ${WEB_DOMAIN}`);
+}
+
+// init socket server
+
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:8081'], //TEMPORARY FOR TESTING PURPUSE 
+    origin: ['http://localhost:8081',WEB_DOMAIN], //TEMPORARY FOR TESTING PURPUSE 
     methods: ["GET","POST"],
     credentials: true 
   }

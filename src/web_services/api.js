@@ -96,8 +96,18 @@ api.use(sessionMiddleware);
 
 // CORS Rules
 
+let WEB_DOMAIN = envManager.readDomain();
+
+if (WEB_DOMAIN == 'localhost') {
+  WEB_DOMAIN = 'http://localhost' + envManager.readAPIPort();
+  logger.warn('[API] Running on localhost, CORS will be set to localhost');
+} else {
+  WEB_DOMAIN = 'https://web.' + WEB_DOMAIN;
+  logger.debug(`[API] Running on domain, CORS will be set to ${WEB_DOMAIN}`);
+}
+
 api.use(cors({
-  origin: ['http://localhost:8081'], //TEMPORARY FOR TESTING PURPUSE 
+  origin: ['http://localhost:8081',WEB_DOMAIN], //TEMPORARY FOR TESTING PURPUSE 
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

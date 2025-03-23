@@ -9,9 +9,9 @@ const encrypter = require('../security/encrypter');
 
 const envManager = require('../security/envManager');
 
-logger.log('Postgresql database starting...');
+logger.log('[POSTGRES] Postgresql database starting...');
 
-logger.debug('Getting PostgreSQL credentials...');
+logger.debug('[POSTGRES] Getting PostgreSQL credentials...');
 
 const POSTGRES_USER = envManager.readPostgresqlUser();
 const POSTGRES_HOST = envManager.readPostgresqlHost();
@@ -19,15 +19,15 @@ const POSTGRES_DB = envManager.readPostgresqlDb();
 const POSTGRES_PASSWORD = envManager.readPostgresqlPassword();
 const POSTGRES_PORT = envManager.readPostgresqlPort();
 
-logger.debug('PostgreSQL credentials acquired');
+logger.debug('[POSTGRES] PostgreSQL credentials acquired');
 
-logger.debug(`POSTGRES_USER: ${POSTGRES_USER}`);
-logger.debug(`POSTGRES_HOST: ${POSTGRES_HOST}`);
-logger.debug(`POSTGRES_DB: ${POSTGRES_DB}`);
-logger.debug(`POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}`);
-logger.debug(`POSTGRES_PORT: ${POSTGRES_PORT}`);
+logger.debug(`[POSTGRES] POSTGRES_USER: ${POSTGRES_USER}`);
+logger.debug(`[POSTGRES] POSTGRES_HOST: ${POSTGRES_HOST}`);
+logger.debug(`[POSTGRES] POSTGRES_DB: ${POSTGRES_DB}`);
+logger.debug(`[POSTGRES] POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}`);
+logger.debug(`[POSTGRES] POSTGRES_PORT: ${POSTGRES_PORT}`);
 
-logger.debug('Creating PostgreSQL pool...');
+logger.debug('[POSTGRES] Creating PostgreSQL pool...');
 const pool = new Pool({
   user: POSTGRES_USER,   
   host: POSTGRES_HOST,
@@ -35,17 +35,17 @@ const pool = new Pool({
   password: POSTGRES_PASSWORD,
   port: POSTGRES_PORT
 });    
-logger.debug('PostgreSQL pool created');
+logger.debug('[POSTGRES] PostgreSQL pool created');
 
 async function query(text, params) {
-  logger.debug(`Executing query: ${text} with parameters: ${JSON.stringify(params)}`);
+  logger.debug(`[POSTGRES] Executing query: ${text} with parameters: ${JSON.stringify(params)}`);
   const client = await pool.connect();
   try {
     const res = await client.query(text, params);
-    logger.debug(`Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows)}`);
+    logger.debug(`[POSTGRES] Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows)}`);
     return res.rows;
   } catch (error) {
-    logger.error(`Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${error}`);
+    logger.error(`[POSTGRES] Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${error}`);
     throw error;
   } finally {
     client.release();
@@ -56,14 +56,14 @@ async function testConnection() {
     try {
       const result = await query('SELECT 1', []);
       if (result && result.length > 0) {
-        logger.log('Postgresql database connection is healthy.');
+        logger.log('[POSTGRES] Postgresql database connection is healthy.');
         return true;
       } else {
-        logger.error('Postgresql database connection test failed: no result.');
+        logger.error('[POSTGRES] Postgresql database connection test failed: no result.');
         return false;
       }
     } catch (error) {
-      logger.error('Postgresql database connection test failed: ' + error);
+      logger.error('[POSTGRES] Postgresql database connection test failed: ' + error);
       return false;
     }
   }
@@ -84,7 +84,7 @@ async function check_email_existence(email) {
           confirmation = false;
       }
     }catch(err){
-      logger.error("database.check_email_existence: " + err);
+      logger.error("[POSTGRES] database.check_email_existence: " + err);
     }
 
 
@@ -103,7 +103,7 @@ async function check_handle_availability(handle) {
     }
   }
   catch(err){
-    logger.error("database.check_handle_availability: " + err);
+    logger.error("[POSTGRES] database.check_handle_availability: " + err);
     confirmation = null;
   }
 
@@ -116,12 +116,12 @@ async function add_user_to_db(signupUser) {
     const password = encrypter.generatePasswordHash(signupUser.password)
 
     const QUERY = `WITH new_user AS (INSERT INTO public.users(email, name, surname, password) VALUES($1, $2, $3, $4) RETURNING user_id) INSERT INTO public.handles(user_id, handle) VALUES((SELECT user_id FROM new_user), $5);`
-    logger.debug(QUERY)
+    logger.debug('[POSTGRES] ' + QUERY)
     try {
       await query(QUERY, [signupUser.email, signupUser.name, signupUser.surname, password, signupUser.handle]);
       confirmation = true
     } catch (err) {
-      logger.error("database.add_user_to_db: " + err)
+      logger.error("[POSTGRES] database.add_user_to_db: " + err)
       confirmation = false
     }
     return confirmation
@@ -140,7 +140,7 @@ async function login(loginUser) {
         user_id = result[0].user_id;
       }
     }catch(err){
-      logger.error("database.login: " + err);
+      logger.error("[POSTGRES] database.login: " + err);
     }
 
     return user_id;
@@ -162,7 +162,7 @@ async function search(handle){
     list = result.map(row => row.handle); 
 
   }catch(err){
-    logger.error("database.search: " + err);
+    logger.error("[POSTGRES] database.search: " + err);
   }
 
   return list;
@@ -184,7 +184,7 @@ async function client_init(user_id) {
     user_info = result[0];
   }
   catch(err){
-    logger.error("database.client_init: " + err);
+    logger.error("[POSTGRES] database.client_init: " + err);
   }
 
   // if no data are found, return the empty json
@@ -216,12 +216,12 @@ async function client_init(user_id) {
     chats = result;
   }
   catch(err){
-    logger.error("database.client_init: " + err);
+    logger.error("[POSTGRES] database.client_init: " + err);
   }
 
   // if no data are found, return only the info json
   if(chats === null || chats === undefined |  chats.length === 0){
-    logger.debug("No chats found for user: " + user_id);
+    logger.debug("[POSTGRES] No chats found for user: " + user_id);
     return json;
   }
 
@@ -253,7 +253,7 @@ async function client_init(user_id) {
       messages = result;
     }
     catch(err){
-      logger.error("database.client_init: " + err);
+      logger.error("[POSTGRES] database.client_init: " + err);
     }
 
     if(messages != null && messages != undefined &&  messages.length != 0){
@@ -302,13 +302,13 @@ async function send_message(message){
     message_id = result[0].message_id;
 
   }catch(err){
-    logger.error("database.send_message: " + err);
+    logger.error("[POSTGRES] database.send_message: " + err);
     return { message_data: null, recipient_list: null };
   }
 
   if(message_id != null && message_id != undefined && message_id != ''){
 
-    logger.debug("Creating response message... message_id: "+ message_id + " chat_id: "+chat_id );
+    logger.debug("[POSTGRES] Creating response message... message_id: "+ message_id + " chat_id: "+chat_id );
     const message_data = { 
       chat_id: chat_id,
       message_id: message_id,
@@ -338,7 +338,7 @@ async function create_chat(chat) {
     chat_id = result[0].chat_id;
   }
   catch(err){
-    logger.error("database.create_chat: " + err);
+    logger.error("[POSTGRES] database.create_chat: " + err);
   }
 
   return chat_id;
@@ -362,7 +362,7 @@ async function create_group(group) {
     group_id = result[0].group_id;
   }
   catch(err){
-    logger.error("database.create_group: " + err);
+    logger.error("[POSTGRES] database.create_group: " + err);
   }
 
   return group_id;
@@ -380,7 +380,7 @@ async function get_user_id_from_handle(handle) {
     const result = await query(QUERY, [handle]);
     user_id = result[0].user_id;
   }catch(err){
-    logger.error("database.get_user_id_from_handle: " + err);
+    logger.error("[POSTGRES] database.get_user_id_from_handle: " + err);
   }
   
   return user_id;
@@ -396,7 +396,7 @@ async function get_handle_from_id(id) {
     const result = await query(QUERY, [id]);
     handle = result[0].handle;
   }catch(err){
-    logger.error("database.get_handle_from_id: " + err);
+    logger.error("[POSTGRES] database.get_handle_from_id: " + err);
   }
   
   return handle;
@@ -416,7 +416,7 @@ async function get_recipient(chat_id, sender) {
     }
 
   }catch(err){
-    logger.error("database.get_recipient: " + err);
+    logger.error("[POSTGRES] database.get_recipient: " + err);
   }
 
   return recipient;

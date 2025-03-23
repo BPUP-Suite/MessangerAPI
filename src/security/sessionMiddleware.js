@@ -8,15 +8,27 @@ const envManager = require('./envManager');
 const fileManager = require('./fileManager');
 const logger = require('../logger');
 
-logger.log('Session middleware starting...');
+logger.log('[SESSION] Session middleware starting...');
 
-logger.debug('Getting session data...');
+logger.debug('[SESSION] Getting session data...');
 const SESSION = fileManager.getSessionKey();
 const NODE_ENV = envManager.readNodeEnv();
-const DOMAIN = envManager.readAPIDomain();
 
-logger.debug(`NODE_ENV: ${NODE_ENV}`);
-logger.debug(`SESSION KEY: ${SESSION}`);
+let DOMAIN = '';
+
+if(envManager.readDomain() == 'localhost') {
+  DOMAIN = 'localhost';
+  logger.warn('[SESSION] Running on localhost, session cookie domain will be set to localhost');
+}else{
+  DOMAIN = 'api.' + envManager.readDomain();
+  logger.debug(`[SESSION] Running on domain, session cookie domain will be set to ${DOMAIN}`);
+}
+
+logger.debug(`[SESSION] DOMAIN: ${DOMAIN}`);
+logger.debug(`[SESSION] NODE_ENV: ${NODE_ENV}`);
+logger.debug(`[SESSION] SESSION KEY: ${SESSION}`);
+
+const sameSite = NODE_ENV == 'production' ? 'none' : 'lax';
 
 const redisStore = new RedisStore({ client: redis });
 
@@ -30,7 +42,7 @@ const sessionMiddleware = session({
     secure: NODE_ENV == 'production', // HTTPS only in production
     maxAge: 30 * 24 * 60 * 60 * 1000,
     domain: DOMAIN,
-    sameSite: 'none',
+    sameSite: sameSite,
     partitioned: true
   },
   rolling: true  
@@ -46,7 +58,7 @@ async function verifySession(session_id) {
     });
   }
 
-logger.log('Session middleware started');
+logger.log('[SESSION] Session middleware started');
 
 module.exports = {
   sessionMiddleware,
