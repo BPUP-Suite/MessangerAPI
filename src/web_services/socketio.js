@@ -27,7 +27,7 @@ io.use(async (socket, next) => {
 
     // takes auth header from the socket
     const session_id = socket.handshake.auth.sessionId;
-    logger.debug(`[IO] Auth header: ${session_id}`);
+    logger.debug(`[IO] session_id: ${session_id}`);
 
     if(!session_id) {
       logger.error('[IO] IO authentication error: no session_id provided');

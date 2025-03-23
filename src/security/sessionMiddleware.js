@@ -18,8 +18,10 @@ const DOMAIN = envManager.readAPIDomain();
 logger.debug(`NODE_ENV: ${NODE_ENV}`);
 logger.debug(`SESSION KEY: ${SESSION}`);
 
+const redisStore = new RedisStore({ client: redis });
+
 const sessionMiddleware = session({
-  store: new RedisStore({ client: redis }),
+  store: redisStore,
   secret: SESSION,
   resave: false,            
   saveUninitialized: false, 
@@ -36,13 +38,13 @@ const sessionMiddleware = session({
 
 async function verifySession(session_id) {
   // verify session id and return session object
-  return new Promise((resolve, reject) => {
-    sessionMiddleware.store.get(session_id, (error, session) => {
-      if (error) reject(error);
-      else resolve(session);
+    return new Promise((resolve, reject) => {
+      redisStore.get(session_id, (error, session) => {
+        if (error) reject(error);
+        else resolve(session);
+      });
     });
-  });
-}
+  }
 
 logger.log('Session middleware started');
 
