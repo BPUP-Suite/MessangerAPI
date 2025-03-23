@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const logger = require('../logger');
 const envManager = require('../security/envManager');
 const database = require('../database/database');
-const sessionMiddleware = require('../security/sessionMiddleware');
+const { sessionMiddleware, verifySession } = require('../security/sessionMiddleware');
 
 const app = express();
 const server = http.createServer(app);
@@ -24,10 +24,21 @@ io.use(wrap(sessionMiddleware));
 io.use(async (socket, next) => {
   try {
     logger.debug('[IO] IO authentication starting... with header: ' + JSON.stringify(socket.request.headers));
-    const session = socket.handshake.query.sessionId;
 
-    logger.debug(`[IO] IO authentication session: ${session}`);
+    // takes auth header from the socket
+    const authHeader = socket.handshake.headers.authorization;
+    logger.debug(`[IO] Auth header: ${authHeader}`);
+
+    if (!authHeader || !authHeader.startsWith('Session ')) {
+      logger.error('[IO] IO authentication error: missing or invalid auth header');
+      return next(new Error('Authentication error - Invalid auth header'));
+    }
+
+    // extract session id from the auth header and verify it returning a session object
+    const session_id = authHeader.substring(8);
+    const session = await verifySession(session_id);
     
+    // if no session is returned, the session id is invalid
     if (!session || !session.user_id) {
       logger.error('[IO] IO authentication error: no active session');
       const error = new Error('Authentication error - No active session');

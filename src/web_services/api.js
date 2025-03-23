@@ -16,7 +16,7 @@ const { send_messages_to_recipients } = require('./socketio');
 api.use(express.json());
 
 const envManager = require('../security/envManager');
-const sessionMiddleware = require('../security/sessionMiddleware');
+const { sessionMiddleware } = require('../security/sessionMiddleware');
 
 // api path 
 

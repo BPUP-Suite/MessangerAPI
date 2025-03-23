@@ -34,6 +34,19 @@ const sessionMiddleware = session({
   rolling: true  
 });
 
+async function verifySession(session_id) {
+  // verify session id and return session object
+  return new Promise((resolve, reject) => {
+    sessionMiddleware.store.get(session_id, (error, session) => {
+      if (error) reject(error);
+      else resolve(session);
+    });
+  });
+}
+
 logger.log('Session middleware started');
 
-module.exports = sessionMiddleware;
+module.exports = {
+  sessionMiddleware,
+  verifySession
+};
