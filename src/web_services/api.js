@@ -344,6 +344,9 @@ api.get(login_path, async (req, res) => {
 
 
 api.get(logout_path, isAuthenticated, (req, res) => {
+
+  logger.debug('[API] [REQUEST] Logout request received ');
+
   req.session.destroy(error => {
 
     let type = logout_response_type;
@@ -366,6 +369,8 @@ api.get(logout_path, isAuthenticated, (req, res) => {
 
 api.get(session_path, isAuthenticated, (req, res) => {
   
+  logger.debug('[API] [REQUEST] Session request received ');
+
   const type = session_response_type;
   let code = 500;
   let session_id = null;
@@ -455,7 +460,8 @@ api.get(init_path, isAuthenticated, async (req, res) => {
   }
 
   const initResponse = new InitResponse(type, confirmation, errorDescription, init_data);
-  logger.debug('[API] [RESPONSE] ' + JSON.stringify(initResponse.toJson()));
+  logger.debug('[API] [RESPONSE] ' + type + ' ' + confirmation + ' ' + errorDescription);
+  //logger.debug('[API] [RESPONSE] ' + JSON.stringify(initResponse.toJson()));  too big, i cry :(
   return res.status(code).json(initResponse.toJson());
 
 });
