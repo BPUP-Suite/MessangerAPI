@@ -172,6 +172,7 @@ async function get_members(chat_id) {
 
   let QUERY = "";
   let personal = false;
+  let members = [];
 
   switch(get_chat_type(chat_id)){
     case "personal":
@@ -188,15 +189,19 @@ async function get_members(chat_id) {
       break;
   }
 
-  let members = null;
+  let members_id = null;
 
   try{
     const result = await query(QUERY, [chat_id]);
 
     if(personal){
-      members = [result[0].user1, result[0].user2];
+      members_id = [result[0].user1, result[0].user2];
     }else{
-      members = result[0].members;
+      members_id = result[0].members;
+    }
+
+    for(let i = 0; i < members_id.length; i++){
+      members.push(await get_handle_from_id(members_id[i]));
     }
 
   }catch(error){

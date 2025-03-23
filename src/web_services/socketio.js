@@ -37,9 +37,9 @@ io.use(wrap(sessionMiddleware));
 
 io.use(async (socket, next) => {
   try {
-    logger.debug('[IO] IO authentication starting... with header: ' + JSON.stringify(socket.request.headers));
+    //logger.debug('[IO] IO authentication starting... with header: ' + JSON.stringify(socket.request.headers)); disabled for security reasons
 
-    // takes auth header from the socket
+    // takes session_id from the socket handshake
     const session_id = socket.handshake.auth.sessionId;
     logger.debug(`[IO] session_id: ${session_id}`);
 
