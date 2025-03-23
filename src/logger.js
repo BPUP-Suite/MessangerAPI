@@ -77,5 +77,5 @@ module.exports = {
     log,
     debug,
     error,
-    warn
+    warn,
 };

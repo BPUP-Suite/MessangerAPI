@@ -448,7 +448,19 @@ async function get_user_id_from_handle(handle) {
   return user_id;
 }
 
+async function get_handle_from_id(id) {
+  const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
+  let handle = null;
 
+  try{
+    const result = await query(QUERY, [id]);
+    handle = result[0].handle;
+  }catch(err){
+    logger.error("[POSTGRES] database.get_handle_from_id: " + err);
+  }
+  
+  return handle;
+}
 
 async function get_handle_from_id(id) {
   const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
@@ -511,6 +523,7 @@ module.exports = {
   search,
   search_users,
   get_user_id_from_handle,
+  get_handle_from_id,
   create_chat,
   create_group,
   get_members

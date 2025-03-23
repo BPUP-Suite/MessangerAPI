@@ -10,6 +10,8 @@ const { sessionMiddleware, verifySession } = require('../security/sessionMiddlew
 const app = express();
 const server = http.createServer(app);
 
+const activeSockets = new Map();
+
 // CORS config
 
 let WEB_DOMAIN = envManager.readDomain();
@@ -31,9 +33,6 @@ const io = new Server(server, {
     credentials: true 
   }
 });
-
-const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
-io.use(wrap(sessionMiddleware));
 
 io.use(async (socket, next) => {
   try {
@@ -67,6 +66,15 @@ io.use(async (socket, next) => {
     socket.user_id = user_id;
     socket.join(user_id);
 
+
+    // add the socket to the activeSockets map
+    // activeSockets is a Map that stores the socket.id and user_id of each connected socket
+    activeSockets.set(socket.id, {
+      socket_id: socket.id,
+      user_id: user_id,
+      connected_at: new Date()
+    });
+
     return next();
   } catch (error) {
     logger.error(`[IO] IO server authentication error: ${error.message}`);
@@ -81,6 +89,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     logger.debug(`[IO] User ${socket.user_id} disconnected`);
+    activeSockets.delete(socket.id);
   });
 });
 
@@ -95,4 +104,8 @@ function send_messages_to_recipients(recipient_list,message_data) {
   }
 }
 
-module.exports = { server, send_messages_to_recipients };
+function getActiveSockets() {
+  return Array.from(activeSockets.values());
+}
+
+module.exports = { server, send_messages_to_recipients,getActiveSockets };

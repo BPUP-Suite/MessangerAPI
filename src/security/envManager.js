@@ -4,7 +4,6 @@
 
 const path = require('path');
 const dotenv = require('dotenv');
-const logger = require('../logger');
 
 const envFilePath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envFilePath });
@@ -13,10 +12,10 @@ function readVariable(name,needed) {
     const VARIABLE = process.env[name];
 
     if(needed && !VARIABLE){
-        logger.error(`[ENV MANAGER] ${name} must be provided (${name} variable) (check .env file)`);
+        console.log(`[ENV MANAGER] ${name} must be provided (${name} variable) (check .env file)`);
         throw new Error(`${name} must be provided (${name} variable) (check .env file)`); 
     }else if(!VARIABLE){
-        logger.warn(`[ENV MANAGER] ${name} not provided, using default value`);
+        console.log(`[ENV MANAGER] ${name} not provided, using default value`);
     }
 
     return VARIABLE;
@@ -101,6 +100,10 @@ function readDomain(){
     return 'localhost';
 }
 
+function readDashboardPort(){
+    return readVariable("DASHBOARD_PORT",false) || '3000';
+}
+
 
 module.exports = {
     readPostgresqlDb,
@@ -122,4 +125,5 @@ module.exports = {
     readRateLimiterMilliseconds,
     readNodeEnv,
     readDomain,
+    readDashboardPort
 };

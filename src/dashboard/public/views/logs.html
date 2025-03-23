@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logs - MessangerAPI Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>MessangerAPI Dashboard</h1>
+      <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/io.html">Socket.io</a></li>
+            <li><a href="/logs.html" class="active">Logs</a></li>
+            <li><a href="/sessions.html">Sessions</a></li>
+          </ul>
+      </nav>
+    </header>
+    
+    <main>
+      <section class="logs-section">
+        <h2>Log Viewer</h2>
+        
+        <div class="logs-container">
+          <div class="log-files">
+            <h3>Log Files</h3>
+            <button id="refresh-logs" class="btn">Refresh</button>
+            <br>
+            <ul id="log-files-list">
+              <!-- Log files will be listed here -->
+              <li class="loading">Loading log files...</li>
+            </ul>
+          </div>
+          
+          <div class="log-content">
+            <h3 id="current-log-title">Select a log file</h3>
+            <div class="auto-scroll">
+              <label>
+                <input type="checkbox" id="auto-scroll" checked>
+                Auto-scroll
+              </label>
+            </div>
+            <div class="log-display" id="log-display">
+              <p class="empty-state">No log file selected</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <footer>
+      <p>MessangerAPI Dashboard &copy; 2025</p>
+    </footer>
+  </div>
+  
+  <script src="/js/logs.js"></script>
+</body>
+</html>

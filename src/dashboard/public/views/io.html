@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Sockets - MessangerAPI Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>MessangerAPI Dashboard</h1>
+      <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/io.html" class="active">Socket.io</a></li>
+            <li><a href="/logs.html">Logs</a></li>
+            <li><a href="/sessions.html">Sessions</a></li>
+          </ul>
+      </nav>
+    </header>
+    
+    <main>
+      <section>
+        <h2>Active Sockets</h2>
+        <button id="refresh-sockets" class="btn">Refresh</button>
+        
+        <div class="socket-groups" id="socket-groups">
+          <!-- Socket groups will be dynamically added here -->
+          <div class="loading">Loading sockets...</div>
+        </div>
+      </section>
+    </main>
+    
+    <footer>
+      <p>MessangerAPI Dashboard &copy; 2025</p>
+    </footer>
+  </div>
+  
+  <script src="/js/io.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redis Sessions - MessangerAPI Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>MessangerAPI Dashboard</h1>
+      <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/io.html">Socket.io</a></li>
+            <li><a href="/logs.html">Logs</a></li>
+            <li><a href="/sessions.html" class="active">Sessions</a></li>
+          </ul>
+      </nav>
+    </header>
+    
+    <main>
+      <section>
+        <h2>Redis Sessions</h2>
+        <button id="refresh-sessions" class="btn">Refresh</button>
+        
+        <div class="sessions-container" id="sessions-container">
+          <div class="loading">Loading sessions...</div>
+        </div>
+      </section>
+    </main>
+    
+    <footer>
+      <p>MessangerAPI Dashboard &copy; 2025</p>
+    </footer>
+  </div>
+  
+  <script src="/js/sessions.js"></script>
+</body>
+</html>
