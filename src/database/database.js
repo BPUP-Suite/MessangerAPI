@@ -168,6 +168,45 @@ async function search(handle){
   return list;
 }
 
+async function get_members(chat_id) {
+
+  let QUERY = "";
+  let personal = false;
+
+  switch(get_chat_type(chat_id)){
+    case "personal":
+      QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1";
+      personal = true;
+      break;
+    case "group":
+      QUERY = "SELECT members FROM public.groups WHERE group_id = $1";
+      break;
+    case "channel":
+      QUERY = "SELECT members FROM public.channels WHERE channel_id = $1";
+      break;
+    default:
+      break;
+  }
+
+  let members = null;
+
+  try{
+    const result = await query(QUERY, [chat_id]);
+
+    if(personal){
+      members = [result[0].user1, result[0].user2];
+    }else{
+      members = result[0].members;
+    }
+
+  }catch(error){
+    logger.error("[POSTGRES] database.get_members: " + error);
+  }
+
+  return members;
+
+}
+
 // IO Methods
 
 async function client_init(user_id) {
@@ -449,5 +488,6 @@ module.exports = {
   search,
   get_user_id_from_handle,
   create_chat,
-  create_group
+  create_group,
+  get_members
 };

@@ -164,6 +164,12 @@ class Response {
     }
   }
 
+  class MembersResponse extends Response{
+    constructor(type, members_list, error_message) {
+      super(type, members_list, error_message);
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
@@ -181,5 +187,6 @@ class Response {
     CreateChatResponse,
     Chat,
     CreateGroupResponse,
-    Group
+    Group,
+    MembersResponse
   };

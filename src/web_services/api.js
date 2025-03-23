@@ -9,7 +9,7 @@ const logger = require('../logger');
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse} = require('../database/object');
 
 const { send_messages_to_recipients } = require('./socketio');
 
@@ -39,11 +39,11 @@ const check_base = data_base + 'check/';
 
 const handle_availability_path = check_base + 'handle-availability';
 
-const get_base = data_base + 'get/'
+const get_data_base = data_base + 'get/'
 
-const user_id_path = get_base + 'user-id'
-const init_path = get_base + 'init'
-const update_path = get_base + 'update'
+const user_id_path = get_data_base + 'user-id'
+const init_path = get_data_base + 'init'
+const update_path = get_data_base + 'update'
 
 const search_path = data_base + 'search';
 
@@ -61,6 +61,10 @@ const create_base = chat_base + 'create/';
 const chat_path = create_base + 'chat';
 const group_path = create_base + 'group';
 const channel_path = create_base + 'channel';
+
+const get_chat_base = chat_base + 'get/';
+
+const members_path = get_chat_base + 'members';
 
 
 
@@ -87,6 +91,8 @@ const group_response_type = 'group_created';
 const channel_response_type = '';
 
 const search_response_type = 'searched_list';
+
+const get_members_response_type = 'members_list';
 
 // api configurations
 
@@ -693,6 +699,43 @@ api.get(group_path, isAuthenticated, async (req, res) => {
   const createGroupResponse = new CreateGroupResponse(type, confirmation, errorDescription, chat_id);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(createGroupResponse.toJson()));
   return res.status(code).json(createGroupResponse.toJson());
+
+});
+
+// Path: .../get
+
+api.get(members_path, isAuthenticated, async (req, res) => {
+
+  const chat_id = req.query.chat_id;
+
+  logger.debug('[API] [REQUEST] Get members request received from: ' + req.session.user_id);
+  logger.debug('-> ' + JSON.stringify(req.query))
+
+  const type = get_members_response_type;
+  let code = 500;
+  let members_list = null;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      members_list = await database.get_members(chat_id);
+      code = 200;
+      errorDescription = '';
+    } catch (error) {
+      logger.error('Error in database.get_members: ' + error);
+    }
+  }
+
+  const membersResponse = new MembersResponse(type, members_list, errorDescription);
+  logger.debug('[API] [RESPONSE] ' + JSON.stringify(membersResponse.toJson()));
+  return res.status(code).json(membersResponse.toJson());
 
 });
 
