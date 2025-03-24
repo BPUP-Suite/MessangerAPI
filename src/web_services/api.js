@@ -629,10 +629,10 @@ api.get(message_path, isAuthenticated, async (req, res) => {
 
 api.get(chat_path, isAuthenticated, async (req, res) => {
 
+  const user_id = req.session.user_id;
+
   logger.debug('[API] [REQUEST] Create chat request received from: ' + user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
-
-  const user_id = req.session.user_id;
 
   const other_handle = req.query.handle;
 
