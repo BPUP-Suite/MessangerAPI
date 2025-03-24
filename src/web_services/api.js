@@ -153,7 +153,7 @@ function isAuthenticated(req, res, next) {
     next();
   } else {
     const code = 401;
-    const errorDescription = 'Non authorized';
+    const errorDescription = 'Non Authorized';
 
     logger.debug(`[API] [AUTH] User not authenticated`);
 

@@ -55,11 +55,11 @@ function readServerIP() {
 }
 
 function readAPIPort() {
-    return readVariable("API_PORT",false) || '80';
+    return readVariable("API_PORT",false) || '8000';
 }
 
 function readIOPort() {
-    return readVariable("IO_PORT",false) || '81';
+    return readVariable("IO_PORT",false) || '8001';
 }
 
 function readSecurityPath() {
@@ -91,7 +91,7 @@ function readRateLimiterMilliseconds() {
 } 
 
 function readNodeEnv(){
-    return readVariable("NODE_ENV",true); 
+    return readVariable("NODE_ENV",false) || 'production'; 
 }
 
 function readDomain(){
