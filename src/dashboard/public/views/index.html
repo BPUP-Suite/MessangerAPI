@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MessangerAPI Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>MessangerAPI Dashboard</h1>
+      <nav>
+        <ul>
+            <li><a href="/" class="active">Home</a></li>
+            <li><a href="/io.html">Socket.io</a></li>
+            <li><a href="/logs.html">Logs</a></li>
+            <li><a href="/sessions.html">Sessions</a></li>
+          </ul>
+      </nav>
+    </header>
+    
+    <main>
+      <section class="overview">
+        <h2>System Overview</h2>
+        
+        <div class="cards">
+          <div class="card" id="sockets-card">
+            <h3>Active Sockets</h3>
+            <div class="counter" id="sockets-count">0</div>
+            <a href="/io.html" class="card-link">View Details</a>
+          </div>
+          
+          <div class="card" id="logs-card">
+            <h3>Log Files</h3>
+            <div class="counter" id="logs-count">0</div>
+            <a href="/logs.html" class="card-link">View Logs</a>
+          </div>
+          
+          <div class="card" id="redis-card">
+            <h3>Active Redis Sessions</h3>
+            <div class="counter" id="sessions-counter">0</div>
+            <a href="/sessions.html" class="card-link">View Sessions</a>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <footer>
+      <p>MessangerAPI Dashboard &copy; 2025</p>
+    </footer>
+  </div>
+  
+  <script src="/js/index.js"></script>
+</body>
+</html>

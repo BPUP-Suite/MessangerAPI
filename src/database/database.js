@@ -167,6 +167,68 @@ async function search(handle){
 
   return list;
 }
+async function search_users(handle){
+  const QUERY = "SELECT handle FROM handles WHERE handle ILIKE '%' || $1 || '%' AND user_id IS NOT NULL ORDER BY similarity(handle, $1) DESC LIMIT 10;";
+
+  let list = [];
+
+  try{
+    const result = await query(QUERY, [handle]);
+    // transfrom result in a handle list 
+    // TBD: get images of users (or another method that passes images on request by socket managed by client)
+
+    list = result.map(row => row.handle); 
+
+  }catch(err){
+    logger.error("[POSTGRES] database.search_users: " + err);
+  }
+
+  return list;
+}
+
+async function get_members(chat_id) {
+
+  let QUERY = "";
+  let personal = false;
+  let members = [];
+
+  switch(get_chat_type(chat_id)){
+    case "personal":
+      QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1";
+      personal = true;
+      break;
+    case "group":
+      QUERY = "SELECT members FROM public.groups WHERE group_id = $1";
+      break;
+    case "channel":
+      QUERY = "SELECT members FROM public.channels WHERE channel_id = $1";
+      break;
+    default:
+      break;
+  }
+
+  let members_id = null;
+
+  try{
+    const result = await query(QUERY, [chat_id]);
+
+    if(personal){
+      members_id = [result[0].user1, result[0].user2];
+    }else{
+      members_id = result[0].members;
+    }
+
+    for(let i = 0; i < members_id.length; i++){
+      members.push(await get_handle_from_id(members_id[i]));
+    }
+
+  }catch(error){
+    logger.error("[POSTGRES] database.get_members: " + error);
+  }
+
+  return members;
+
+}
 
 // IO Methods
 
@@ -386,7 +448,19 @@ async function get_user_id_from_handle(handle) {
   return user_id;
 }
 
+async function get_handle_from_id(id) {
+  const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
+  let handle = null;
 
+  try{
+    const result = await query(QUERY, [id]);
+    handle = result[0].handle;
+  }catch(err){
+    logger.error("[POSTGRES] database.get_handle_from_id: " + err);
+  }
+  
+  return handle;
+}
 
 async function get_handle_from_id(id) {
   const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
@@ -447,7 +521,10 @@ module.exports = {
   client_init,
   send_message,
   search,
+  search_users,
   get_user_id_from_handle,
+  get_handle_from_id,
   create_chat,
-  create_group
+  create_group,
+  get_members
 };

@@ -4,6 +4,7 @@ logger.log('=+----------------------------------------------------------------Se
 
 const database = require('./database/database'); // Database
 const envManager = require('./security/envManager'); // Environment Variables Manager
+const dashboard = require('./dashboard/dashboard'); // Dashboard
 
 const api = require('./web_services/api'); // API Server
 const { server: io } = require('./web_services/socketio'); // Socket.IO Server
@@ -37,7 +38,17 @@ async function startServer() {
         io.listen(IO_PORT, () => {
             logger.log(`[INDEX] Socket IO Server listening on http://${HOST}:${IO_PORT}`);
 
-            logger.log('=+----------------------------------------------------------------Server started!----------------------------------------------------------------+=');
+            logger.log('[INDEX] Dashboard starting...');
+
+            logger.debug('[INDEX] Getting DASHBOARD_PORT...');
+
+            const DASHBOARD_PORT = envManager.readDashboardPort();
+            logger.debug(`[INDEX] DASHBOARD_PORT: ${DASHBOARD_PORT}`);
+
+            dashboard.startServer(DASHBOARD_PORT,() => {
+              logger.log(`[INDEX] Dashboard listening on http://${HOST}:${DASHBOARD_PORT}`);
+              logger.log('=+----------------------------------------------------------------Server started!----------------------------------------------------------------+=');
+            });
           });         
       });
     }else{

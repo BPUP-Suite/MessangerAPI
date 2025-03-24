@@ -21,8 +21,9 @@ services:
       context: .
       dockerfile: ./docker/Dockerfile
     ports:
-      - 8000:8000
-      - 8001:8001
+      - 3000:3000     # admin dashboard
+      - 8000:8000       # api
+      - 8001:8001       # socket.io
     env_file:
       - .env
     volumes:
