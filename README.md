@@ -48,7 +48,18 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
     - [Dashboard](#Dashboard)
       - [Screenshots](#Screenshots)
     - [Dictionary](#Dictionary)
+      - [Tags](#Tags)
+        - [Input](#Input)
+        - [Output](#Output)
+        - [Authentication](#Authentication)
       - [Variables](#Variables)
+        - [access_type](#access_type)
+        - [session_id](#session_id)
+        - [email](#email)
+        - [password](#password)
+        - [name](#name)
+        - [surname](#surname)
+        - [handle](#handle)
       - [Errors](#Errors)
         - [Codes](#Codes)
             - [200](#200)
@@ -113,7 +124,7 @@ services:
       context: .
       dockerfile: ./docker/Dockerfile
     ports:
-      - 3000:3000     # admin dashboard
+      - 3000:3000       # admin dashboard
       - 8000:8000       # api
       - 8001:8001       # socket.io
     env_file:
@@ -327,8 +338,25 @@ ALTER TABLE public.users OWNER TO bpup;
 
 ## API
 
-La seguente documentazione è ordinata il modo tale da costruire il path a ogni richiesta tramite i vari titoli.
-Se il metodo presenta [Authentication](#authentication) sarà necessario fare prima il login per accedere al metodo, in caso contario verrà tornato un errore [401](#401) e il messaggio [Non Authorized](Non%20Authorized).
+La seguente documentazione è ordinata il modo tale da costruire il path a ogni richiesta tramite i vari titoli inoltre verranno forniti i percorsi per accedere al metodo, i parametri da passare e le possibili risposte.
+
+Tutte le risposte sono SEMPRE in formato JSON.
+
+Negli esempi forniti le risposte NON comprendono i casi dove sono presenti errori, vengono presi in considerazione solo casistiche con richiesta ricevuta, elaborata con successo e risposta inviata.
+
+Tutti i metodi sono dentro il path v1/ per permettere in futuro un cambiamento drastico ai metodi dell'api senza intaccare la funzionalità delle vecchie applicazioni.
+
+Tutti i metodi sono disponibili sia per richieste GET (acquisizione dei parametri dalla query) sia per richieste POST (acquisizione dei parametri dal body in x-www-form-urlencoded). 
+
+Se il metodo presenta il tag [Input](#Input) avrà dei parametri in input da passare (o da query o da body) sarà necessario verificare la loro validità altrimenti verrà tornato un errore [400](#400) con relativo messaggio che spiega esattamente quale parametro ha problema di sintassi (nella documentazione dell'errore sarà specificato i parametri con cui verrà valutata la validità di un parametro).
+
+Se il metodo presenta il tag [Output](#Output) avrà dei parametri in output utili a delle elaborazioni lato client. (Le conferme di azioni (es. 'logged_in:true') non vengono contati come [Output](#Output) in quanto NON necessari al funzionamento del client, per verificare se una richiesta ha avuto successo basta controllare il codice della risposta (es. [200](#200))).
+
+Se il metodo presenta il tag [Authentication](#authentication) sarà necessario fare prima il login per accedere al metodo, in caso contario verrà tornato un errore [401](#401) e il messaggio [Non Authorized](#Non%20Authorized).
+
+Se il metodo ritorna errore [500](#500) con messaggio [Generic Error](#Generic%20Error) è molto probabile che si sia verificato un errore lato server. È quindi necessario contattare l'admin del server o aprire un issue in questa repository per trovare e risolvere il problema.
+
+Se il metodo ritorna risposta [200](#200) il tutto è andato a buon fine e sono stati ritornati dei parametri che indi  cano lo stato della richiesta (es. 'logged_in:true') e, dove viene richiesto, i parametri di risposta.
 
 ### user/
 
@@ -336,19 +364,162 @@ Se il metodo presenta [Authentication](#authentication) sarà necessario fare pr
 
 ##### access
 
+Tells the client if a specific e-mail is already registered.
+
+Path : ```{URL}/v1/user/auth/access```
+
+- [Input](#Input):
+
+  - [email](#email)
+
+- [Output](#Output):
+
+  - [access_type](#access_type)
+
+Example:
+```
+Request: {URL}/v1/user/auth/access?email=test@gmail.com
+
+Response: 
+
+{
+  access_type: signup
+}
+
+OR
+
+{
+  access_type: login
+}
+
+```
+
 ##### signup
+
+Adds a user to database
+
+Path : ```{URL}/v1/user/auth/signup```
+
+- [Input](#Input):
+
+  - [name](#name)
+  - [surname](#surname)
+  - [handle](#handle)
+  - [email](#email)
+  - [password](#password)
+
+
+Example:
+```
+Request: {URL}/v1/user/auth/signup?name=test&surname=test&handle=test&email=test@gmail.com&password=Test1234!
+
+Response: 
+
+{
+  signed_up: true
+}
+
+```
 
 ##### login
 
+Let users access their account
+
+Path : ```{URL}/v1/user/auth/login```
+
+- [Input](#Input):
+
+  - [email](#email)
+  - [password](#password)
+
+Example:
+```
+Request: {URL}/v1/user/auth/login?email=test@gmail.com&password=Test1234!
+
+Response: 
+
+{
+  logged_in: true
+}
+
+```
+
 ##### logout
 
+Delete active session
+
+Path : ```{URL}/v1/user/auth/logout```
+
+- [Authentication](#Authentication)
+
+Example:
+```
+Request: {URL}/v1/user/auth/logout
+
+Response: 
+
+{
+  logged_out: true
+}
+
+```
+
 ##### session
+
+Returns session id value
+
+Path : ```{URL}/v1/user/auth/session```
+
+- [Output](#Output):
+
+  - [session_id](#session_id)
+
+- [Authentication](#Authentication)
+
+Example:
+```
+Request: {URL}/v1/user/auth/session
+
+Response: 
+
+{
+  session_id: "aNF6MCG8OWpiwXGCDKfh4gTYO7Zb7cSV"
+}
+
+```
 
 ### data/
 
 #### check/
 
 ##### handle-availability
+
+Returns the state of availability for handles
+
+Path : ```{URL}/v1/user/data/check/handle-availability```
+
+- [Input](#Input):
+
+  - [handle](#handle)
+
+
+Example:
+```
+Request: {URL}/v1/user/data/check/handle-availability?handle=test
+
+Response: 
+
+{
+  handle_available:	true
+}
+
+OR
+
+{
+  handle_available:	false
+}
+
+```
 
 #### get/
 
@@ -418,7 +589,40 @@ da fare perchè sincero no voglia (al massimo conviene fare tipo un dictionary a
 
 ## Dictionary
 
-### Variables
+### Tags
+
+#### Input
+
+Indica che il metodo chiede dei parametri in input nella richiesta. È possibile trovare una spiegazione esaustiva di ogni parametro in [Variables](#Variables).
+
+#### Output
+
+Indica che il metodo ritornerà dei parametri in output nella risposta. È possibile trovare una spiegazione esaustiva di ogni parametro in [Variables](#Variables).
+
+#### Authentication
+
+#### Variables
+
+##### access_type
+Indicates whether an email is registered, returning either "signup" or "login"
+
+##### session_id
+Unique identifier for a user's authenticated session
+
+##### email
+User's email address used for account identification
+
+##### password
+User's account password for authentication
+
+##### name
+User's first name or given name
+
+##### surname
+User's last name or family name
+
+##### handle
+Unique username for the user, checked for availability before registration
 
 ### Errors
 
