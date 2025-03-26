@@ -14,6 +14,7 @@ const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, Lo
 const { send_messages_to_recipients } = require('./socketio');
 
 api.use(express.json());
+api.use(express.urlencoded({ extended: true }));
 
 const envManager = require('../security/envManager');
 const { sessionMiddleware } = require('../security/sessionMiddleware');
