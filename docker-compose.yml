@@ -1,5 +1,5 @@
 services:
-  db:
+  postgres:
     image: postgres
     container_name: local_pgdb
     restart: always
@@ -31,7 +31,7 @@ services:
       - ./data/api/security:${SECURITY_FOLDER_PATH}
     restart: unless-stopped
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy

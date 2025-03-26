@@ -94,7 +94,6 @@ const group_response_type = 'group_created';
 const channel_response_type = '';
 
 const search_response_type = 'searched_list';
-
 const get_members_response_type = 'members_list';
 
 // api configurations
@@ -153,6 +152,7 @@ api.use(limiter);
 // all good, returns 200
 // This is valid for every methods in this class
 
+// GET METHODS
 
 // Auth based on session
 
@@ -779,8 +779,39 @@ api.get(members_path, isAuthenticated, async (req, res) => {
 
 });
 
-// POST methods
+// POST METHODS
 
+function postToGetWrapper(path) {
+  api.post(path, (req, res) => {
+    const queryParams = new URLSearchParams(req.body).toString();
+    
+    res.redirect(`${path}?${queryParams}`);
+  });
+}
 
+// redirect every post request to a get request
+
+postToGetWrapper(access_path);
+postToGetWrapper(signup_path);
+postToGetWrapper(login_path);
+postToGetWrapper(logout_path);
+postToGetWrapper(session_path);
+
+postToGetWrapper(handle_availability_path);
+
+postToGetWrapper(user_id_path);
+postToGetWrapper(init_path);
+//postToGetWrapper(update_path);
+
+postToGetWrapper(message_path);
+//postToGetWrapper(voice_message_path);
+//postToGetWrapper(file_path);
+
+postToGetWrapper(chat_path);
+postToGetWrapper(group_path);
+//postToGetWrapper(channel_path);
+
+postToGetWrapper(search_all_path);
+postToGetWrapper(search_users_path);
 
 module.exports = api;
