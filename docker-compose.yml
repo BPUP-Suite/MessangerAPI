@@ -23,7 +23,7 @@ services:
     ports:
       - 3000:${DASHBOARD_PORT}    # admin dashboard
       - 8000:${API_PORT}          # api
-      - 8001:8001${IO_PORT}       # socket.io
+      - 8001:${IO_PORT}       # socket.io
     env_file:
       - .env
     volumes:

@@ -24,7 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const response = await fetch('/api/logs');
         const logFiles = await response.json();
         
-        if (logFiles.length === 0) {
+        console.log('Retrieved log files:', logFiles); // Debug to see what's returned
+        
+        if (!logFiles || logFiles.length === 0) {
           logFilesList.innerHTML = '<li class="empty-state">No log files found</li>';
           return;
         }

@@ -258,9 +258,17 @@
     padding: 15px;
     height: 600px;
     overflow-y: auto;
+    overflow-x: auto; 
     font-family: 'Courier New', Courier, monospace;
     line-height: 1.5;
     white-space: pre-wrap;
+    word-break: break-word; 
+  }
+  
+  .log-line {
+    width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   
   /* Log Colors */
