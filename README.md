@@ -350,13 +350,15 @@ Tutti i metodi sono disponibili sia per richieste GET (acquisizione dei parametr
 
 Se il metodo presenta il tag [Input](#Input) avrà dei parametri in input da passare (o da query o da body) sarà necessario verificare la loro validità altrimenti verrà tornato un errore [400](#400) con relativo messaggio che spiega esattamente quale parametro ha problema di sintassi (nella documentazione dell'errore sarà specificato i parametri con cui verrà valutata la validità di un parametro).
 
-Se il metodo presenta il tag [Output](#Output) avrà dei parametri in output utili a delle elaborazioni lato client. (Le conferme di azioni (es. 'logged_in:true') non vengono contati come [Output](#Output) in quanto NON necessari al funzionamento del client, per verificare se una richiesta ha avuto successo basta controllare il codice della risposta (es. [200](#200))).
+Se il metodo presenta il tag [Output](#Output) avrà dei parametri in output utili a delle elaborazioni lato client. (Le conferme di azioni (es. ```{logged_in:true}```) non vengono contati come [Output](#Output) in quanto NON necessari al funzionamento del client, per verificare se una richiesta ha avuto successo basta controllare il codice della risposta (es. [200](#200))).
 
 Se il metodo presenta il tag [Authentication](#authentication) sarà necessario fare prima il login per accedere al metodo, in caso contario verrà tornato un errore [401](#401) e il messaggio [Non Authorized](#Non%20Authorized).
 
 Se il metodo ritorna errore [500](#500) con messaggio [Generic Error](#Generic%20Error) è molto probabile che si sia verificato un errore lato server. È quindi necessario contattare l'admin del server o aprire un issue in questa repository per trovare e risolvere il problema.
 
-Se il metodo ritorna risposta [200](#200) il tutto è andato a buon fine e sono stati ritornati dei parametri che indi  cano lo stato della richiesta (es. 'logged_in:true') e, dove viene richiesto, i parametri di risposta.
+Se il metodo ritorna un qualsiasi tipo di [Errors](#Errors) code allora sarà associato ad un ```{error_message: «Message»}```. È consigliato leggere questo errore per capire la tipologia specifica del problema. (es. ```{error_message: "Handle not valid"}```)
+
+Se il metodo ritorna risposta [200](#200) il tutto è andato a buon fine e sono stati ritornati dei parametri che indi  cano lo stato della richiesta (es. ```{logged_in:true}```) e, dove viene richiesto, i parametri di risposta.
 
 ### user/
 
@@ -622,7 +624,7 @@ User's first name or given name
 User's last name or family name
 
 ##### handle
-Unique username for the user, checked for availability before registration
+Unique username for the user, checked for availability before registration with [handle-availability](#handle-availability) method. If its already used it will return an error.
 
 ### Errors
 
