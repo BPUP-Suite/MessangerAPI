@@ -815,4 +815,17 @@ postToGetWrapper(group_path);
 postToGetWrapper(search_all_path);
 postToGetWrapper(search_users_path);
 
+
+// Middleware per gestire richieste a endpoints non esistenti
+api.all('*', (req, res) => {
+  logger.debug(`[API] [ERROR] Endpoint not found: ${req.method} ${req.originalUrl}`);
+  
+  const code = 404;
+  const errorDescription = 'Not found';
+  
+  return res.status(code).json({
+    error_message: errorDescription
+  });
+});
+
 module.exports = api;
