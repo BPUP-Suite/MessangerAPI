@@ -9,7 +9,7 @@ const logger = require('../logger');
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse} = require('../database/object');
 
 const { send_messages_to_recipients,send_groups_to_recipients } = require('./socketio');
 
@@ -84,7 +84,7 @@ const handle_availability_response_type = 'handle_available';
 
 const user_id_response_type = 'user_id';
 const init_response_type = 'init';
-const update_response_type = '';
+const update_response_type = 'update';
 
 const message_response_type = 'message_sent';
 const voice_message_response_type = '';
@@ -486,6 +486,52 @@ api.get(init_path, isAuthenticated, async (req, res) => {
 
 });
 
+api.get(update_path, isAuthenticated, async (req, res) => {
+
+  const user_id = req.session.user_id;
+
+  logger.debug('[API] [REQUEST] Get update request received from: ' + user_id);
+  logger.debug('-> ' + JSON.stringify(req.query))
+
+  const latest_update_datetime = req.query.latest_update_datetime;
+
+  const type = update_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let update_data = null;
+
+  let validated = true;
+
+  if (!(validator.datetime(latest_update_datetime))) {
+    code = 400;
+    errorDescription = 'Latest update datetime not valid';
+    validated = false;
+  }
+
+  if(validated){
+    try {
+
+      update_data = await database.client_update(latest_update_datetime,user_id);
+  
+      if (update_data != null) {
+        confirmation = true;
+        code = 200;
+        errorDescription = '';
+      }
+  
+    } catch (error) {
+      logger.error('database.client_update: ' + error);
+    }
+  }
+
+  const updateResponse = new UpdateResponse(type, confirmation, errorDescription, update_data);
+  //logger.debug('[API] [RESPONSE] ' + type + ' ' + confirmation + ' ' + errorDescription);
+  logger.debug('[API] [RESPONSE] ' + JSON.stringify(updateResponse.toJson()));
+  return res.status(code).json(updateResponse.toJson());
+
+});
+
 // Path: .../search
 
 api.get(search_users_path, isAuthenticated,async (req, res) => {
@@ -812,7 +858,7 @@ postToGetWrapper(handle_availability_path);
 
 postToGetWrapper(user_id_path);
 postToGetWrapper(init_path);
-//postToGetWrapper(update_path);
+postToGetWrapper(update_path);
 
 postToGetWrapper(message_path);
 //postToGetWrapper(voice_message_path);

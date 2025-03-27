@@ -170,6 +170,12 @@ class Response {
     }
   }
 
+  class UpdateResponse extends ExtraJsonData_Response{
+    constructor(type, confirmation, error_message,update_data) {
+      super(type, confirmation, error_message, update_data);
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
@@ -188,5 +194,6 @@ class Response {
     Chat,
     CreateGroupResponse,
     Group,
-    MembersResponse
+    MembersResponse,
+    UpdateResponse
   };

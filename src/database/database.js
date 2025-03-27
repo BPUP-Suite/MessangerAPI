@@ -326,6 +326,62 @@ async function client_init(user_id) {
   return json;
 }
 
+async function client_update(datetime, user_id) {
+
+  let json = {};
+
+  // Find chats with new messages since the provided datetime
+  const QUERY_CHATS_WITH_NEW_MESSAGES = `SELECT c.chat_id, c.user1, c.user2 FROM public.chats c WHERE (c.user1 = $1 OR c.user2 = $1) AND EXISTS (SELECT 1 FROM public.messages m WHERE m.chat_id = c.chat_id AND m.date > $2)`;
+
+  let chatsWithNewMessages = null;
+
+  try {
+    const result = await query(QUERY_CHATS_WITH_NEW_MESSAGES, [user_id, datetime]);
+    chatsWithNewMessages = result;
+  } catch(error) {
+    logger.error("[POSTGRES] database.client_update finding chats: " + error);
+    return null;
+  }
+
+  // If no chats with new messages, return just null
+  if(!chatsWithNewMessages || chatsWithNewMessages.length === 0) {
+    logger.debug("[POSTGRES] No updated chats found for user since: " + datetime);
+    return json;
+  }
+
+  // Format chats with new messages
+  const chatPromises = chatsWithNewMessages.map(async chat => {
+    return {
+      chat_id: chat.chat_id,
+      users: [
+        {
+          "handle": await get_handle_from_id(chat.user1)
+        },
+        {
+          "handle": await get_handle_from_id(chat.user2)
+        }
+      ]
+    };
+  });
+
+  json["chats"] = await Promise.all(chatPromises);
+  
+  // Get new messages for each chat
+  for(let i = 0; i < chatsWithNewMessages.length; i++) {
+    const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
+    try {
+      const result = await query(QUERY_MESSAGES, [chatsWithNewMessages[i].chat_id, datetime]);
+      if(result && result.length > 0) {
+        json["chats"][i]["messages"] = result;
+      }
+    } catch(err) {
+      logger.error("[POSTGRES] database.client_update getting messages: " + err);
+    }
+  }
+
+  return json;
+}
+
 async function send_message(message){
 
   const chat_id= message.chat_id;
@@ -519,6 +575,7 @@ module.exports = {
   login,
   check_handle_availability,
   client_init,
+  client_update,
   send_message,
   search,
   search_users,

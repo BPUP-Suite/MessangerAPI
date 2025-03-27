@@ -82,5 +82,15 @@ function email(emailStr) {
   function generic(text){
     return notNull(text);
   }
-  module.exports = { email, password,name,surname,handle,api_key,message,chat_id,generic};
+
+  function datetime(datetime){
+    if(notNull(datetime)){
+      const date = new Date(datetime);
+      // If date is invalid, getTime() returns NaN
+      return !isNaN(date.getTime());
+    }else{
+      return false;
+    }
+  } 
   
+module.exports = { email, password,name,surname,handle,api_key,message,chat_id,generic,datetime};
