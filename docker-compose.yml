@@ -1,5 +1,5 @@
 services:
-  db:
+  postgres:
     image: postgres
     container_name: local_pgdb
     restart: always
@@ -23,7 +23,7 @@ services:
     ports:
       - 3000:${DASHBOARD_PORT}    # admin dashboard
       - 8000:${API_PORT}          # api
-      - 8001:8001${IO_PORT}       # socket.io
+      - 8001:${IO_PORT}       # socket.io
     env_file:
       - .env
     volumes:
@@ -31,7 +31,7 @@ services:
       - ./data/api/security:${SECURITY_FOLDER_PATH}
     restart: unless-stopped
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy

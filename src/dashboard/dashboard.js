@@ -47,15 +47,26 @@ app.get('/api/sockets', async (req, res) => {
   }
 });
 
-// API endpoint to get log files list
-app.get('/api/logs', async (req, res) => {
+// API endpoint to get all log files
+app.get('/api/logs', (req, res) => {
   try {
-    const logsDir = path.join(LOGS_PATH); 
-    const files = await promisify(fs.readdir)(logsDir);
-    const logFiles = files.filter(file => file.endsWith('.log'));
-    res.json(logFiles);
+    const logsDir = LOGS_PATH;
+    
+    // Read all files in logs directory
+    fs.readdir(logsDir, (err, files) => {
+      if (err) {
+        logger.error('Error reading logs directory:', err);
+        return res.status(500).json({ error: 'Failed to read logs directory' });
+      }
+      
+      // Filter to only include .log files
+      const logFiles = files.filter(file => file.endsWith('.log'));
+      
+      console.log('Sending log files:', logFiles); // Debug output
+      res.json(logFiles);
+    });
   } catch (error) {
-    logger.error('[DASHBOARD] Error fetching log files:', error);
+    logger.error('Error fetching log files:', error);
     res.status(500).json({ error: 'Failed to fetch log files' });
   }
 });
