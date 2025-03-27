@@ -27,7 +27,6 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
         - [check/](#check/)
             - [handle-availability](#handle-availability)
         - [get/](#get)
-            - [user-id](#user-id)
             - [init](#init)
             - [update](#update)
         - [search/](#search/)
@@ -60,13 +59,28 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
         - [name](#name)
         - [surname](#surname)
         - [handle](#handle)
+        - [user_id](#user_id)
+        - [chat_id](#chat_id)
+        - [message_id](#message_id)
+        - [text](#text)
+        - [sender](#sender)
+        - [date](#date)
       - [Errors](#Errors)
         - [Codes](#Codes)
-            - [200](#200)
-            ...
+          - [200](#200)
+          - [201](#201)
+          - [304](#304)
+          - [400](#400)
+          - [401](#401)
+          - [403](#403)
+          - [404](#404)
+          - [429](#429)
+          - [500](#500)
         - [Messages](#Messages)
-            - [Generic error](#Generic%20error)
-            ...
+          - [Validation Errors](#Validation-Errors)
+          - [Authentication Errors](#Authentication-Errors)
+          - [System Errors](#System-Errors)
+
     
 
      
@@ -78,7 +92,7 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
 - [ ] Da aggiornare la vecchia descrizione subito qui sopra
 - [ ] Fornire la guida/documentazione a nginx
 - [ ] Database rework
-- [ ] Tutti i metodi devono avere - al posto di _, mentre tutte le risposte avranno _ nelle variabili
+- [x] Tutti i metodi devono avere - al posto di _, mentre tutte le risposte avranno _ nelle variabili
 
 # Documentation
 
@@ -485,7 +499,7 @@ Request: {URL}/v1/user/auth/session
 Response: 
 
 {
-  session_id: "aNF6MCG8OWpiwXGCDKfh4gTYO7Zb7cSV"
+  session_id: "aNF9pCG8OWpiwXgCDKfh4gTyO7ZB7CsV"
 }
 
 ```
@@ -525,17 +539,115 @@ OR
 
 #### get/
 
-##### user-id
-
 ##### init
 
+Returns ALL informations about the requesting user
+
+Path : ```{URL}/v1/user/data/get/init```
+
+- [Authentication](#Authentication)
+
+- [Output](#Output):
+  - localUser:
+      - [email](#email)
+      - [user_id](#user_id)
+      - [name](#name)
+      - [surname](#surname)
+      - [handle](#handle)
+  - chats:
+    - [chat_id](#chat_id)
+    - messages:
+      - [message_id](#message_id)
+      - [text](#text)
+      - [sender](#sender)
+      - [date](#date)
+
+  Where localUser contains user parameters, chats contains a list of chat and messages contains a list of message.
+
+Example:
+```
+Request: {URL}/v1/user/data/get/init
+
+Response: 
+
+{
+    "init": true,
+    "localUser": {
+        "handle": "test",
+        "email": "test@gmail.com",
+        "name": "test",
+        "surname": "test",
+        "user_id": "1000000000000000000"
+    },
+    "chats": [
+        {
+            "chat_id": "2000000000000000000",
+            "users": [
+                {
+                    "handle": "test"
+                },
+                {
+                    "handle": "test1"
+                }
+            ],
+            "messages": [
+                {
+                    "message_id": "5000000000000000000",
+                    "text": "Ciaooo come stai",
+                    "sender": "1000000000000000000",
+                    "date": "2025-03-10T17:07:41.058Z"
+                },
+                {
+                    "message_id": "5000000000000000001",
+                    "text": "Ciaooo come stai",
+                    "sender": "1000000000000000001",
+                    "date": "2025-03-10T17:08:20.364Z"
+                }
+            ]
+        },
+        {
+            "chat_id": "2000000000000000001",
+            "users": [
+                {
+                    "handle": "test"
+                },
+                {
+                    "handle": "test2"
+                }
+            ],
+            "messages": [
+                {
+                    "message_id": "5000000000000000000",
+                    "text": "Ehy son io",
+                    "sender": "1000000000000000000",
+                    "date": "2025-04-10T19:09:19.123Z"
+                },
+                {
+                    "message_id": "5000000000000000001",
+                    "text": "Ehy ciao io",
+                    "sender": "1000000000000000002",
+                    "date": "2025-04-10T19:09:21.453Z"
+                }
+            ]
+        }
+    ]
+}
+
+```
+
 ##### update
+
+metodo appena creato, scriverò la documentazione dopo aver effettuato il test del ssuo effettivo funzionamento
 
 #### search/
 
 ##### all
 
+...
+
 ##### users
+
+...
 
 ### chat/
 
@@ -543,17 +655,29 @@ OR
 
 ##### message
 
+...
+
 ##### voice-message
 
+None
+
 ##### file
+
+None
 
 #### create/
 
 ##### chat
 
+...
+
 ##### group
 
+...
+
 ##### channel
+
+None
 
 ## Socket.io
 
@@ -626,6 +750,30 @@ User's last name or family name
 ##### handle
 Unique username for the user, checked for availability before registration with [handle-availability](#handle-availability) method. If its already used it will return an error.
 
+##### user_id
+
+Unique numeric identifier for users in the system, automatically generated upon registration. Always starts with digit 1 followed by 18 zeros (e.g., 1000000000000000000).
+
+##### chat_id
+
+Unique identifier for a conversation between two users. Automatically generated when a chat is created. Always starts with digit 2 followed by 18 zeros (e.g., 2000000000000000000).
+
+##### message_id
+
+Unique (only insides a chat) identifier for each message sent within a chat. Automatically generated for each new message. Always starts with digit 5 followed by 18 zeros (e.g., 5000000000000000000).
+
+##### text
+
+The actual content of a message sent by a user, limited to 2056 characters maximum.
+
+##### sender
+
+The [user_id](#user_id) of the person who sent the message, used to identify the message author.
+
+##### date
+
+The timestamp indicating when the message was sent, stored in ISO 8601 format (e.g., "2025-03-10T17:07:41.058Z").
+
 ### Errors
 
 #### Codes
@@ -670,7 +818,28 @@ Si è verificato un errore interno del server che ha impedito il completamento d
 
 #### Messages
 
-In aggiunta ai codici di stato, l'API fornisce messaggi di errore specifici per aiutare a diagnosticare i problemi. Il messaggio verrà fornito nella response solo in caso di errore.
+In aggiunta ai codici di stato, l'API fornisce messaggi di errore specifici per aiutare a diagnosticare i problemi. Il messaggio verrà fornito nella response nel formato `{error_message: "messaggio specifico"}`.
 
-DA AGGIUNGERE
+##### Validation Errors
+- **"Email not valid"** - L'email fornita non corrisponde al formato richiesto
+- **"Name not valid"** - Il nome fornito è vuoto o ha un formato non valido
+- **"Surname not valid"** - Il cognome fornito è vuoto o ha un formato non valido
+- **"Handle not valid"** - L'handle fornito è vuoto o già in uso
+- **"Password not valid"** - La password non soddisfa i criteri richiesti (deve essere di 8-32 caratteri, contenere lettere minuscole, maiuscole, numeri e caratteri speciali)
+- **"Text message not valid (Too long [max 2056 char] or missing)"** - Il messaggio supera il limite di 2056 caratteri o è vuoto
+- **"Chat_id not valid"** - Il chat_id fornito è vuoto o ha un formato non valido
+- **"Latest update datetime not valid"** - Il formato datetime per le richieste di aggiornamento non è corretto
+- **"Search parameter (handle) not valid"** - L'handle usato per la ricerca è vuoto o ha un formato non valido
+- **"Groups name not valid"** - Il nome del gruppo fornito è vuoto o ha un formato non valido
+
+##### Authentication Errors
+- **"Non Authorized"** - L'utente non è autenticato per accedere a questa risorsa
+- **"Login failed"** - L'email o la password fornite per il login sono errate
+- **"Failed to save session"** - Si è verificato un problema durante la creazione della sessione utente
+
+##### System Errors
+- **"Generic error"** - Si è verificato un errore generale lato server
+- **"Database error"** - Si è verificato un problema durante l'accesso al database
+- **"Not found"** - L'endpoint richiesto non esiste
+- **"Too many requests, please try again later."** - Limite di frequenza superato
 

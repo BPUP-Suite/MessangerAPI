@@ -42,7 +42,6 @@ const handle_availability_path = check_base + 'handle-availability';
 
 const get_data_base = data_base + 'get/'
 
-const user_id_path = get_data_base + 'user-id'
 const init_path = get_data_base + 'init'
 const update_path = get_data_base + 'update'
 
@@ -82,7 +81,6 @@ const session_response_type = 'session_id';
 
 const handle_availability_response_type = 'handle_available';
 
-const user_id_response_type = 'user_id';
 const init_response_type = 'init';
 const update_response_type = 'update';
 
@@ -856,7 +854,6 @@ postToGetWrapper(session_path);
 
 postToGetWrapper(handle_availability_path);
 
-postToGetWrapper(user_id_path);
 postToGetWrapper(init_path);
 postToGetWrapper(update_path);
 
