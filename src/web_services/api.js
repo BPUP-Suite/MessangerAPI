@@ -11,7 +11,7 @@ const database = require('../database/database');
 
 const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse} = require('../database/object');
 
-const { send_messages_to_recipients } = require('./socketio');
+const { send_messages_to_recipients,send_groups_to_recipients } = require('./socketio');
 
 api.use(express.json());
 
@@ -738,7 +738,17 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
   const createGroupResponse = new CreateGroupResponse(type, confirmation, errorDescription, chat_id);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(createGroupResponse.toJson()));
-  return res.status(code).json(createGroupResponse.toJson());
+  res.status(code).json(createGroupResponse.toJson());
+
+
+  // Send group to recipients after sending the response to sender
+  if (chat_id != null) {
+    setImmediate(() => {
+      send_groups_to_recipients(members,chat_id);
+    });
+  }
+
+  return;
 
 });
 

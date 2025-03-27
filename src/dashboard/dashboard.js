@@ -22,27 +22,29 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API endpoint to get all active sockets
 app.get('/api/sockets', async (req, res) => {
-    try {
-        const rawSockets = socketio.getActiveSockets();
-        
-        // Transform sockets data to include handles instead of user_ids
-        const sockets = await Promise.all(rawSockets.map(async socket => {
-          // Get handle for the user_id
-          const handle = await database.get_handle_from_id(socket.user_id);
-          
-          return {
-            id: socket.socket_id,
-            user_id: socket.user_id,
-            handle: handle,
-            connected_at: socket.connected_at
-          };
-        }));
-        
-        res.json(sockets);
-      } catch (error) {
-        logger.error('[DASHBOARD] Error fetching sockets:', error);
-        res.status(500).json({ error: 'Failed to fetch socket data' });
-      }
+  try {
+      const rawSockets = socketio.getActiveSockets();
+      
+      // Estrai tutti gli user_id unici
+      const userIds = [...new Set(rawSockets.map(socket => socket.user_id))];
+      
+      // Recupera tutti gli handle in una singola query
+      logger.debug("[DASHBOARD] Recover handles from ids -> sockets");
+      const handleMap = await database.get_handles_from_ids(userIds);
+      
+      // Trasforma i socket con gli handle recuperati
+      const sockets = rawSockets.map(socket => ({
+          id: socket.socket_id,
+          user_id: socket.user_id,
+          handle: handleMap[socket.user_id] || 'Unknown',
+          connected_at: socket.connected_at
+      }));
+      
+      res.json(sockets);
+  } catch (error) {
+      logger.error('[DASHBOARD] Error fetching sockets:', error);
+      res.status(500).json({ error: 'Failed to fetch socket data' });
+  }
 });
 
 // API endpoint to get log files list
@@ -78,61 +80,61 @@ app.get('/api/logs/:filename', async (req, res) => {
 
 // API endpoint to get Redis sessions
 app.get('/api/redis/sessions', async (req, res) => {
-    try {
-      // Get all keys matching the pattern for sessions
+  try {
       const keys = await redisClient.keys('sess:*');
       
-      // Object to store sessions grouped by handle
+      // Estrai tutti gli user_id unici
+      const userIds = [...new Set(
+          keys
+              .map(async key => {
+                  const sessionData = JSON.parse(await redisClient.get(key));
+                  return sessionData.user_id;
+              })
+              .filter(id => id && id !== "unknown")
+      )];
+      
+      // Recupera tutti gli handle in una singola query
+      logger.debug("[DASHBOARD] Recover handles from ids -> sessions");
+      const handleMap = await database.get_handles_from_ids(userIds);
+      
       const sessionGroups = {};
       
       for (const key of keys) {
-        const sessionData = await redisClient.get(key);
-        let parsedData;
-        
-        try {
-          parsedData = JSON.parse(sessionData);
-        } catch (e) {
-          parsedData = { data: sessionData, error: "Could not parse as JSON" };
-        }
-        
-        // Extract session ID from the key
-        const sessionId = key.split(':')[1];
-        
-        // Get the user_id from the session data or use "unknown" if not available
-        const userId = parsedData.user_id || "unknown";
-        
-        // Get handle for this user_id from database
-        let handle = "unknown";
-        if (userId !== "unknown") {
+          const sessionData = await redisClient.get(key);
+          let parsedData;
+          
           try {
-            handle = await database.get_handle_from_id(userId);
-            if (!handle) handle = userId; // Fallback to user_id if no handle found
-          } catch (error) {
-            logger.error(`[DASHBOARD] Error getting handle for user ${userId}: ${error.message}`);
-            handle = userId; // Fallback to user_id if error occurs
+              parsedData = JSON.parse(sessionData);
+          } catch (e) {
+              parsedData = { data: sessionData, error: "Could not parse as JSON" };
           }
-        }
-        
-        // Initialize group if it doesn't exist
-        if (!sessionGroups[handle]) {
-          sessionGroups[handle] = [];
-        }
-        
-        // Add this session to the appropriate group
-        sessionGroups[handle].push({
-          key,
-          sessionId,
-          data: parsedData,
-          userId: userId // Keep the user_id in the data for reference
-        });
+          
+          const sessionId = key.split(':')[1];
+          const userId = parsedData.user_id || "unknown";
+          
+          // Usa la mappa degli handle
+          const handle = userId !== "unknown" 
+              ? handleMap[userId] || userId 
+              : "unknown";
+          
+          if (!sessionGroups[handle]) {
+              sessionGroups[handle] = [];
+          }
+          
+          sessionGroups[handle].push({
+              key,
+              sessionId,
+              data: parsedData,
+              userId: userId
+          });
       }
       
       res.json(sessionGroups);
-    } catch (error) {
+  } catch (error) {
       logger.error('Error fetching Redis sessions:', error);
       res.status(500).json({ error: 'Failed to fetch Redis sessions' });
-    }
-  });
+  }
+});
 
 // WebSocket setup for real-time log updates
 wss.on('connection', (ws) => {
@@ -218,6 +220,8 @@ app.get('/', (req, res) => {
   app.get('*', (req, res) => {
     res.status(404).send('Page not found');
   });
+
+  
 
 function startServer(port, callback) {
     server.listen(port, () => {

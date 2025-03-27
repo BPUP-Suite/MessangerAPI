@@ -97,10 +97,19 @@ io.on('connection', (socket) => {
 
 // Function to send a message to all sockets in a group
 function send_messages_to_recipients(recipient_list,message_data) {
-  for (const recipient of recipient_list) {
-    // send message to everyone on the group
-    io.to(recipient).emit('receive_message', message_data);
-    logger.log(`[IO] [RESPONSE] Event receive_message sent to ${recipient}: ${JSON.stringify(message_data)}`);
+  send_to_all(recipient_list,message_data,'receive_message');
+}
+
+// Function to send group creating alert to all sockets in a group
+function send_groups_to_recipients(members,chat_id){
+  const chat_data = {chat_id:chat_id};
+  send_to_all(members,chat_data,'group_created');
+}
+
+function send_to_all(recipient_list,data,type){
+  for (const recipient of recipient_list){
+    io.to(recipient).emit(type,data);
+    logger.debug(`[IO] [RESPONSE] Event ${type} sent to ${recipient}: ${JSON.stringify(data)}`);
   }
 }
 
@@ -108,4 +117,4 @@ function getActiveSockets() {
   return Array.from(activeSockets.values());
 }
 
-module.exports = { server, send_messages_to_recipients,getActiveSockets };
+module.exports = { server, send_messages_to_recipients, send_groups_to_recipients,getActiveSockets };
