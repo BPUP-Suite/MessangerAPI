@@ -526,13 +526,13 @@ Request: {URL}/v1/user/data/check/handle-availability?handle=test
 Response: 
 
 {
-  handle_available:	true
+  handle_available:true
 }
 
-OR
+OR 
 
 {
-  handle_available:	false
+  handle_available: false
 }
 
 ```
