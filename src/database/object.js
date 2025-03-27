@@ -177,19 +177,6 @@ class Response {
     }
   }
 
-  class CreateGroupResponse extends Response{
-    constructor(type, confirmation, error_message,group_id) {
-      super(type, confirmation, error_message);
-      this.group_id = group_id;
-    }
-    toJson() {
-      return {
-        ...super.toJson(),
-        chat_id: this.group_id
-      };
-    }
-  }
-
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
