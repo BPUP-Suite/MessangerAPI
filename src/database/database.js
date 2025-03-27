@@ -475,9 +475,19 @@ async function create_group(group) {
   const QUERY = "INSERT INTO public.groups(name, description, members, admins) VALUES ($1, $2, $3, $4) RETURNING group_id";
   let group_id = null;
 
-  try{
+  try{  
+    // Insert the group into the database
     const result = await query(QUERY, [name, description, members, admins]);
     group_id = result[0].group_id;
+    logger.debug("[POSTGRES] Group created with ID: " + group_id);
+
+    const HANDLE_QUERY = "INSERT INTO public.handles(group_id, handle) VALUES ($1, $2)";
+    const handle = group.handle;
+
+    // Insert the group handle into the database
+    const group_id = result[0].group_id;
+    await query(HANDLE_QUERY, [group_id, handle]);
+    logger.debug("[POSTGRES] Group handle inserted: " + handle);
   }
   catch(err){
     logger.error("[POSTGRES] database.create_group: " + err);
@@ -485,6 +495,22 @@ async function create_group(group) {
 
   return group_id;
 
+}
+
+// Insert the new members into the group
+
+async function add_members_to_group(group_id, members) {
+  const QUERY = "UPDATE public.groups SET members = array_append(members, $1) WHERE group_id = $2";
+  let confirmation = false;
+
+  try{
+    await query(QUERY, [members, group_id]);
+    confirmation = true;
+  }catch(err){
+    logger.error("[POSTGRES] database.add_members_to_group: " + err);
+  }
+
+  return confirmation;
 }
 
 
@@ -504,19 +530,31 @@ async function get_user_id_from_handle(handle) {
   return user_id;
 }
 
-async function get_handle_from_id(id) {
-  const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
-  let handle = null;
+async function get_chat_id_from_handle(handle) {
+
+  const QUERY = "SELECT chat_id,group_id,channel_id FROM public.handles WHERE handle = $1";
+  let chat_id = null;
 
   try{
-    const result = await query(QUERY, [id]);
-    handle = result[0].handle;
+    const result = await query(QUERY, [handle]);
+
+    chat_id = result[0].chat_id;
+
+    if(chat_id === null || chat_id === undefined || chat_id === ''){
+      chat_id = result[0].group_id;
+    }
+
+    if(chat_id === null || chat_id === undefined || chat_id === ''){
+      chat_id = result[0].channel_id;
+    }
+    
   }catch(err){
-    logger.error("[POSTGRES] database.get_handle_from_id: " + err);
+    logger.error("[POSTGRES] database.get_chat_id_from_handle: " + err);
   }
-  
-  return handle;
+
+  return chat_id;
 }
+
 
 async function get_handle_from_id(id) {
   const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
@@ -580,8 +618,10 @@ module.exports = {
   search,
   search_users,
   get_user_id_from_handle,
+  get_chat_id_from_handle,
   get_handle_from_id,
   create_chat,
   create_group,
-  get_members
+  get_members,
+  add_members_to_group
 };

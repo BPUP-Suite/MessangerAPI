@@ -9,7 +9,7 @@ const logger = require('../logger');
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,CreateGroupResponse} = require('../database/object');
 
 const { send_messages_to_recipients,send_groups_to_recipients } = require('./socketio');
 
@@ -69,6 +69,10 @@ const get_chat_base = chat_base + 'get/';
 
 const members_path = get_chat_base + 'members';
 
+const join_base = get_chat_base + 'join/';
+
+const join_group_path = join_base + 'group';
+const join_channel_path = join_base + 'channel';
 
 
 // api response type
@@ -94,6 +98,9 @@ const channel_response_type = '';
 
 const search_response_type = 'searched_list';
 const get_members_response_type = 'members_list';
+
+const join_group_response_type = 'group_joined';
+const join_channel_response_type = 'channel_joined';
 
 // api configurations
 
@@ -319,7 +326,7 @@ api.get(login_path, async (req, res) => {
     const loginUser = new LoginUser(email, password);
     try {
       user_id = await database.login(loginUser);
-      if (user_id != null) {
+      if (validator.generic(user_id)) {
         confirmation = true;
         errorDescription = '';
         code = 200;
@@ -731,6 +738,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
   const user_id = req.session.user_id;
 
   const name = req.query.name;
+  const handle = req.query.handle;
 
   // optionals
   const description = req.query.description;
@@ -755,6 +763,12 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     validated = false;
   }
 
+  if (!(validator.handle(handle))) {
+    code = 400;
+    errorDescription = 'Groups handle not valid';
+    validated = false;
+  }
+
   if (validated) {  
     // get all members list from their handles
     for (let i = 0; i < members_handles.length; i++) {
@@ -769,7 +783,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     }
 
     try {
-      const group = new Group(name, description, members, admins);
+      const group = new Group(handle,name, description, members, admins);
       chat_id = await database.create_group(group);
       if (chat_id != null) {
         confirmation = true;
@@ -801,8 +815,6 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
 api.get(members_path, isAuthenticated, async (req, res) => {
 
-  const chat_id = req.query.chat_id;
-
   logger.debug('[API] [REQUEST] Get members request received from: ' + req.session.user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
 
@@ -811,6 +823,8 @@ api.get(members_path, isAuthenticated, async (req, res) => {
   let members_list = null;
   let errorDescription = 'Generic error';
   let validated = true;
+
+  const chat_id = req.query.chat_id;
 
   if (!(validator.chat_id(chat_id))) {
     code = 400;
@@ -833,6 +847,63 @@ api.get(members_path, isAuthenticated, async (req, res) => {
   return res.status(code).json(membersResponse.toJson());
 
 });
+
+
+// Path: .../join
+
+api.get(join_group_path, isAuthenticated, async (req, res) => {
+
+  const user_id = req.session.user_id; //per ora i gruppi sono tutti pubblic quindi basta essere registrati per entrarci
+
+  logger.debug('[API] [REQUEST] Join group request received from: ' + req.session.user_id);
+  logger.debug('-> ' + JSON.stringify(req.query))
+
+  const type = join_group_response_type;
+  let code = 500;
+  let errorDescription = 'Generic error';
+  let confirmation = false;
+  let validated = true;
+
+  let chat_id = null;
+
+  const handle = req.query.handle;
+
+  if (!(validator.generic(handle))) {
+    code = 400;
+    errorDescription = 'Handle not valid';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      chat_id = await database.get_chat_id_from_handle(handle);
+
+      if (chat_id != null) {
+        try {
+          confirmation = await database.add_members_to_group(chat_id, user_id);
+          if (confirmation) {
+            code = 200;
+            errorDescription = '';
+          }
+        } catch (error) {
+          logger.error('database.add_member_to_group: ' + error);
+        }
+      } else {
+        code = 404;
+        errorDescription = 'Group not found';
+      }
+    } catch (error) {
+      logger.error('database.get_chat_id_from_handle: ' + error);
+    }
+  }
+
+  const joinGroupResponse = new CreateGroupResponse(type, confirmation, errorDescription, chat_id);
+  logger.debug('[API] [RESPONSE] ' + JSON.stringify(joinGroupResponse.toJson()));
+  return res.status(code).json(joinGroupResponse.toJson());
+
+});
+
+
 
 // POST METHODS
 

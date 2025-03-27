@@ -41,6 +41,9 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
             - [chat](#chat)
             - [group](#group)
             - [channel](#channel)
+        - [join/](#join/)
+            - [group](#group)
+            - [channel](#channel)
 
     - [Socket.io](#Socket.io)
       - [receive_message](#receive_message)
@@ -670,6 +673,17 @@ None
 ##### chat
 
 ...
+
+##### group
+
+...
+
+##### channel
+
+None
+
+#### join/
+
 
 ##### group
 
