@@ -23,11 +23,11 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         
-        // Group sockets by handle instead of user_id
+        // Group sockets by handle
         const socketGroups = {};
         sockets.forEach(socket => {
           // Use handle as the group key, fallback to user_id if handle is not available
-          const groupKey = socket.handle || `User ${socket.user_id}`;
+          const groupKey = socket.user_id;
           
           if (!socketGroups[groupKey]) {
             socketGroups[groupKey] = [];
@@ -39,8 +39,8 @@ document.addEventListener('DOMContentLoaded', function() {
         socketGroupsContainer.innerHTML = '';
         
         // Create socket group elements
-        Object.keys(socketGroups).forEach(handle => {
-          const groupSockets = socketGroups[handle];
+        Object.keys(socketGroups).forEach(async user_id => {
+          const groupSockets = socketGroups[user_id];
           
           const socketGroup = document.createElement('div');
           socketGroup.className = 'socket-group';
@@ -59,6 +59,8 @@ document.addEventListener('DOMContentLoaded', function() {
           // Create header with title
           const headerTitle = document.createElement('h3');
           headerTitle.style.display = 'inline-block';
+          const response = await fetch('/api/get/handle?user_id='+user_id);
+          const { handle } = await response.json();
           headerTitle.textContent = handle;
           
           const socketCount = document.createElement('div');

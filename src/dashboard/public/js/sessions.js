@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionsContainer.innerHTML = '';
         
         // Create session group elements
-        Object.keys(sessionGroups).forEach(handle => {
-          const sessions = sessionGroups[handle];
+        Object.keys(sessionGroups).forEach(async user_id => {
+          const sessions = sessionGroups[user_id];
           
           const sessionGroup = document.createElement('div');
           sessionGroup.className = 'socket-group'; // Reuse socket group styling
@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
           // Create header with title
           const headerTitle = document.createElement('h3');
           headerTitle.style.display = 'inline-block';
+          const response = await fetch('/api/get/handle?user_id='+user_id);
+          const { handle } = await response.json();
           headerTitle.textContent = handle;
           
           const sessionCount = document.createElement('div');

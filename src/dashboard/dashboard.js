@@ -20,53 +20,43 @@ const LOGS_PATH = envManager.readLogsPath();
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API endpoint to get all active sockets
-app.get('/api/sockets', async (req, res) => {
-  try {
-      const rawSockets = socketio.getActiveSockets();
-      
-      // Estrai tutti gli user_id unici
-      const userIds = [...new Set(rawSockets.map(socket => socket.user_id))];
-      
-      // Recupera tutti gli handle in una singola query
-      logger.debug("[DASHBOARD] Recover handles from ids -> sockets");
-      const handleMap = await database.get_handles_from_ids(userIds);
-      
-      // Trasforma i socket con gli handle recuperati
-      const sockets = rawSockets.map(socket => ({
-          id: socket.socket_id,
-          user_id: socket.user_id,
-          handle: handleMap[socket.user_id] || 'Unknown',
-          connected_at: socket.connected_at
-      }));
-      
-      res.json(sockets);
-  } catch (error) {
-      logger.error('[DASHBOARD] Error fetching sockets:', error);
-      res.status(500).json({ error: 'Failed to fetch socket data' });
-  }
+app.get('/api/get/handle', async(req,res) => {
+  const user_id = req.query.user_id;
+  const handle = await database.get_handle_from_id(user_id);
+  return res.status(200).json({handle:handle});
 });
 
-// API endpoint to get all log files
-app.get('/api/logs', (req, res) => {
-  try {
-    const logsDir = LOGS_PATH;
-    
-    // Read all files in logs directory
-    fs.readdir(logsDir, (err, files) => {
-      if (err) {
-        logger.error('Error reading logs directory:', err);
-        return res.status(500).json({ error: 'Failed to read logs directory' });
+// API endpoint to get all active sockets
+app.get('/api/sockets', async (req, res) => {
+    try {
+        const rawSockets = socketio.getActiveSockets();
+        
+        // Transform sockets data to include handles instead of user_ids
+        const sockets = await Promise.all(rawSockets.map(async socket => {
+          
+          return {
+            id: socket.socket_id,
+            user_id: socket.user_id,
+            connected_at: socket.connected_at
+          };
+        }));
+        
+        res.json(sockets);
+      } catch (error) {
+        logger.error('[DASHBOARD] Error fetching sockets:', error);
+        res.status(500).json({ error: 'Failed to fetch socket data' });
       }
-      
-      // Filter to only include .log files
-      const logFiles = files.filter(file => file.endsWith('.log'));
-      
-      console.log('Sending log files:', logFiles); // Debug output
-      res.json(logFiles);
-    });
+});
+
+// API endpoint to get log files list
+app.get('/api/logs', async (req, res) => {
+  try {
+    const logsDir = path.join(LOGS_PATH); 
+    const files = await promisify(fs.readdir)(logsDir);
+    const logFiles = files.filter(file => file.endsWith('.log'));
+    res.json(logFiles);
   } catch (error) {
-    logger.error('Error fetching log files:', error);
+    logger.error('[DASHBOARD] Error fetching log files:', error);
     res.status(500).json({ error: 'Failed to fetch log files' });
   }
 });
@@ -91,61 +81,49 @@ app.get('/api/logs/:filename', async (req, res) => {
 
 // API endpoint to get Redis sessions
 app.get('/api/redis/sessions', async (req, res) => {
-  try {
+    try {
+      // Get all keys matching the pattern for sessions
       const keys = await redisClient.keys('sess:*');
       
-      // Estrai tutti gli user_id unici
-      const userIds = [...new Set(
-          keys
-              .map(async key => {
-                  const sessionData = JSON.parse(await redisClient.get(key));
-                  return sessionData.user_id;
-              })
-              .filter(id => id && id !== "unknown")
-      )];
-      
-      // Recupera tutti gli handle in una singola query
-      logger.debug("[DASHBOARD] Recover handles from ids -> sessions");
-      const handleMap = await database.get_handles_from_ids(userIds);
-      
+      // Object to store sessions grouped by handle
       const sessionGroups = {};
       
       for (const key of keys) {
-          const sessionData = await redisClient.get(key);
-          let parsedData;
-          
-          try {
-              parsedData = JSON.parse(sessionData);
-          } catch (e) {
-              parsedData = { data: sessionData, error: "Could not parse as JSON" };
-          }
-          
-          const sessionId = key.split(':')[1];
-          const userId = parsedData.user_id || "unknown";
-          
-          // Usa la mappa degli handle
-          const handle = userId !== "unknown" 
-              ? handleMap[userId] || userId 
-              : "unknown";
-          
-          if (!sessionGroups[handle]) {
-              sessionGroups[handle] = [];
-          }
-          
-          sessionGroups[handle].push({
-              key,
-              sessionId,
-              data: parsedData,
-              userId: userId
-          });
+        const sessionData = await redisClient.get(key);
+        let parsedData;
+        
+        try {
+          parsedData = JSON.parse(sessionData);
+        } catch (e) {
+          parsedData = { data: sessionData, error: "Could not parse as JSON" };
+        }
+        
+        // Extract session ID from the key
+        const sessionId = key.split(':')[1];
+        
+        // Get the user_id from the session data or use "unknown" if not available
+        const userId = parsedData.user_id || "unknown";
+        
+        // Initialize group if it doesn't exist
+        if (!sessionGroups[userId]) {
+          sessionGroups[userId] = [];
+        }
+        
+        // Add this session to the appropriate group
+        sessionGroups[userId].push({
+          key,
+          sessionId,
+          data: parsedData,
+          userId: userId // Keep the user_id in the data for reference
+        });
       }
       
       res.json(sessionGroups);
-  } catch (error) {
+    } catch (error) {
       logger.error('Error fetching Redis sessions:', error);
       res.status(500).json({ error: 'Failed to fetch Redis sessions' });
-  }
-});
+    }
+  });
 
 // WebSocket setup for real-time log updates
 wss.on('connection', (ws) => {
@@ -231,8 +209,6 @@ app.get('/', (req, res) => {
   app.get('*', (req, res) => {
     res.status(404).send('Page not found');
   });
-
-  
 
 function startServer(port, callback) {
     server.listen(port, () => {

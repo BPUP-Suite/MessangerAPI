@@ -512,29 +512,6 @@ function get_chat_type(id){
   return null;
 }
 
-async function get_handles_from_ids(user_ids){
-// fatto da IA per ottimizzazione dashboard
-  try {
-      // Query PostgreSQL per recuperare handle in batch
-      const query = `
-          SELECT user_id, handle 
-          FROM public.handles 
-          WHERE user_id = ANY($1)
-      `;
-      
-      const { rows } = await pool.query(query, [user_ids]);
-      
-      // Converti i risultati in un oggetto map per accesso rapido
-      return rows.reduce((map, row) => {
-          map[row.user_id] = row.handle;
-          return map;
-      }, {});
-  } catch (error) {
-      logger.error('[POSTGRES] database.get_handles_from_ids:', error);
-      return {}; // Restituisci un oggetto vuoto in caso di errore
-  }
-};
-
 module.exports = {
   testConnection,
   check_email_existence,
@@ -549,6 +526,5 @@ module.exports = {
   get_handle_from_id,
   create_chat,
   create_group,
-  get_members,
-  get_handles_from_ids
+  get_members
 };
