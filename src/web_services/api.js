@@ -774,17 +774,18 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
   if (validated) {  
     // get all members list from their handles
-    for (let i = 0; i < members_handles.length; i++) {
-      try{
-        const other_user_id = await database.get_user_id_from_handle(members_handles[i]);
-        if (other_user_id != null) {
-          members.push(other_user_id);
+    if(members_handles != null){
+      for (let i = 0; i < members_handles.length; i++) {
+        try{
+          const other_user_id = await database.get_user_id_from_handle(members_handles[i]);
+          if (other_user_id != null) {
+            members.push(other_user_id);
+          }
+        }catch (error) {
+          logger.error('database.get_user_id_from_handle: ' + error);
         }
-      }catch (error) {
-        logger.error('database.get_user_id_from_handle: ' + error);
       }
-    }
-
+    } 
     try {
       const group = new Group(handle,name, description, members, admins);
       chat_id = await database.create_group(group);
