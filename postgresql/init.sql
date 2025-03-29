@@ -55,7 +55,7 @@ ALTER TABLE public.files ADD CONSTRAINT files_pkey PRIMARY KEY (files_id);
 ALTER TABLE public.files OWNER TO bpup;
 
 CREATE TABLE public.groups (
-    chat_id bigint NOT NULL,
+    chat_id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 3000000000000000000 MINVALUE 3000000000000000000 MAXVALUE 3999999999999999999 CACHE 1 ),
     name text NOT NULL,
     pinned_messages text[],
     members bigint[] NOT NULL,

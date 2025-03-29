@@ -485,7 +485,6 @@ async function create_group(group) {
     const handle = group.handle;
 
     // Insert the group handle into the database
-    const chat_id = result[0].chat_id;
     await query(HANDLE_QUERY, [chat_id, handle]);
     logger.debug("[POSTGRES] Group handle inserted: " + handle);
   }
