@@ -763,11 +763,14 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     validated = false;
   }
 
-  if (!(validator.handle(handle))) {
-    code = 400;
-    errorDescription = 'Groups handle not valid';
-    validated = false;
-  }
+  // skip if handle is not provided = group is private
+  if(handle != null){
+    if (!(validator.handle(handle))) {
+      code = 400;
+      errorDescription = 'Groups handle not valid';
+      validated = false;
+    }
+}
 
   if (validated) {  
     // get all members list from their handles
