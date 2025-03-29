@@ -95,15 +95,24 @@ io.on('connection', (socket) => {
 
 
 
-// Function to send a message to all sockets in a group
+// Message to all sockets in a group
 function send_messages_to_recipients(recipient_list,message_data) {
   send_to_all(recipient_list,message_data,'receive_message');
 }
 
-// Function to send group creating alert to all sockets in a group
+// Group creating alert to all sockets in a group
 function send_groups_to_recipients(members,group_data){
   send_to_all(members,group_data,'group_created');
 }
+
+// Alert of a new member joined to a group
+function send_group_member_joined(members,group_data){
+  send_to_all(members,group_data,'group_member_joined');
+}
+
+// Alert of a member left a group
+
+// 
 
 function send_to_all(recipient_list,data,type){
   for (const recipient of recipient_list){
@@ -116,4 +125,11 @@ function getActiveSockets() {
   return Array.from(activeSockets.values());
 }
 
-module.exports = { server, send_messages_to_recipients, send_groups_to_recipients,getActiveSockets };
+module.exports = { 
+  server, 
+  send_messages_to_recipients, 
+  send_groups_to_recipients,
+  getActiveSockets,
+  send_group_member_joined
+
+};

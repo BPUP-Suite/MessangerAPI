@@ -11,7 +11,7 @@ const database = require('../database/database');
 
 const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse} = require('../database/object');
 
-const { send_messages_to_recipients,send_groups_to_recipients } = require('./socketio');
+const { send_messages_to_recipients,send_groups_to_recipients, send_group_member_joined } = require('./socketio');
 
 api.use(express.json());
 api.use(express.urlencoded({ extended: true }));
@@ -69,7 +69,7 @@ const get_chat_base = chat_base + 'get/';
 
 const members_path = get_chat_base + 'members';
 
-const join_base = get_chat_base + 'join/';
+const join_base = chat_base + 'join/';
 
 const join_group_path = join_base + 'group';
 const join_channel_path = join_base + 'channel';
@@ -686,6 +686,7 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
   logger.debug('[API] [REQUEST] Create chat request received from: ' + user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
 
+  const handle = await database.get_handle_from_id(user_id);
   const other_handle = req.query.handle;
 
   const type = chat_response_type;
@@ -699,6 +700,18 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
   if (!(validator.generic(other_handle))) {
     code = 400;
     errorDescription = 'Handle not valid';
+    validated = false;
+  } else if(await database.check_handle_availability(other_handle)){ // handle should exist
+    code = 400;
+    errorDescription = 'Handle not valid';
+    validated = false;
+  } else if(handle == other_handle){
+    code = 400;
+    errorDescription = 'Handle not valid: You cannot create a chat with yourself';
+    validated = false;
+  } else if(await database.check_chat_existance(handle,other_handle)){
+    code = 400;
+    errorDescription = 'Chat already exists';
     validated = false;
   }
 
@@ -738,7 +751,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
   logger.debug('-> ' + JSON.stringify(req.query))
 
   const name = req.query.name;
-  const handle = req.query.handle;
+  let handle = req.query.handle;
 
   // optionals
   const description = req.query.description;
@@ -759,18 +772,17 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
   if (!(validator.generic(name))) {
     code = 400;
-    errorDescription = 'Groups name not valid';
+    errorDescription = 'Name not valid';
     validated = false;
-  }
-
-  // skip if handle is not provided = group is private
-  if(handle != null){
-    if (!(validator.handle(handle))) {
-      code = 400;
-      errorDescription = 'Groups handle not valid';
-      validated = false;
+  }else if (handle != null || handle != undefined || handle == ''){  // skip if handle is not provided = group is private
+    if(!(await validator.handle(handle))) {
+    code = 400;
+    errorDescription = 'Handle not valid';
+    validated = false;
     }
-}
+  }else{
+    handle = null; // handle is not provided = group is private
+  }
 
   if (validated) {  
     // get all members list from their handles
@@ -806,8 +818,17 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
   // Send group to recipients after sending the response to sender
   if (chat_id != null) {
+    const group_data = {
+      chat_id: chat_id,
+      name: name,
+      description: description,
+      members: members,
+      admins: admins
+    };
+
     setImmediate(() => {
-      send_groups_to_recipients(members,chat_id);
+      send_groups_to_recipients(members, group_data);
+      logger.debug('[API] [IO] Group created and sent to members: ' + JSON.stringify(group_data));
     });
   }
 
@@ -838,7 +859,7 @@ api.get(members_path, isAuthenticated, async (req, res) => {
 
   if (validated) {
     try {
-      members_list = await database.get_members(chat_id);
+      members_list = await database.get_members_as_user_id(chat_id);
       code = 200;
       errorDescription = '';
     } catch (error) {
@@ -918,8 +939,24 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
 
   const joinGroupResponse = new JoinGroupResponse(type, confirmation, errorDescription, data);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(joinGroupResponse.toJson()));
-  return res.status(code).json(joinGroupResponse.toJson());
+  res.status(code).json(joinGroupResponse.toJson());
 
+  // Send group to recipients after sending the response to sender
+  if (chat_id != null) {
+    const user_data = {
+      chat_id: chat_id,
+      user_id: user_id,
+    };  
+
+    const members = await database.get_members_as_user_id(chat_id); // get all members of the group
+
+    setImmediate(() => {
+      send_group_member_joined(members, user_data);
+      logger.debug('[API] [IO] User joined and sent to members: ' + JSON.stringify(user_data));
+    });
+  }
+
+  return;
 });
 
 

@@ -203,5 +203,6 @@ class Response {
     Group,
     MembersResponse,
     UpdateResponse,
-    CreateGroupResponse
+    CreateGroupResponse,
+    JoinGroupResponse
   };

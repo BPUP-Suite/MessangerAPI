@@ -186,11 +186,29 @@ async function search_users(handle){
   return list;
 }
 
-async function get_members(chat_id) {
+async function get_members_as_handle(chat_id) {
+
+    let members = [];
+
+    const members_id = get_members_as_user_id(chat_id);
+    if(members_id === null || members_id === undefined || members_id.length === 0){
+      logger.debug("[POSTGRES] No members found for chat: " + chat_id);
+      return null;
+    }
+    // Get the handles of the members
+
+    for(let i = 0; i < members_id.length; i++){
+      members.push(await get_handle_from_id(members_id[i]));
+    }
+
+  return members;
+
+}
+
+async function get_members_as_user_id(chat_id) {
 
   let QUERY = "";
   let personal = false;
-  let members = [];
 
   switch(get_chat_type(chat_id)){
     case "personal":
@@ -198,10 +216,10 @@ async function get_members(chat_id) {
       personal = true;
       break;
     case "group":
-      QUERY = "SELECT members FROM public.groups WHERE group_id = $1";
+      QUERY = "SELECT members FROM public.groups WHERE chat_id = $1";
       break;
     case "channel":
-      QUERY = "SELECT members FROM public.channels WHERE channel_id = $1";
+      QUERY = "SELECT members FROM public.channels WHERE chat_id = $1";
       break;
     default:
       break;
@@ -217,19 +235,14 @@ async function get_members(chat_id) {
     }else{
       members_id = result[0].members;
     }
-
-    for(let i = 0; i < members_id.length; i++){
-      members.push(await get_handle_from_id(members_id[i]));
-    }
-
   }catch(error){
-    logger.error("[POSTGRES] database.get_members: " + error);
+    logger.error("[POSTGRES] database.get_members_as_handle: " + error);
   }
 
-  return members;
+  return members_id;
 
-}
-
+  }
+  
 // IO Methods
 
 async function client_init(user_id) {
@@ -269,7 +282,67 @@ async function client_init(user_id) {
   };
 
   // Get user chats
+  const chats = await get_chats(user_id);
 
+  if(chats === null || chats === undefined || chats.length === 0){
+    logger.debug("[POSTGRES] No chats found for user: " + user_id);
+  }else{
+    json["chats"] = chats;
+
+    // Get user chat messages
+
+    let messages = null;
+
+    for(let i = 0; i < chats.length; i++){
+      messages = await get_chat_messages(chats[i].chat_id);
+      if(messages != null && messages != undefined &&  messages.length != 0){
+        json["chats"][i]["messages"] = messages;
+      }
+    }
+  }
+  
+  // Get groups 
+  const groups = await get_groups(user_id);
+  if(groups === null || groups === undefined || groups.length === 0){
+    logger.debug("[POSTGRES] No groups found for user: " + user_id);
+  }else{
+    json["groups"] = groups;
+
+    // Get group messages
+
+    let messages = null;
+
+    for(let i = 0; i < groups.length; i++){
+      messages = await get_chat_messages(groups[i].chat_id);
+      if(messages != null && messages != undefined &&  messages.length != 0){
+        json["groups"][i]["messages"] = messages;
+      }
+    }
+  }
+
+  // Get channels
+
+  //TDB: get channels from the database
+
+
+  return json;
+}
+
+async function get_chat_messages(chat_id){
+  const QUERY = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1";
+  let messages = null;
+
+  try{
+    const result = await query(QUERY, [chat_id]);
+    messages = result;
+  }catch(err){
+    logger.error("[POSTGRES] database.get_chat_messages: " + err);
+  }
+
+  return messages;
+}
+
+async function get_chats(user_id){
   const QUERY_CHATS = "SELECT chat_id,user1,user2 FROM public.chats WHERE user1 = $1 OR user2 = $1";
   let chats = null;
 
@@ -284,7 +357,7 @@ async function client_init(user_id) {
   // if no data are found, return only the info json
   if(chats === null || chats === undefined |  chats.length === 0){
     logger.debug("[POSTGRES] No chats found for user: " + user_id);
-    return json;
+    return null;
   }
 
   // Remap of the chats array to a json object using a list for users 
@@ -302,29 +375,48 @@ async function client_init(user_id) {
     };
   });
 
-  json["chats"] = await Promise.all(chatPromises);
-  
-  // Get user messages
+  return await Promise.all(chatPromises);
+}
 
-  let messages = null;
+async function get_groups(user_id){
 
-  for(let i = 0; i < chats.length; i++){
-    const QUERY_MESSAGES = "SELECT message_id,text,sender,date FROM public.messages WHERE chat_id = $1";
-    try{
-      const result = await query(QUERY_MESSAGES, [chats[i].chat_id]);
-      messages = result;
-    }
-    catch(err){
-      logger.error("[POSTGRES] database.client_init: " + err);
-    }
-
-    if(messages != null && messages != undefined &&  messages.length != 0){
-      json["chats"][i]["messages"] = messages;
-    }
+  const QUERY_GROUPS = "SELECT name,chat_id,members FROM public.groups WHERE members @> ARRAY[$1]::bigint[]";
+  let groups = null;
+  try{
+    const result = await query(QUERY_GROUPS, [user_id]);
+    groups = result;
+  }
+  catch(error){
+    logger.error("[POSTGRES] database.client_init: " + error);
   }
 
-  return json;
+  // if no data are found, return only the info json
+  if(groups === null || groups === undefined |  groups.length === 0){
+    logger.debug("[POSTGRES] No groups found for user: " + user_id);
+    return null;
+  }
+  // Remap of the groups array to a json object using a list for users
+
+  const groupPromises = groups.map(async group => {
+    // Map all members to their user_id and handle
+    const usersPromises = group.members.map(async memberId => {
+      return {
+        "user_id": memberId,
+        "handle": await get_handle_from_id(memberId)
+      };
+    });
+    
+    return {
+      name: group.name,
+      chat_id: group.chat_id,
+      users: await Promise.all(usersPromises)
+    };
+  });
+
+  return await Promise.all(groupPromises);
+
 }
+
 
 async function client_update(datetime, user_id) {
 
@@ -379,6 +471,59 @@ async function client_update(datetime, user_id) {
     }
   }
 
+  // Get groups with new messages since the provided datetime
+
+  const QUERY_GROUPS_WITH_NEW_MESSAGES = `SELECT g.chat_id, g.name, g.members FROM public.groups g WHERE g.members @> ARRAY[$1]::bigint[]" AND EXISTS (SELECT 1 FROM public.messages m WHERE m.chat_id = g.chat_id AND m.date > $2)`;
+  let groupsWithNewMessages = null;
+  const members = [user_id];
+  try {
+    const result = await query(QUERY_GROUPS_WITH_NEW_MESSAGES, [members, datetime]);
+    groupsWithNewMessages = result;
+  } catch(error) {
+    logger.error("[POSTGRES] database.client_update finding groups: " + error);
+    return null;
+  }
+  // If no groups with new messages, return just null
+
+  if(!groupsWithNewMessages || groupsWithNewMessages.length === 0) {
+    logger.debug("[POSTGRES] No updated groups found for user since: " + datetime);
+    return json;
+  }
+  // Format groups with new messages
+
+  const groupPromises = groupsWithNewMessages.map(async group => {
+    return {
+      name: group.name,
+      chat_id: group.chat_id,
+      users: [
+        {
+          "user_id": group.members[0],
+          "handle": await get_handle_from_id(group.members[0])
+        }
+      ]
+    };
+  }
+
+  );
+  json["groups"] = await Promise.all(groupPromises);
+
+  // Get new messages for each group
+
+  for(let i = 0; i < groupsWithNewMessages.length; i++) {
+    const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
+    try {
+      const result = await query(QUERY_MESSAGES, [groupsWithNewMessages[i].chat_id, datetime]);
+      if(result && result.length > 0) {
+        json["groups"][i]["messages"] = result;
+      }
+    } catch(err) {
+      logger.error("[POSTGRES] database.client_update getting messages: " + err);
+    }
+  }
+
+  // Get channels with new messages since the provided datetime
+  // TBD: get channels from the database
+
   return json;
 }
 
@@ -409,7 +554,7 @@ async function send_message(message){
     case "group": 
 
       // sender is already inside the list of members
-      recipient_list = await get_members(chat_id);
+      recipient_list = await get_members_as_user_id(chat_id);
       break;
       
     case "channel": // not implemented yet
@@ -489,9 +634,12 @@ async function create_group(group) {
     const HANDLE_QUERY = "INSERT INTO public.handles(group_id, handle) VALUES ($1, $2)";
     const handle = group.handle;
 
-    // Insert the group handle into the database
-    await query(HANDLE_QUERY, [chat_id, handle]);
-    logger.debug("[POSTGRES] Group handle inserted: " + handle);
+    if(handle != null){ // if handle is null do not insert it into the database because group is private
+        // Insert the group handle into the database
+        await query(HANDLE_QUERY, [chat_id, handle]);
+        logger.debug("[POSTGRES] Group handle inserted: " + handle);
+    }
+
   }
   catch(err){
     logger.error("[POSTGRES] database.create_group: " + err);
@@ -536,17 +684,12 @@ async function get_user_id_from_handle(handle) {
 
 async function get_chat_id_from_handle(handle) {
 
-  const QUERY = "SELECT chat_id,group_id,channel_id FROM public.handles WHERE handle = $1";
+  const QUERY = "SELECT group_id,channel_id FROM public.handles WHERE handle = $1";
   let chat_id = null;
 
   try{
     const result = await query(QUERY, [handle]);
-
-    chat_id = result[0].chat_id;
-
-    if(chat_id === null || chat_id === undefined || chat_id === ''){
-      chat_id = result[0].group_id;
-    }
+    chat_id = result[0].group_id;
 
     if(chat_id === null || chat_id === undefined || chat_id === ''){
       chat_id = result[0].channel_id;
@@ -624,6 +767,30 @@ async function get_group_name_from_chat_id(chat_id){
   return name;
 }
 
+async function check_chat_existance(handle,other_handle) {
+  
+  const QUERY = "SELECT chat_id FROM public.chats WHERE (user1 = $1 AND user2 = $2) OR (user1 = $2 AND user2 = $1)";
+  let confirmation = false;
+
+  let user_id = null;
+  let other_user_id = null;
+  try{
+    user_id = await get_user_id_from_handle(handle);
+    other_user_id = await get_user_id_from_handle(other_handle);
+    const result = await query(QUERY, [user_id, other_user_id]);
+
+    if(result.length != 0){
+      confirmation = true;
+    }
+
+  }
+  catch(error){
+    logger.debug("[POSTGRES] database.check_chat_existance: " + error);
+  }
+
+  return confirmation;
+}
+
 module.exports = {
   testConnection,
   check_email_existence,
@@ -640,7 +807,9 @@ module.exports = {
   get_handle_from_id,
   create_chat,
   create_group,
-  get_members,
+  get_members_as_handle,
+  get_members_as_user_id,
   add_members_to_group,
-  get_group_name_from_chat_id
+  get_group_name_from_chat_id,
+  check_chat_existance
 };

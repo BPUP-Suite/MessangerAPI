@@ -43,7 +43,7 @@ function email(emailStr) {
   }
 
   function notNull(value){
-    return value != null && value != undefined && value != "";
+    return value != null && value != undefined && value != ""  && value != "undefined";
   }
 
   function name(name){
