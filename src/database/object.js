@@ -150,7 +150,7 @@ class Response {
     toJson() {
       return {
         ...super.toJson(),
-        ...this.chat_id
+        chat_id: this.chat_id
       };
     }
   }
