@@ -605,6 +605,20 @@ function get_chat_type(id){
   return null;
 }
 
+async function get_group_name_from_chat_id(chat_id){
+  const QUERY = "SELECT name FROM public.groups WHERE chat_id = $1";
+  let name = null;
+
+  try{
+    const result = await query(QUERY, [chat_id]);
+    name = result[0].name;
+  }catch(err){
+    logger.error("[POSTGRES] database.get_group_name_from_chat_id: " + err);
+  }
+
+  return name;
+}
+
 module.exports = {
   testConnection,
   check_email_existence,
@@ -622,5 +636,6 @@ module.exports = {
   create_chat,
   create_group,
   get_members,
-  add_members_to_group
+  add_members_to_group,
+  get_group_name_from_chat_id
 };

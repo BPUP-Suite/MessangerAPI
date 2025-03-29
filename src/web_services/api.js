@@ -9,7 +9,7 @@ const logger = require('../logger');
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse} = require('../database/object');
 
 const { send_messages_to_recipients,send_groups_to_recipients } = require('./socketio');
 
@@ -869,6 +869,9 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
   let validated = true;
 
   let chat_id = null;
+  let group_name = null;
+
+  let data = {};
 
   const handle = req.query.handle;
 
@@ -881,16 +884,28 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
   if (validated) {
     try {
       chat_id = await database.get_chat_id_from_handle(handle);
+      
 
       if (chat_id != null) {
-        try {
-          confirmation = await database.add_members_to_group(chat_id, user_id);
-          if (confirmation) {
-            code = 200;
-            errorDescription = '';
+        try{
+          group_name = await database.get_group_name_from_chat_id(chat_id);
+
+          try {
+            confirmation = await database.add_members_to_group(chat_id, user_id);
+            if (confirmation) {
+
+              data.group_name = group_name;
+              data.chat_id = chat_id;
+
+              code = 200;
+              errorDescription = '';
+            }
+          } catch (error) {
+            logger.error('database.add_member_to_group: ' + error);
           }
+
         } catch (error) {
-          logger.error('database.add_member_to_group: ' + error);
+          logger.error('database.get_group_name_from_chat_id: ' + error);
         }
       } else {
         code = 404;
@@ -901,7 +916,7 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
     }
   }
 
-  const joinGroupResponse = new CreateGroupResponse(type, confirmation, errorDescription, chat_id);
+  const joinGroupResponse = new JoinGroupResponse(type, confirmation, errorDescription, data);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(joinGroupResponse.toJson()));
   return res.status(code).json(joinGroupResponse.toJson());
 

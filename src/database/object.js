@@ -177,6 +177,12 @@ class Response {
     }
   }
 
+  class JoinGroupResponse extends ExtraJsonData_Response{
+    constructor(type, confirmation, error_message,group_data) {
+      super(type, confirmation, error_message, group_data);
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 

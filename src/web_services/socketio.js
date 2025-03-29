@@ -101,9 +101,8 @@ function send_messages_to_recipients(recipient_list,message_data) {
 }
 
 // Function to send group creating alert to all sockets in a group
-function send_groups_to_recipients(members,chat_id){
-  const chat_data = {chat_id:chat_id};
-  send_to_all(members,chat_data,'group_created');
+function send_groups_to_recipients(members,group_data){
+  send_to_all(members,group_data,'group_created');
 }
 
 function send_to_all(recipient_list,data,type){
