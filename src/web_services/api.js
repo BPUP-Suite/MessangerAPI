@@ -762,7 +762,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     code = 400;
     errorDescription = 'Name not valid';
     validated = false;
-  }else if (!(validator.generic(handle))){  // skip if handle is not provided = group is private
+  }else if (validator.generic(handle)){  // skip if handle is not provided = group is private
     if(!(await validator.handle(handle))) {
     code = 400;
     errorDescription = 'Handle not valid';
