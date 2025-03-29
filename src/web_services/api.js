@@ -732,10 +732,10 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
 
 api.get(group_path, isAuthenticated, async (req, res) => {
 
+  const user_id = req.session.user_id;
+
   logger.debug('[API] [REQUEST] Create group request received from: ' + user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
-
-  const user_id = req.session.user_id;
 
   const name = req.query.name;
   const handle = req.query.handle;
