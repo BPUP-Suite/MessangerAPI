@@ -389,12 +389,13 @@ async function send_message(message){
   const text = message.text;
   const date = new Date();
 
-  let QUERY = "";
-  let recipient_list = [sender];
+  let QUERY = 'INSERT INTO public.messages (chat_id, text, sender, date) VALUES ($1, $2, $3, $4) RETURNING message_id';;
+  let recipient_list = [];
 
   switch(get_chat_type(chat_id)){
     case "personal":
-      QUERY = 'INSERT INTO public.messages (chat_id, text, sender, date) VALUES ($1, $2, $3, $4) RETURNING message_id';
+
+      recipient_list.push(sender);
 
       const recipient = await get_recipient(chat_id, sender);
 
@@ -405,9 +406,13 @@ async function send_message(message){
       recipient_list.push(recipient);
       break;
 
-    case "group": // not implemented yet
-    return { message_data: null, recipient_list: null };
-    case "channel":
+    case "group": 
+
+      // sender is already inside the list of members
+      recipient_list = await get_members(chat_id);
+      break;
+      
+    case "channel": // not implemented yet
       return { message_data: null, recipient_list: null };
     default:
       return { message_data: null, recipient_list: null };
