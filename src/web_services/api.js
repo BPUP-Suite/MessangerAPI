@@ -244,27 +244,19 @@ api.get(signup_path, async (req, res) => {
     code = 400;
     errorDescription = 'Email not valid';
     validated = false;
-  }
-
-  if (!(validator.name(name))) {
+  }else if (!(validator.name(name))) {
     code = 400;
     errorDescription = 'Name not valid';
     validated = false;
-  }
-
-  if (!(validator.surname(surname))) {
+  }else if (!(validator.surname(surname))) {
     code = 400;
     errorDescription = 'Surname not valid';
     validated = false;
-  }
-
-  if (!(await validator.handle(handle))) {
+  }else if (!(await validator.handle(handle))) {
     code = 400;
     errorDescription = 'Handle not valid';
     validated = false;
-  }
-
-  if (!(validator.password(password))) {
+  }else if (!(validator.password(password))) {
     code = 400;
     errorDescription = 'Password not valid';
     validated = false;
@@ -314,9 +306,7 @@ api.get(login_path, async (req, res) => {
     code = 400;
     errorDescription = 'Email not valid';
     validated = false;
-  }
-
-  if (!validator.generic(password)) {
+  }else if (!validator.generic(password)) {
     code = 400;
     errorDescription = 'Password not valid';
     validated = false;
@@ -635,9 +625,7 @@ api.get(message_path, isAuthenticated, async (req, res) => {
     code = 400;
     errorDescription = 'Text message not valid (Too long [max 2056 char] or missing)';
     validated = false;
-  }
-
-  if (!(validator.chat_id(chat_id))) {
+  }else if (!(validator.chat_id(chat_id))) {
     code = 400;
     errorDescription = 'Chat_id not valid';
     validated = false;
@@ -895,10 +883,15 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
   let data = {};
 
   const handle = req.query.handle;
+  const members = await database.get_members_as_user_id(chat_id); // get all members of the group
 
   if (!(validator.generic(handle))) {
     code = 400;
     errorDescription = 'Handle not valid';
+    validated = false;
+  }else if (members.includes(user_id)) {
+    code = 400;
+    errorDescription = 'User already in group';
     validated = false;
   }
 
@@ -948,8 +941,6 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
       user_id: user_id,
     };  
 
-    const members = await database.get_members_as_user_id(chat_id); // get all members of the group
-
     setImmediate(() => {
       send_group_member_joined(members, user_data);
       logger.debug('[API] [IO] User joined and sent to members: ' + JSON.stringify(user_data));
@@ -995,6 +986,7 @@ postToGetWrapper(group_path);
 postToGetWrapper(search_all_path);
 postToGetWrapper(search_users_path);
 
+postToGetWrapper(join_group_path);
 
 // Middleware per gestire richieste a endpoints non esistenti
 api.all('*', (req, res) => {

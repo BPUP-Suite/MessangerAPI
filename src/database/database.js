@@ -150,22 +150,38 @@ async function login(loginUser) {
 
 // needs this to work: CREATE EXTENSION IF NOT EXISTS pg_trgm;
 async function search(handle){
-  const QUERY = "SELECT handle FROM handles WHERE handle ILIKE '%' || $1 || '%' ORDER BY similarity(handle, $1) DESC LIMIT 10;";
+  const QUERY = "SELECT handle, user_id, group_id, channel_id FROM handles WHERE handle ILIKE '%' || $1 || '%' ORDER BY similarity(handle, $1) DESC LIMIT 10;";
 
-  let list = [];
+  let results = [];
 
   try{
     const result = await query(QUERY, [handle]);
     // transfrom result in a handle list 
     // TBD: get images of users (or another method that passes images on request by socket managed by client)
 
-    list = result.map(row => row.handle); 
+    // Transform results to include handle type
+    results = result.map(row => {
+      let type = null;
+      
+      if (row.user_id !== null && row.user_id !== undefined) {
+        type = "user";
+      } else if (row.group_id !== null && row.group_id !== undefined) {
+        type = "group";
+      } else if (row.channel_id !== null && row.channel_id !== undefined) {
+        type = "channel";
+      }
+      
+      return {
+        handle: row.handle,
+        type: type
+      };
+    });
 
   }catch(err){
     logger.error("[POSTGRES] database.search: " + err);
   }
 
-  return list;
+  return results;
 }
 async function search_users(handle){
   const QUERY = "SELECT handle FROM handles WHERE handle ILIKE '%' || $1 || '%' AND user_id IS NOT NULL ORDER BY similarity(handle, $1) DESC LIMIT 10;";
