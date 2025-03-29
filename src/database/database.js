@@ -756,6 +756,10 @@ async function get_recipient(chat_id, sender) {
 
 function get_chat_type(id){
 
+  if(id == null || id === undefined || id === ''){
+    return null;
+  }
+
   if (id.charAt(0) === '2') {
     return "personal"; 
   }
@@ -827,5 +831,6 @@ module.exports = {
   get_members_as_user_id,
   add_members_to_group,
   get_group_name_from_chat_id,
-  check_chat_existance
+  check_chat_existance,
+  get_chat_messages
 };

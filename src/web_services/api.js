@@ -11,7 +11,7 @@ const database = require('../database/database');
 
 const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse} = require('../database/object');
 
-const { send_messages_to_recipients,send_groups_to_recipients, send_group_member_joined } = require('./socketio');
+const io = require('./socketio');
 
 api.use(express.json());
 api.use(express.urlencoded({ extended: true }));
@@ -658,7 +658,7 @@ api.get(message_path, isAuthenticated, async (req, res) => {
   // Send messages to recipients after sending the response to sender
   if (message_data != null && recipient_list != null) {
     setImmediate(() => {
-      send_messages_to_recipients(recipient_list, message_data);
+      io.send_messages_to_recipients(recipient_list, message_data);
     });
   }
 
@@ -815,7 +815,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     };
 
     setImmediate(() => {
-      send_groups_to_recipients(members, group_data);
+      io.send_groups_to_recipients(members, group_data);
       logger.debug('[API] [IO] Group created and sent to members: ' + JSON.stringify(group_data));
     });
   }
@@ -877,76 +877,108 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
   let confirmation = false;
   let validated = true;
 
-  let chat_id = null;
   let group_name = null;
 
   let data = {};
 
   const handle = req.query.handle;
-  const members = await database.get_members_as_user_id(chat_id); // get all members of the group
+  let chat_id = null;
+  let members = null; // get all members of the group
 
   if (!(validator.generic(handle))) {
     code = 400;
     errorDescription = 'Handle not valid';
     validated = false;
-  }else if (members.includes(user_id)) {
-    code = 400;
-    errorDescription = 'User already in group';
-    validated = false;
-  }
-
-  if (validated) {
+  }else{
     try {
+
       chat_id = await database.get_chat_id_from_handle(handle);
-
-      data = database.get
-      
-
       if (chat_id != null) {
-        try{
-          group_name = await database.get_group_name_from_chat_id(chat_id);
-
-          try {
-            confirmation = await database.add_members_to_group(chat_id, user_id);
-            if (confirmation) {
-
-              data.group_name = group_name;
-              data.chat_id = chat_id;
-
-              code = 200;
-              errorDescription = '';
-            }
-          } catch (error) {
-            logger.error('database.add_member_to_group: ' + error);
-          }
-
+        try {
+          members = await database.get_members_as_user_id(chat_id);
         } catch (error) {
-          logger.error('database.get_group_name_from_chat_id: ' + error);
+          logger.error('database.get_members_as_user_id: ' + error);
         }
       } else {
-        code = 404;
-        errorDescription = 'Group not found';
+        code = 400;
+        errorDescription = 'Handle not valid';
       }
     } catch (error) {
       logger.error('database.get_chat_id_from_handle: ' + error);
     }
+
+    if(members == null) {
+      code = 400;
+      errorDescription = 'Handle not valid';
+      validated = false;
+    }else if (members.includes(user_id)) {
+      code = 400;
+      errorDescription = 'User already in group';
+      validated = false;
+    }
   }
 
+  if (validated) {
+    try{
+      group_name = await database.get_group_name_from_chat_id(chat_id);
+
+      try {
+        confirmation = await database.add_members_to_group(chat_id, user_id);
+        if (confirmation) {
+
+          data.group_name = group_name;
+          data.chat_id = chat_id;
+
+          // Map each user_id to an object with both id and handle
+          const members_handles = await Promise.all(members.map(async member_id => {
+            return {
+              user_id: member_id,
+              handle: await database.get_handle_from_id(member_id)
+            };
+          }));
+          
+          // Add the current user to the members list
+          members_handles.push({
+            user_id: user_id,
+            handle: await database.get_handle_from_id(user_id)
+          });
+
+          data.members = members_handles; // get all members of the group
+
+          data.messages = await database.get_chat_messages(chat_id); // get all messages of the group
+
+          code = 200;
+          errorDescription = '';
+        }
+      } catch (error) {
+        logger.error('database.add_member_to_group: ' + error);
+      }
+
+    } catch (error) {
+      logger.error('database.get_group_name_from_chat_id: ' + error);
+    }
+
+
+  }
+
+  
   const joinGroupResponse = new JoinGroupResponse(type, confirmation, errorDescription, data);
   logger.debug('[API] [RESPONSE] ' + JSON.stringify(joinGroupResponse.toJson()));
   res.status(code).json(joinGroupResponse.toJson());
 
   // Send group to recipients after sending the response to sender
-  if (chat_id != null) {
-    const user_data = {
-      chat_id: chat_id,
-      user_id: user_id,
-    };  
+  if(validated && confirmation && chat_id != null) {
+      const user_data = {
+        chat_id: chat_id,
+        user_id: user_id,
+      };  
 
-    setImmediate(() => {
-      send_group_member_joined(members, user_data);
-      logger.debug('[API] [IO] User joined and sent to members: ' + JSON.stringify(user_data));
-    });
+      setImmediate(() => {
+        io.send_group_member_joined(members, user_data);
+        logger.debug('[API] [IO] User joined and sent to members: ' + JSON.stringify(user_data));
+        io.send_member_member_joined(user_id, data);
+        logger.debug('[API] [IO] User joined and sent to member ' + user_id + ' : ' + JSON.stringify(data));
+      });
   }
 
   return;

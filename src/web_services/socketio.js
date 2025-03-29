@@ -110,6 +110,11 @@ function send_group_member_joined(members,group_data){
   send_to_all(members,group_data,'group_member_joined');
 }
 
+// Alert of a new member joined to a group (to the member that joined)
+function send_member_member_joined(member,group_data){
+  send_to_all([member],group_data,'member_joined_group');
+}
+
 // Alert of a member left a group
 
 // 
@@ -130,6 +135,6 @@ module.exports = {
   send_messages_to_recipients, 
   send_groups_to_recipients,
   getActiveSockets,
-  send_group_member_joined
-
+  send_group_member_joined,
+  send_member_member_joined
 };
