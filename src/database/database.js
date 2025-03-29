@@ -473,38 +473,38 @@ async function create_group(group) {
   const admins = group.admins;
 
   const QUERY = "INSERT INTO public.groups(name, description, members, admins) VALUES ($1, $2, $3, $4) RETURNING group_id";
-  let group_id = null;
+  let chat_id = null;
 
   try{  
     // Insert the group into the database
     const result = await query(QUERY, [name, description, members, admins]);
-    group_id = result[0].group_id;
-    logger.debug("[POSTGRES] Group created with ID: " + group_id);
+    chat_id = result[0].chat_id;
+    logger.debug("[POSTGRES] Group created with ID: " + chat_id);
 
     const HANDLE_QUERY = "INSERT INTO public.handles(group_id, handle) VALUES ($1, $2)";
     const handle = group.handle;
 
     // Insert the group handle into the database
-    const group_id = result[0].group_id;
-    await query(HANDLE_QUERY, [group_id, handle]);
+    const chat_id = result[0].chat_id;
+    await query(HANDLE_QUERY, [chat_id, handle]);
     logger.debug("[POSTGRES] Group handle inserted: " + handle);
   }
   catch(err){
     logger.error("[POSTGRES] database.create_group: " + err);
   }
 
-  return group_id;
+  return chat_id;
 
 }
 
 // Insert the new members into the group
 
-async function add_members_to_group(group_id, members) {
-  const QUERY = "UPDATE public.groups SET members = array_append(members, $1) WHERE group_id = $2";
+async function add_members_to_group(chat_id, members) {
+  const QUERY = "UPDATE public.groups SET members = array_append(members, $1) WHERE chat_id = $2";
   let confirmation = false;
 
   try{
-    await query(QUERY, [members, group_id]);
+    await query(QUERY, [members, chat_id]);
     confirmation = true;
   }catch(err){
     logger.error("[POSTGRES] database.add_members_to_group: " + err);
