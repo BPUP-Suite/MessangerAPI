@@ -472,7 +472,7 @@ async function create_group(group) {
   const members = group.members;
   const admins = group.admins;
 
-  const QUERY = "INSERT INTO public.groups(name, description, members, admins) VALUES ($1, $2, $3, $4) RETURNING group_id";
+  const QUERY = "INSERT INTO public.groups(name, description, members, admins) VALUES ($1, $2, $3, $4) RETURNING chat_id";
   let chat_id = null;
 
   try{  
