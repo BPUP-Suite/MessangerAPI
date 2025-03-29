@@ -762,7 +762,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     code = 400;
     errorDescription = 'Name not valid';
     validated = false;
-  }else if (handle != null || handle != undefined || handle == ''){  // skip if handle is not provided = group is private
+  }else if (handle != null || handle != undefined || handle != ''){  // skip if handle is not provided = group is private
     if(!(await validator.handle(handle))) {
     code = 400;
     errorDescription = 'Handle not valid';
@@ -866,7 +866,7 @@ api.get(members_path, isAuthenticated, async (req, res) => {
 
 api.get(join_group_path, isAuthenticated, async (req, res) => {
 
-  const user_id = req.session.user_id; //per ora i gruppi sono tutti pubblic quindi basta essere registrati per entrarci
+  const user_id = req.session.user_id; // all public groups are visible to all users
 
   logger.debug('[API] [REQUEST] Join group request received from: ' + req.session.user_id);
   logger.debug('-> ' + JSON.stringify(req.query))
@@ -898,6 +898,8 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
   if (validated) {
     try {
       chat_id = await database.get_chat_id_from_handle(handle);
+
+      data = database.get
       
 
       if (chat_id != null) {
