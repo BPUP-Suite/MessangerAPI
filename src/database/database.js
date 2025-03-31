@@ -436,11 +436,12 @@ async function get_groups(user_id){
 // sicuramente da ottimizzare insieme al client_init
 async function client_update(datetime, user_id) {
 
-  let json = {};
+  const date = new Date();
+  let json = {date: date};
 
   // Find chats with new messages since the provided datetime
   const QUERY_CHATS_WITH_NEW_MESSAGES = `SELECT c.chat_id, c.user1, c.user2 FROM public.chats c WHERE (c.user1 = $1 OR c.user2 = $1) AND EXISTS (SELECT 1 FROM public.messages m WHERE m.chat_id = c.chat_id AND m.date > $2)`;
-
+  
   let chatsWithNewMessages = null;
 
   try {
@@ -454,7 +455,7 @@ async function client_update(datetime, user_id) {
   // If no chats with new messages, return just null
   if(!chatsWithNewMessages || chatsWithNewMessages.length === 0) {
     logger.debug("[POSTGRES] No updated chats found for user since: " + datetime);
-  }else{
+  } else {
     // Format chats with new messages
     const chatPromises = chatsWithNewMessages.map(async chat => {
       return {
@@ -486,52 +487,59 @@ async function client_update(datetime, user_id) {
     }
   }
 
-  // Get groups with new messages since the provided datetime
-
-  const QUERY_GROUPS_WITH_NEW_MESSAGES = `SELECT g.chat_id, g.name, g.members FROM public.groups g WHERE g.members @> ARRAY[$1]::bigint[] AND EXISTS (SELECT 1 FROM public.messages m WHERE m.chat_id = g.chat_id AND m.date > $2)`;
-  let groupsWithNewMessages = null;
+  // Get groups that have been updated or created since the provided datetime
+  const QUERY_UPDATED_GROUPS = `
+    SELECT g.chat_id, g.name, g.members, g.description, g.date_created
+    FROM public.groups g 
+    WHERE g.members @> ARRAY[$1]::bigint[] AND 
+    (g.date_created > $2 OR g.last_modification > $2 OR EXISTS 
+      (SELECT 1 FROM public.messages m WHERE m.chat_id = g.chat_id AND m.date > $2))
+  `;
+  
+  let updatedGroups = null;
 
   try {
-    const result = await query(QUERY_GROUPS_WITH_NEW_MESSAGES, [user_id, datetime]);
-    groupsWithNewMessages = result;
+    const result = await query(QUERY_UPDATED_GROUPS, [user_id, datetime]);
+    updatedGroups = result;
   } catch(error) {
-    logger.error("[POSTGRES] database.client_update finding groups: " + error);
-    return null;
+    logger.error("[POSTGRES] database.client_update finding updated groups: " + error);
+    return json; // Return what we have so far
   }
-  // If no groups with new messages, return just null
 
-  if(!groupsWithNewMessages || groupsWithNewMessages.length === 0) {
+  // If no updated groups, just continue
+  if(!updatedGroups || updatedGroups.length === 0) {
     logger.debug("[POSTGRES] No updated groups found for user since: " + datetime);
-  }else{
-    // Format groups with new messages
-
-    const groupPromises = groupsWithNewMessages.map(async group => {
+  } else {
+    // Format updated groups
+    const groupPromises = updatedGroups.map(async group => {
+      // Map all members to their user_id and handle
+      const usersPromises = group.members.map(async memberId => {
+        return {
+          "user_id": memberId,
+          "handle": await get_handle_from_id(memberId)
+        };
+      });
+      
       return {
         name: group.name,
         chat_id: group.chat_id,
-        users: [
-          {
-            "user_id": group.members[0],
-            "handle": await get_handle_from_id(group.members[0])
-          }
-        ]
+        description: group.description,
+        users: await Promise.all(usersPromises)
       };
-    }
+    });
 
-    );
     json["groups"] = await Promise.all(groupPromises);
 
-    // Get new messages for each group
-
-    for(let i = 0; i < groupsWithNewMessages.length; i++) {
+    // Get new messages for each group (only if there are new messages)
+    for(let i = 0; i < updatedGroups.length; i++) {
       const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
       try {
-        const result = await query(QUERY_MESSAGES, [groupsWithNewMessages[i].chat_id, datetime]);
+        const result = await query(QUERY_MESSAGES, [updatedGroups[i].chat_id, datetime]);
         if(result && result.length > 0) {
           json["groups"][i]["messages"] = result;
         }
       } catch(err) {
-        logger.error("[POSTGRES] database.client_update getting messages: " + err);
+        logger.error("[POSTGRES] database.client_update getting group messages: " + err);
       }
     }
   }
@@ -636,13 +644,14 @@ async function create_group(group) {
   const description = group.description;
   const members = group.members;
   const admins = group.admins;
+  const date = new Date();
 
-  const QUERY = "INSERT INTO public.groups(name, description, members, admins) VALUES ($1, $2, $3, $4) RETURNING chat_id";
+  const QUERY = "INSERT INTO public.groups(name, description, members, admins, date_created) VALUES ($1, $2, $3, $4, $5) RETURNING chat_id";
   let chat_id = null;
 
   try{  
     // Insert the group into the database
-    const result = await query(QUERY, [name, description, members, admins]);
+    const result = await query(QUERY, [name, description, members, admins, date]);
     chat_id = result[0].chat_id;
     logger.debug("[POSTGRES] Group created with ID: " + chat_id);
 
@@ -660,24 +669,27 @@ async function create_group(group) {
     logger.error("[POSTGRES] database.create_group: " + err);
   }
 
-  return chat_id;
+  return { chat_id: chat_id, date: date };
 
 }
 
 // Insert the new members into the group
 
 async function add_members_to_group(chat_id, members) {
-  const QUERY = "UPDATE public.groups SET members = array_append(members, $1) WHERE chat_id = $2";
+
+  const date = new Date();
+
+  const QUERY = "UPDATE public.groups SET members = array_append(members, $1), last_modification = $3 WHERE chat_id = $2";
   let confirmation = false;
 
   try{
-    await query(QUERY, [members, chat_id]);
+    await query(QUERY, [members, chat_id, date]);
     confirmation = true;
   }catch(err){
     logger.error("[POSTGRES] database.add_members_to_group: " + err);
   }
 
-  return confirmation;
+  return { confirmation: confirmation, date: date };
 }
 
 

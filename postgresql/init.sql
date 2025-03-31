@@ -61,7 +61,9 @@ CREATE TABLE public.groups (
     members bigint[] NOT NULL,
     admins bigint[] NOT NULL,
     description text,
-    group_picture_id bigint[]
+    group_picture_id bigint[],
+    date_created timestamp without time zone NOT NULL,
+    last_modification timestamp without time zone NOT NULL
 );
 
 ALTER TABLE public.groups ADD CONSTRAINT groups_pkey PRIMARY KEY (chat_id);

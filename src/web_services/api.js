@@ -170,7 +170,8 @@ function isAuthenticated(req, res, next) {
     const code = 401;
     const errorDescription = 'Non Authorized';
 
-    logger.debug(`[API] [AUTH] User not authenticated`);
+    logger.error(`[API] [AUTH] User not authenticated`);
+    logger.error(`[API] [AUTH] Request: ${req}`);
 
     res.status(code).json({ errorMessage: errorDescription });
   }
@@ -757,6 +758,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
   let validated = true;
 
   let chat_id = null;
+  let date = null;
 
   if (!(validator.generic(name))) {
     code = 400;
@@ -788,8 +790,10 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     } 
     try {
       const group = new Group(handle,name, description, members, admins);
-      chat_id = await database.create_group(group);
-      if (chat_id != null) {
+      const result = await database.create_group(group);
+      chat_id = result.chat_id;
+      date = result.date;
+      if (chat_id != null && date != null) {
         confirmation = true;
         code = 200;
         errorDescription = '';
@@ -805,13 +809,14 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
 
   // Send group to recipients after sending the response to sender
-  if (chat_id != null) {
+  if (chat_id != null && date != null) {
     const group_data = {
       chat_id: chat_id,
       name: name,
       description: description,
       members: members,
-      admins: admins
+      admins: admins,
+      date: date
     };
 
     setImmediate(() => {
@@ -880,6 +885,7 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
   let group_name = null;
 
   let data = {};
+  let date = null;
 
   const handle = req.query.handle;
   let chat_id = null;
@@ -923,7 +929,9 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
       group_name = await database.get_group_name_from_chat_id(chat_id);
 
       try {
-        confirmation = await database.add_members_to_group(chat_id, user_id);
+        const result = await database.add_members_to_group(chat_id, user_id);
+        confirmation = result.confirmation;
+        date = result.date;
         if (confirmation) {
 
           data.group_name = group_name;
@@ -971,7 +979,13 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
       const user_data = {
         chat_id: chat_id,
         user_id: user_id,
+        date: date
       };  
+
+      data = {
+        ...data,
+        date: date
+      };
 
       setImmediate(() => {
         io.send_group_member_joined(members, user_data);
