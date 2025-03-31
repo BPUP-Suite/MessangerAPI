@@ -8,7 +8,6 @@ const logger = require('../logger');
 const encrypter = require('../security/encrypter');
 
 const envManager = require('../security/envManager');
-const validator = require('../security/validator');
 
 logger.log('[POSTGRES] Postgresql database starting...');
 
@@ -368,7 +367,7 @@ async function get_chats(user_id){
     chats = result;
   }
   catch(err){
-    logger.error("[POSTGRES] database.client_init: " + err);
+    logger.error("[POSTGRES] database.get_chats: " + err);
   }
 
   // if no data are found, return only the info json
@@ -404,7 +403,7 @@ async function get_groups(user_id){
     groups = result;
   }
   catch(error){
-    logger.error("[POSTGRES] database.client_init: " + error);
+    logger.error("[POSTGRES] database.get_groups: " + error);
   }
 
   // if no data are found, return only the info json
@@ -434,7 +433,7 @@ async function get_groups(user_id){
 
 }
 
-
+// sicuramente da ottimizzare insieme al client_init
 async function client_update(datetime, user_id) {
 
   let json = {};
@@ -455,46 +454,45 @@ async function client_update(datetime, user_id) {
   // If no chats with new messages, return just null
   if(!chatsWithNewMessages || chatsWithNewMessages.length === 0) {
     logger.debug("[POSTGRES] No updated chats found for user since: " + datetime);
-    return json;
-  }
+  }else{
+    // Format chats with new messages
+    const chatPromises = chatsWithNewMessages.map(async chat => {
+      return {
+        chat_id: chat.chat_id,
+        users: [
+          {
+            "handle": await get_handle_from_id(chat.user1)
+          },
+          {
+            "handle": await get_handle_from_id(chat.user2)
+          }
+        ]
+      };
+    });
 
-  // Format chats with new messages
-  const chatPromises = chatsWithNewMessages.map(async chat => {
-    return {
-      chat_id: chat.chat_id,
-      users: [
-        {
-          "handle": await get_handle_from_id(chat.user1)
-        },
-        {
-          "handle": await get_handle_from_id(chat.user2)
+    json["chats"] = await Promise.all(chatPromises);
+
+    // Get new messages for each chat
+    for(let i = 0; i < chatsWithNewMessages.length; i++) {
+      const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
+      try {
+        const result = await query(QUERY_MESSAGES, [chatsWithNewMessages[i].chat_id, datetime]);
+        if(result && result.length > 0) {
+          json["chats"][i]["messages"] = result;
         }
-      ]
-    };
-  });
-
-  json["chats"] = await Promise.all(chatPromises);
-  
-  // Get new messages for each chat
-  for(let i = 0; i < chatsWithNewMessages.length; i++) {
-    const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
-    try {
-      const result = await query(QUERY_MESSAGES, [chatsWithNewMessages[i].chat_id, datetime]);
-      if(result && result.length > 0) {
-        json["chats"][i]["messages"] = result;
+      } catch(err) {
+        logger.error("[POSTGRES] database.client_update getting messages: " + err);
       }
-    } catch(err) {
-      logger.error("[POSTGRES] database.client_update getting messages: " + err);
     }
   }
 
   // Get groups with new messages since the provided datetime
 
-  const QUERY_GROUPS_WITH_NEW_MESSAGES = `SELECT g.chat_id, g.name, g.members FROM public.groups g WHERE g.members @> ARRAY[$1]::bigint[]" AND EXISTS (SELECT 1 FROM public.messages m WHERE m.chat_id = g.chat_id AND m.date > $2)`;
+  const QUERY_GROUPS_WITH_NEW_MESSAGES = `SELECT g.chat_id, g.name, g.members FROM public.groups g WHERE g.members @> ARRAY[$1]::bigint[] AND EXISTS (SELECT 1 FROM public.messages m WHERE m.chat_id = g.chat_id AND m.date > $2)`;
   let groupsWithNewMessages = null;
-  const members = [user_id];
+
   try {
-    const result = await query(QUERY_GROUPS_WITH_NEW_MESSAGES, [members, datetime]);
+    const result = await query(QUERY_GROUPS_WITH_NEW_MESSAGES, [user_id, datetime]);
     groupsWithNewMessages = result;
   } catch(error) {
     logger.error("[POSTGRES] database.client_update finding groups: " + error);
@@ -504,37 +502,37 @@ async function client_update(datetime, user_id) {
 
   if(!groupsWithNewMessages || groupsWithNewMessages.length === 0) {
     logger.debug("[POSTGRES] No updated groups found for user since: " + datetime);
-    return json;
-  }
-  // Format groups with new messages
+  }else{
+    // Format groups with new messages
 
-  const groupPromises = groupsWithNewMessages.map(async group => {
-    return {
-      name: group.name,
-      chat_id: group.chat_id,
-      users: [
-        {
-          "user_id": group.members[0],
-          "handle": await get_handle_from_id(group.members[0])
+    const groupPromises = groupsWithNewMessages.map(async group => {
+      return {
+        name: group.name,
+        chat_id: group.chat_id,
+        users: [
+          {
+            "user_id": group.members[0],
+            "handle": await get_handle_from_id(group.members[0])
+          }
+        ]
+      };
+    }
+
+    );
+    json["groups"] = await Promise.all(groupPromises);
+
+    // Get new messages for each group
+
+    for(let i = 0; i < groupsWithNewMessages.length; i++) {
+      const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
+      try {
+        const result = await query(QUERY_MESSAGES, [groupsWithNewMessages[i].chat_id, datetime]);
+        if(result && result.length > 0) {
+          json["groups"][i]["messages"] = result;
         }
-      ]
-    };
-  }
-
-  );
-  json["groups"] = await Promise.all(groupPromises);
-
-  // Get new messages for each group
-
-  for(let i = 0; i < groupsWithNewMessages.length; i++) {
-    const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
-    try {
-      const result = await query(QUERY_MESSAGES, [groupsWithNewMessages[i].chat_id, datetime]);
-      if(result && result.length > 0) {
-        json["groups"][i]["messages"] = result;
+      } catch(err) {
+        logger.error("[POSTGRES] database.client_update getting messages: " + err);
       }
-    } catch(err) {
-      logger.error("[POSTGRES] database.client_update getting messages: " + err);
     }
   }
 
@@ -651,7 +649,7 @@ async function create_group(group) {
     const HANDLE_QUERY = "INSERT INTO public.handles(group_id, handle) VALUES ($1, $2)";
     const handle = group.handle;
 
-    if(!(validator.generic(handle))){ // if handle is null (or similar) do not insert it into the database because group is private
+    if(handle != null && handle != undefined && handle != ""  && handle != "undefined" && handle != "null"){ // if handle is null (or similar) do not insert it into the database because group is private
         // Insert the group handle into the database
         await query(HANDLE_QUERY, [chat_id, handle]);
         logger.debug("[POSTGRES] Group handle inserted: " + handle);

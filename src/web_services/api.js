@@ -764,14 +764,14 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     validated = false;
   }else if (validator.generic(handle)){  // skip if handle is not provided = group is private
     if(!(await validator.handle(handle))) {
-    code = 400;
-    errorDescription = 'Handle not valid';
-    validated = false;
+      code = 400;
+      errorDescription = 'Handle not valid';
+      validated = false;
     }
   }else{
     handle = null; // handle is not provided = group is private
   }
-
+  
   if (validated) {  
     // get all members list from their handles
     if(members_handles != null){
@@ -795,7 +795,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
         errorDescription = '';
       }
     } catch (error) {
-      logger.error('database.get_user_id_from_handle: ' + error);
+      logger.error('database.create_group: ' + error);
     }
   }
 
