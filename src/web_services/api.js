@@ -513,7 +513,7 @@ api.get(init_path, isAuthenticated, async (req, res) => {
         ...init_data,
         date: date
       };
-      
+
     }
 
   } catch (error) {
@@ -1023,7 +1023,7 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
   if(validated && confirmation && chat_id != null) {
       const user_data = {
         chat_id: chat_id,
-        user_id: user_id,
+        handle: handle,
         date: date
       };  
 
