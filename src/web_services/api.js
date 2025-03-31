@@ -5,6 +5,7 @@ const cors = require('cors');
 
 const api = express();
 const logger = require('../logger');
+const swaggerRouter = require('./swagger');
 
 const validator = require('../database/validator');
 const database = require('../database/database');
@@ -149,6 +150,7 @@ const limiter = rateLimit({
 });
 
 api.use(limiter);
+api.use('/api-docs', swaggerRouter);
 
 // Api methods
 
@@ -288,6 +290,42 @@ api.get(signup_path, async (req, res) => {
 
 // returns the api_key of the requested user if logged_in is true (true = logged_in successfully, false = error [see error code/description])
 // if password is wrong return code 401 (Unauthorized)
+// Example for documenting the login endpoint in api.js
+
+/**
+ * @swagger
+ * /v1/user/auth/login:
+ *   get:
+ *     summary: Authenticate a user
+ *     description: Log in a user with email and password
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User's email address
+ *       - in: query
+ *         name: password
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User's password
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       400:
+ *         description: Invalid input parameters
+ *       401:
+ *         description: Authentication failed
+ *       500:
+ *         description: Server error
+ */
 
 api.get(login_path, async (req, res) => {
   const email = req.query.email;
