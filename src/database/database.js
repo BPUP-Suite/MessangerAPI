@@ -8,6 +8,7 @@ const logger = require('../logger');
 const encrypter = require('../security/encrypter');
 
 const envManager = require('../security/envManager');
+const validator = require('../security/validator');
 
 logger.log('[POSTGRES] Postgresql database starting...');
 
@@ -650,7 +651,7 @@ async function create_group(group) {
     const HANDLE_QUERY = "INSERT INTO public.handles(group_id, handle) VALUES ($1, $2)";
     const handle = group.handle;
 
-    if(handle != null){ // if handle is null do not insert it into the database because group is private
+    if(!(validator.generic(handle))){ // if handle is null (or similar) do not insert it into the database because group is private
         // Insert the group handle into the database
         await query(HANDLE_QUERY, [chat_id, handle]);
         logger.debug("[POSTGRES] Group handle inserted: " + handle);

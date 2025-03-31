@@ -14,38 +14,6 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
     - [Environmentals](#Environmental)
     - [Databases](#Databases)
     - [API](#API)
-<<<<<<< HEAD
-=======
-      - [user/](#user/)
-        - [auth/](#auth/)
-            - [access](#access)
-            - [signup](#signup)
-            - [login](#login)
-            - [logout](#logout)
-            - [session](#session)
-      - [data/](#data/)
-        - [check/](#check/)
-            - [handle-availability](#handle-availability)
-        - [get/](#get)
-            - [init](#init)
-            - [update](#update)
-        - [search/](#search/)
-            - [all](#all)
-            - [users](#users)
-      - [chat/](#chat/)
-        - [send/](#send/)
-            - [message](#message)
-            - [voice-message](#voice-message)
-            - [file](#file)
-        - [create/](#create/)
-            - [chat](#chat)
-            - [group](#group)
-            - [channel](#channel)
-        - [join/](#join/)
-            - [group](#group)
-            - [channel](#channel)
-
->>>>>>> 73b6d81a5331e22dd31af835b97d4c682a799da7
     - [Socket.io](#Socket.io)
     - [Dashboard](#Dashboard)
       - [Screenshots](#Screenshots)
@@ -55,7 +23,6 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
       - [Errors](#Errors)
         - [Codes](#Codes)
         - [Messages](#Messages)
-    
 
      
 ## To-dos
