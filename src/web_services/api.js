@@ -507,6 +507,13 @@ api.get(init_path, isAuthenticated, async (req, res) => {
       confirmation = true;
       code = 200;
       errorDescription = '';
+
+      const date = new Date();
+      init_data = {
+        ...init_data,
+        date: date
+      };
+      
     }
 
   } catch (error) {
