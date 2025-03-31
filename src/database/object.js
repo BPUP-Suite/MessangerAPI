@@ -150,13 +150,14 @@ class Response {
     toJson() {
       return {
         ...super.toJson(),
-        ...this.chat_id
+        chat_id: this.chat_id
       };
     }
   }
 
   class Group{
-    constructor(name, description, members, admins){
+    constructor(handle, name, description, members, admins){
+      this.handle = handle;
       this.name = name;
       this.description = description || ''; // if description is not provided, it will be an empty string
       this.members = members;
@@ -173,6 +174,12 @@ class Response {
   class UpdateResponse extends ExtraJsonData_Response{
     constructor(type, confirmation, error_message,update_data) {
       super(type, confirmation, error_message, update_data);
+    }
+  }
+
+  class JoinGroupResponse extends ExtraJsonData_Response{
+    constructor(type, confirmation, error_message,group_data) {
+      super(type, confirmation, error_message, group_data);
     }
   }
 
@@ -195,5 +202,7 @@ class Response {
     CreateGroupResponse,
     Group,
     MembersResponse,
-    UpdateResponse
+    UpdateResponse,
+    CreateGroupResponse,
+    JoinGroupResponse
   };

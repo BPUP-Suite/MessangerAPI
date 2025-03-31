@@ -127,7 +127,7 @@ app.get('/api/redis/sessions', async (req, res) => {
 
 // WebSocket setup for real-time log updates
 wss.on('connection', (ws) => {
-  logger.log('[DASHBOARD] WebSocket client connected');
+  logger.debug('[DASHBOARD] WebSocket client connected');
   
   // Set up file watcher for logs
   const logsDir = LOGS_PATH;
