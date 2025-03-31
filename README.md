@@ -13,74 +13,16 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
     - [Docker](#Docker)
     - [Environmentals](#Environmental)
     - [Databases](#Databases)
-        - [Postgres](#Postgres)
-        - [Redis](#Redis)
     - [API](#API)
-      - [user/](#user/)
-        - [auth/](#auth/)
-            - [access](#access)
-            - [signup](#signup)
-            - [login](#login)
-            - [logout](#logout)
-            - [session](#session)
-      - [data/](#data/)
-        - [check/](#check/)
-            - [handle-availability](#handle-availability)
-        - [get/](#get)
-            - [init](#init)
-            - [update](#update)
-        - [search/](#search/)
-            - [all](#all)
-            - [users](#users)
-      - [chat/](#chat/)
-        - [send/](#send/)
-            - [message](#message)
-            - [voice-message](#voice-message)
-            - [file](#file)
-        - [create/](#create/)
-            - [chat](#chat)
-            - [group](#group)
-            - [channel](#channel)
-
     - [Socket.io](#Socket.io)
-      - [receive_message](#receive_message)
     - [Dashboard](#Dashboard)
       - [Screenshots](#Screenshots)
     - [Dictionary](#Dictionary)
       - [Tags](#Tags)
-        - [Input](#Input)
-        - [Output](#Output)
-        - [Authentication](#Authentication)
       - [Variables](#Variables)
-        - [access_type](#access_type)
-        - [session_id](#session_id)
-        - [email](#email)
-        - [password](#password)
-        - [name](#name)
-        - [surname](#surname)
-        - [handle](#handle)
-        - [user_id](#user_id)
-        - [chat_id](#chat_id)
-        - [message_id](#message_id)
-        - [text](#text)
-        - [sender](#sender)
-        - [date](#date)
       - [Errors](#Errors)
         - [Codes](#Codes)
-          - [200](#200)
-          - [201](#201)
-          - [304](#304)
-          - [400](#400)
-          - [401](#401)
-          - [403](#403)
-          - [404](#404)
-          - [429](#429)
-          - [500](#500)
         - [Messages](#Messages)
-          - [Validation Errors](#Validation-Errors)
-          - [Authentication Errors](#Authentication-Errors)
-          - [System Errors](#System-Errors)
-
     
 
      
@@ -186,6 +128,9 @@ NODE_ENV -> (if not on production will not use DOMAIN and will be only HTTP, es:
 DOMAIN -> (using buzz.it as an example we will have api.buzz.it for API and io.buzz.it for SOCKET.IO and cookie will be stored in api.buzz.it)
 
 ## Databases
+
+  - [Postgres](#Postgres)
+  - [Redis](#Redis)
 
 ### Postgres
 
@@ -352,6 +297,9 @@ ALTER TABLE public.users OWNER TO bpup;
 
 ## API
 
+- [user/](#user/)
+- [chat/](#chat/)
+
 La seguente documentazione è ordinata il modo tale da costruire il path a ogni richiesta tramite i vari titoli inoltre verranno forniti i percorsi per accedere al metodo, i parametri da passare e le possibili risposte.
 
 Tutte le risposte sono SEMPRE in formato JSON.
@@ -376,7 +324,16 @@ Se il metodo ritorna risposta [200](#200) il tutto è andato a buon fine e sono 
 
 ### user/
 
+- [auth/](#auth/)
+- [data/](#data/)
+
 #### auth/
+
+- [access](#access)
+- [signup](#signup)
+- [login](#login)
+- [logout](#logout)
+- [session](#session)
 
 ##### access
 
@@ -506,7 +463,13 @@ Response:
 
 ### data/
 
+- [check/](#check/)
+- [get/](#get)
+- [search/](#search/)
+
 #### check/
+
+- [handle-availability](#handle-availability)
 
 ##### handle-availability
 
@@ -538,6 +501,9 @@ OR
 ```
 
 #### get/
+
+- [init](#init)
+- [update](#update)
 
 ##### init
 
@@ -641,6 +607,9 @@ metodo appena creato, scriverò la documentazione dopo aver effettuato il test d
 
 #### search/
 
+- [all](#all)
+- [users](#users)
+
 ##### all
 
 ...
@@ -651,7 +620,14 @@ metodo appena creato, scriverò la documentazione dopo aver effettuato il test d
 
 ### chat/
 
+- [send/](#send/)
+- [create/](#create/)
+
 #### send/
+
+- [message](#message)
+- [voice-message](#voice-message)
+- [file](#file)
 
 ##### message
 
@@ -667,6 +643,10 @@ None
 
 #### create/
 
+- [chat](#chat)
+- [group](#group)
+- [channel](#channel)
+
 ##### chat
 
 ...
@@ -680,6 +660,8 @@ None
 None
 
 ## Socket.io
+
+- [receive_message](#receive_message)
 
 ### receive_message 
 DA CAMBIARE
@@ -717,6 +699,10 @@ da fare perchè sincero no voglia (al massimo conviene fare tipo un dictionary a
 
 ### Tags
 
+- [Input](#Input)
+- [Output](#Output)
+- [Authentication](#Authentication)
+
 #### Input
 
 Indica che il metodo chiede dei parametri in input nella richiesta. È possibile trovare una spiegazione esaustiva di ogni parametro in [Variables](#Variables).
@@ -728,6 +714,20 @@ Indica che il metodo ritornerà dei parametri in output nella risposta. È possi
 #### Authentication
 
 #### Variables
+
+- [access_type](#access_type)
+- [session_id](#session_id)
+- [email](#email)
+- [password](#password)
+- [name](#name)
+- [surname](#surname)
+- [handle](#handle)
+- [user_id](#user_id)
+- [chat_id](#chat_id)
+- [message_id](#message_id)
+- [text](#text)
+- [sender](#sender)
+- [date](#date)
 
 ##### access_type
 Indicates whether an email is registered, returning either "signup" or "login"
@@ -778,6 +778,16 @@ The timestamp indicating when the message was sent, stored in ISO 8601 format (e
 
 #### Codes
 
+- [200](#200)
+- [201](#201)
+- [304](#304)
+- [400](#400)
+- [401](#401)
+- [403](#403)
+- [404](#404)
+- [429](#429)
+- [500](#500)
+
 I codici di stato utilizzati dall'API fanno riferimento ai codici standard HTTP. Ogni codice indica un tipo specifico di risposta dal server. Il codice sarà presente nella response.
 
 ##### 200
@@ -817,6 +827,10 @@ L'utente ha inviato troppe richieste in un determinato periodo di tempo (rate li
 Si è verificato un errore interno del server che ha impedito il completamento della richiesta.
 
 #### Messages
+
+- [Validation Errors](#Validation-Errors)
+- [Authentication Errors](#Authentication-Errors)
+- [System Errors](#System-Errors)
 
 In aggiunta ai codici di stato, l'API fornisce messaggi di errore specifici per aiutare a diagnosticare i problemi. Il messaggio verrà fornito nella response nel formato `{error_message: "messaggio specifico"}`.
 
