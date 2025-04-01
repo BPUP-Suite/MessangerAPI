@@ -111,7 +111,7 @@ function readDashboardPort(){
     return readVariable("DASHBOARD_PORT",false) || '3000';
 }
 
-function getVersion(){
+function readVersion(){
     if(isProduction){
         return readVariable("VERSION",false) || 'v1';
     }
@@ -141,5 +141,5 @@ module.exports = {
     readNodeEnv,
     readDomain,
     readDashboardPort,
-    getVersion
+    readVersion,
 };
