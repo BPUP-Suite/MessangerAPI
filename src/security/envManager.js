@@ -4,7 +4,6 @@
 
 const path = require('path');
 const dotenv = require('dotenv');
-const { read } = require('fs');
 
 const envFilePath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envFilePath });
@@ -74,7 +73,7 @@ function readDebugMode() {
     if(isProduction()){
         return readVariable("DEBUG_MODE",false) || 'false';
     }
-    return true;
+    return 'true';
 }
 
 function readTimeZone() {
@@ -112,7 +111,7 @@ function readDashboardPort(){
     return readVariable("DASHBOARD_PORT",false) || '3000';
 }
 
-function getVersion(){
+function readVersion(){
     if(isProduction){
         return readVariable("VERSION",false) || 'v1';
     }
@@ -142,5 +141,5 @@ module.exports = {
     readNodeEnv,
     readDomain,
     readDashboardPort,
-    getVersion
+    readVersion,
 };

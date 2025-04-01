@@ -25,7 +25,11 @@ if (WEB_DOMAIN == 'localhost') {
 
 // init socket server
 
+const version = envManager.readVersion();
+const path = '/' + version;
+
 const io = new Server(server, {
+  path: path,
   cors: {
     origin: ['http://localhost:8081',WEB_DOMAIN], //TEMPORARY FOR TESTING PURPUSE 
     methods: ["GET","POST"],
