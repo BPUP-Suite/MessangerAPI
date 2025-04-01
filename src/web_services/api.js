@@ -5,7 +5,7 @@ const cors = require('cors');
 
 const api = express();
 const logger = require('../logger');
-const swaggerRouter = require('./swagger');
+const swaggerRouter = require('./swagger/swagger');
 
 const validator = require('../database/validator');
 const database = require('../database/database');
@@ -154,12 +154,6 @@ api.use('/api-docs', swaggerRouter);
 
 // Api methods
 
-// Docs:
-// if the input items are not valid, returns 400
-// if there is an error, returns 500
-// all good, returns 200
-// This is valid for every methods in this class
-
 // GET METHODS
 
 // Auth based on session
@@ -170,7 +164,7 @@ function isAuthenticated(req, res, next) {
     next();
   } else {
     const code = 401;
-    const errorDescription = 'Non Authorized';
+    const errorDescription = 'Unauthorized';
 
     logger.error(`[API] [AUTH] User not authenticated`);
     logger.error(`[API] [AUTH] Request: ${req}`);
@@ -287,45 +281,6 @@ api.get(signup_path, async (req, res) => {
   return res.status(code).json(signupResponse.toJson());
 
 });
-
-// returns the api_key of the requested user if logged_in is true (true = logged_in successfully, false = error [see error code/description])
-// if password is wrong return code 401 (Unauthorized)
-// Example for documenting the login endpoint in api.js
-
-/**
- * @swagger
- * /v1/user/auth/login:
- *   get:
- *     summary: Authenticate a user
- *     description: Log in a user with email and password
- *     tags: [Authentication]
- *     parameters:
- *       - in: query
- *         name: email
- *         required: true
- *         schema:
- *           type: string
- *         description: User's email address
- *       - in: query
- *         name: password
- *         required: true
- *         schema:
- *           type: string
- *         description: User's password
- *     responses:
- *       200:
- *         description: Login successful
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/LoginResponse'
- *       400:
- *         description: Invalid input parameters
- *       401:
- *         description: Authentication failed
- *       500:
- *         description: Server error
- */
 
 api.get(login_path, async (req, res) => {
   const email = req.query.email;
