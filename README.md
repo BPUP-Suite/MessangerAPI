@@ -103,6 +103,7 @@ _.env:_
 ```
 NODE_ENV = production                          # | default=production
 DOMAIN = buzz.it                               #   needed 
+VERSION=v1                                     # | default=v1 (or 'test' in development mode)
 POSTGRES_DB = postgres                         # | default=postgres
 POSTGRES_USER = buzz                           #   needed
 POSTGRES_PASSWORD = password                   #   needed
@@ -116,7 +117,7 @@ IO_PORT=8001                                   # | default=8001
 DASHBOARD_PORT=3000                            # | default=3000
 LOGS_FOLDER_PATH=/logs                         # | default=/logs
 SECURITY_FOLDER_PATH=/security                 # | default=/security
-DEBUG_MODE=true                                # | default=false
+DEBUG_MODE=true                                # | default=false (or true in development mode)
 TIMEZONE=Europe/Rome                           # | default=Europe/ROme
 RATE_LIMITER_NUMBER=100                        # | default=100
 RATE_LIMITER_MILLISECONDS=10000                # | default=10000
