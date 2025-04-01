@@ -4,8 +4,7 @@ const { Server } = require('socket.io');
 
 const logger = require('../logger');
 const envManager = require('../security/envManager');
-const database = require('../database/database');
-const { sessionMiddleware, verifySession } = require('../security/sessionMiddleware');
+const { verifySession } = require('../security/sessionMiddleware');
 
 const app = express();
 const server = http.createServer(app);

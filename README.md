@@ -41,58 +41,55 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
 
 _docker-compose.yml:_
 ```
+
 services:
-  postgres: # main database, all persistent data are stored here
+  postgres:
     image: postgres
-    container_name: local_pgdb
+    container_name: ${POSTGRES_HOST}
     restart: always
-    ports:
-      - 5432:5432
     env_file:
       - .env
     volumes:
-      - ./data/postgresql:/var/lib/postgresql/data    # data folder
-      - ./postgresql:/docker-entrypoint-initdb.d      # init.sql (database tables initialization)
+      - ./data/postgresql:/var/lib/postgresql/data
+      - ./postgresql:/docker-entrypoint-initdb.d 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready","-d","${POSTGRES_DB}","-h","db","-U","${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-
-  redis:   # cache database, for better performance. Its also used as permanent storage for sessions
-    image: redis:latest
-    container_name: local_redis
+  server:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    container_name: ${SERVER_HOST}
     ports:
-      - "6379:6379"
+      - 3000:${DASHBOARD_PORT}    # admin dashboard
+      - 8000:${API_PORT}          # api
+      - 8001:${IO_PORT}           # socket.io
+    env_file:
+      - .env
     volumes:
-      - ./data/redis:/data         # data folder
+      - ./data/server/logs:${LOGS_FOLDER_PATH}
+      - ./data/server/security:${SECURITY_FOLDER_PATH} 
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:latest
+    container_name: ${REDIS_HOST}
+    volumes:
+      - ./data/redis:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  api:
-    build:
-      context: .
-      dockerfile: ./docker/Dockerfile
-    ports:
-      - 3000:3000       # admin dashboard
-      - 8000:8000       # api
-      - 8001:8001       # socket.io
-    env_file:
-      - .env
-    volumes:
-      - ./data/api/logs:/logs                            # logs folder
-      - ./data/api/security:/security                    # security folder (contain salt and session_key)
-    restart: unless-stopped
-    depends_on:   # starts only if both database are healthy
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
 ```
 
 ## Environmental
@@ -103,10 +100,12 @@ _.env:_
 ```
 NODE_ENV = production                          # | default=production
 DOMAIN = buzz.it                               #   needed 
+VERSION=v1                                     # | default=v1 (or 'test' in development mode)
+SERVER_HOST=buzz_server                        #   needed
 POSTGRES_DB = postgres                         # | default=postgres
 POSTGRES_USER = buzz                           #   needed
 POSTGRES_PASSWORD = password                   #   needed
-POSTGRES_HOST = local_pgdb                     # | default=local_pgdb
+POSTGRES_HOST = local_postgres                 # | default=local_postgres
 POSTGRES_PORT = 5432                           # | default=5432
 REDIS_HOST = local_redis                       # | default=local_redis
 REDIS_PORT = 6379                              # | default=6379
@@ -116,7 +115,7 @@ IO_PORT=8001                                   # | default=8001
 DASHBOARD_PORT=3000                            # | default=3000
 LOGS_FOLDER_PATH=/logs                         # | default=/logs
 SECURITY_FOLDER_PATH=/security                 # | default=/security
-DEBUG_MODE=true                                # | default=false
+DEBUG_MODE=true                                # | default=false (or true in development mode)
 TIMEZONE=Europe/Rome                           # | default=Europe/ROme
 RATE_LIMITER_NUMBER=100                        # | default=100
 RATE_LIMITER_MILLISECONDS=10000                # | default=10000

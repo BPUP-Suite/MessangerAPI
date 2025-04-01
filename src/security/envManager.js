@@ -4,6 +4,7 @@
 
 const path = require('path');
 const dotenv = require('dotenv');
+const { read } = require('fs');
 
 const envFilePath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envFilePath });
@@ -70,7 +71,10 @@ function readLogsPath() {
 }
 
 function readDebugMode() {
-    return readVariable("DEBUG_MODE",false) || 'false';
+    if(isProduction()){
+        return readVariable("DEBUG_MODE",false) || 'false';
+    }
+    return true;
 }
 
 function readTimeZone() {
@@ -93,8 +97,12 @@ function readNodeEnv(){
     return readVariable("NODE_ENV",false) || 'production'; 
 }
 
+function isProduction(){
+    return readNodeEnv() == "production";
+}
+
 function readDomain(){
-    if (readNodeEnv() == "production") {
+    if (isProduction()){
         return readVariable("DOMAIN",true); 
     }
     return 'localhost';
@@ -102,6 +110,14 @@ function readDomain(){
 
 function readDashboardPort(){
     return readVariable("DASHBOARD_PORT",false) || '3000';
+}
+
+function getVersion(){
+    if(isProduction){
+        return readVariable("VERSION",false) || 'v1';
+    }
+
+    return 'test';
 }
 
 
@@ -125,5 +141,6 @@ module.exports = {
     readRateLimiterMilliseconds,
     readNodeEnv,
     readDomain,
-    readDashboardPort
+    readDashboardPort,
+    getVersion
 };

@@ -22,7 +22,7 @@ const { sessionMiddleware } = require('../security/sessionMiddleware');
 
 // api path 
 
-const version = '/v1/';
+const version = '/' + envManager.getVersion() + '/';
 
 // /user
 const user_base = version + 'user/';
