@@ -4,7 +4,6 @@
 
 const path = require('path');
 const dotenv = require('dotenv');
-const { read } = require('fs');
 
 const envFilePath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envFilePath });
@@ -74,7 +73,7 @@ function readDebugMode() {
     if(isProduction()){
         return readVariable("DEBUG_MODE",false) || 'false';
     }
-    return true;
+    return 'true';
 }
 
 function readTimeZone() {
