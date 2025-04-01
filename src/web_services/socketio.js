@@ -28,6 +28,8 @@ if (WEB_DOMAIN == 'localhost') {
 const version = envManager.readVersion();
 const path = '/' + version;
 
+logger.debug(`[IO] IO base path: ${path}`);
+
 const io = new Server(server, {
   path: path,
   cors: {

@@ -6,6 +6,21 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 const logger = require('../../logger');
+const envManager = require('../../security/envManager');
+
+const DOMAIN = envManager.readDomain();
+const API_PORT = envManager.readAPIPort();
+const VERSION = envManager.readVersion();
+
+const swagger_url = 'http://localhost'+':'+API_PORT+'/'+VERSION+'/docs'; // URL path for the Swagger UI
+
+if(DOMAIN != 'localhost'){
+  swagger_url = 'https://api.'+DOMAIN+'/'+VERSION+'/docs'; // URL path for the Swagger UI
+  logger.debug('[SWAGGER] Running on domain, Swagger URL set to: ' + swagger_url);
+}else{
+  logger.warn('[SWAGGER] Running on localhost, Swagger URL set to: ' + swagger_url);
+}
+
 
 // Initialize router
 const router = express.Router();
@@ -23,12 +38,8 @@ const swaggerOptions = {
       },
       servers: [
         {
-          url: 'http://localhost:8000', // Development server
-          description: 'Development server'
-        },
-        {
-          url: 'https://api.buzz.it', // Production server 
-          description: 'Production server'
+          url: swagger_url,
+          description: 'Server'
         }
       ]
     },
@@ -51,6 +62,27 @@ const swaggerOptions = {
 // Initialize swagger-jsdoc
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+// Dynamically replace all occurrences of /v1/ with the actual version
+const replaceVersionInPaths = (spec) => {
+  const versionPath = `/${VERSION}/`;
+  if (spec.paths) {
+    const newPaths = {};
+    Object.keys(spec.paths).forEach(path => {
+      const newPath = path.replace(/\/v1\//g, versionPath);
+      newPaths[newPath] = spec.paths[path];
+    });
+    spec.paths = newPaths;
+  }
+  return spec;
+};
+
+let processedSpec = swaggerSpec;
+
+// If the version is not 'v1', replace the paths with the correct version
+if(VERSION != 'v1'){
+  processedSpec = replaceVersionInPaths(swaggerSpec);
+}
+
 // Setup swagger UI route
 router.use('/', swaggerUi.serve);
 
@@ -66,9 +98,10 @@ router.get('/', swaggerUi.setup(swaggerSpec, {
 // Add route to get the Swagger JSON
 router.get('/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
+  res.send(processedSpec);
 });
 
-logger.debug('[SWAGGER] Swagger documentation initialized');
+
+logger.debug('[SWAGGER] Swagger documentation initialized on path: ' + swagger_url);
 
 module.exports = router;

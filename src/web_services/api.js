@@ -24,6 +24,8 @@ const { sessionMiddleware } = require('../security/sessionMiddleware');
 
 const version = '/' + envManager.readVersion() + '/';
 
+logger.debug(`[API] API base path: ${version}`);
+
 // /user
 const user_base = version + 'user/';
 
@@ -150,7 +152,7 @@ const limiter = rateLimit({
 });
 
 api.use(limiter);
-api.use('/api-docs', swaggerRouter);
+api.use('/'+envManager.readVersion()+'/docs', swaggerRouter);
 
 // Api methods
 
