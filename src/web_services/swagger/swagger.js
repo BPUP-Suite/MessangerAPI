@@ -12,7 +12,7 @@ const DOMAIN = envManager.readDomain();
 const API_PORT = envManager.readAPIPort();
 const VERSION = envManager.readVersion();
 
-const swagger_url = 'http://localhost'+':'+API_PORT+'/'+VERSION+'/docs'; // URL path for the Swagger UI
+let swagger_url = 'http://localhost'+':'+API_PORT+'/'+VERSION+'/docs'; // URL path for the Swagger UI
 
 if(DOMAIN != 'localhost'){
   swagger_url = 'https://api.'+DOMAIN+'/'+VERSION+'/docs'; // URL path for the Swagger UI
