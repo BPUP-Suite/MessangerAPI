@@ -3,8 +3,13 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const logger = require('../logger');
+const { io_log:log, io_debug:debug, io_warn:warn, io_error:error, io_info:info } = require('../logger');
+
+
 const envManager = require('../security/envManager');
 const { verifySession } = require('../security/sessionMiddleware');
+
+const database = require('../database/database');  
 
 const app = express();
 const server = http.createServer(app);
@@ -92,6 +97,45 @@ io.use(async (socket, next) => {
 io.on('connection', (socket) => {
   logger.debug(`[IO] User ${socket.user_id} connected to IO`);
 
+  // WebRTC
+
+  socket.on('join', (data) => {
+    const chat_id = data.chat_id;
+
+    socket.join(chat_id);
+    logger.debug(`[IO] User ${socket.user_id} joined room ${chat_id}`);
+    const recipients_list = database.get_members_as_user_id(chat_id);
+    const sender_id = socket.user_id;
+    const sender = database.get_handle_from_id(sender_id);
+
+    const offer_data = {
+      chat_id: chat_id,
+      sender: sender
+    };
+
+    send_to_all(recipients_list,offer_data,'join');
+  });
+
+  socket.on('leave', (chat_id) => {
+    socket.leave(chat_id);
+    logger.debug(`[IO] User ${socket.user_id} left room ${room}`);
+    
+    const recipients_list = database.get_members_as_user_id(chat_id);
+    const sender_id = socket.user_id;
+    const sender = database.get_handle_from_id(sender_id);
+    const leave_data = {
+      chat_id: chat_id,
+      sender: sender
+    };
+    send_to_all(recipients_list,leave_data,'leave');
+  });
+
+  socket.on('candidate', (data) => {
+    socket.to(data.chat_id).emit('candidate', data);
+  }); 
+
+  // End of IO
+
   socket.on('disconnect', () => {
     logger.debug(`[IO] User ${socket.user_id} disconnected`);
     activeSockets.delete(socket.id);
@@ -129,6 +173,11 @@ function send_to_all(recipient_list,data,type){
     io.to(recipient).emit(type,data);
     logger.debug(`[IO] [RESPONSE] Event ${type} sent to ${recipient}: ${JSON.stringify(data)}`);
   }
+}
+
+function send_to_a_room(room,data,type){
+  io.to(room).emit(type,data);
+  logger.debug(`[IO] [RESPONSE] Event ${type} sent to ${room}: ${JSON.stringify(data)}`);
 }
 
 function getActiveSockets() {
