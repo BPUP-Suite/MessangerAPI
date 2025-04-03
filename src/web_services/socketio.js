@@ -31,7 +31,7 @@ if (WEB_DOMAIN == 'localhost') {
 // init socket server
 
 const version = envManager.readVersion();
-const path = '/' + version;
+const path = '/' + version + '/' + 'io';
 
 logger.debug(`[IO] IO base path: ${path}`);
 

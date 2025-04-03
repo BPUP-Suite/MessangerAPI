@@ -5,7 +5,7 @@ const cors = require('cors');
 
 const api = express();
 const { api_log:log, api_debug:debug, api_warn:warn, api_error:error, api_info:info } = require('../logger');
-const swaggerRouter = require('./swagger/swagger');
+const swaggerRouter = require('./swagger/api-swagger');
 
 const validator = require('../database/validator');
 const database = require('../database/database');

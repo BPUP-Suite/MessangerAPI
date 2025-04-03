@@ -55,7 +55,7 @@ const swaggerOptions = {
   },
   // Path to the API docs - look for JSDoc comments in these locations
   apis: [
-    ,'./src/web_services/swagger/swagger-docs.js'
+    ,'./src/web_services/swagger/api-swagger-docs.js'
   ]
 };
 

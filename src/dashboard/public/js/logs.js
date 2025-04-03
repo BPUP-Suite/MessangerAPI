@@ -31,11 +31,11 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         
-        // Sort log files by date (assuming format like YYYY-MM-DD.log)
+        // Sort log files by date (assuming format like DD-MM-YYYY.log)
         logFiles.sort((a, b) => {
           // Extract date part from filename
-          const dateA = a.replace('.log', '');
-          const dateB = b.replace('.log', '');
+          const dateA = a.replace('.log', '').split('-').reverse().join('-');
+          const dateB = b.replace('.log', '').split('-').reverse().join('-');
           return new Date(dateB) - new Date(dateA); // Newest first
         });
         
