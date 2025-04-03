@@ -73,9 +73,78 @@ function warn(message){
     writeLogToFile(warnMessage);
 }
 
+function info(message){
+    const timestamp = getTimestamp();
+    const infoMessage = `[INFO] ${timestamp} - ${message}`;
+    console.info(infoMessage);
+    writeLogToFile(infoMessage);
+}
+
+// Specific methods
+
+
+// API
+
+function api_log(path,type,message,code,data){
+    log(`[API] [${type}] - ${path} - ${message} |${code}| -> ${data}`);
+}
+
+function api_debug(path,type,message,code,data){
+    debug(`[API] [${type}] - ${path} - ${message} |${code}| -> ${data}`);
+}
+
+function api_warn(type,message,data){
+    warn(`[API] [${type}] - ${message} > ${data}`);
+}
+
+function api_error(path,type,message,code,data){
+    error(`[API] [${type}] - ${path} - ${message} |${code}| -> ${data}`);
+}
+
+function api_info(type,message,data){
+    info(`[API] [${type}] - ${message} -> ${data}`);
+}
+
+// SOCKET.IO
+
+function io_log(event,type,message){
+    log(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+}
+
+function io_debug(event,type,message){
+    debug(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+}
+
+function io_warn(event,type,message){
+    warn(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+}
+
+function io_error(event,type,message){
+    error(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+}
+
+function io_info(type,message,data){
+    info(`[SOCKET.IO] [${type}] - ${message} -> ${data}`);
+}
+
+// POSTGRES
+
+// REDIS
+
 module.exports = {
     log,
     debug,
     error,
     warn,
+    info,
+    api_log,
+    api_debug,
+    api_error,
+    api_warn,
+    api_info,
+    io_log,
+    io_debug,
+    io_error,
+    io_warn,
+    io_info,
 };
