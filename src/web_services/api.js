@@ -485,7 +485,7 @@ api.get(init_path, isAuthenticated, async (req, res) => {
   }
 
   const initResponse = new InitResponse(type, confirmation, errorDescription, init_data);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(initResponse.toJson()));
+  debug(req.path, 'RESPONSE', req.session.user_id, code, JSON.stringify(initResponse.toJson()).substring(0, 200) + "...");
   return res.status(code).json(initResponse.toJson());
 
 });
