@@ -104,20 +104,17 @@ async function verifySession(session_id) {
           reject(err);
         } else {
           logger.debug(`[SESSION] Session destroyed for user ${user_id}`);
-          
-          // Rimuovi il cookie con gli stessi parametri usati per crearlo
-          if (clearCookie) {
-            res.clearCookie('_' + DOMAIN + '_sid', {
-              path: '/',
-              domain: DOMAIN,
-              httpOnly: true,
-              secure: NODE_ENV === 'production',
-              sameSite: sameSite,
-              partitioned: true
-            });
-            logger.debug(`[SESSION] Cookie cleared for user ${user_id}`);
-          }
-          
+
+          res.clearCookie('_' + DOMAIN + '_sid', {
+            path: '/',
+            domain: DOMAIN,
+            httpOnly: true,
+            secure: NODE_ENV === 'production',
+            sameSite: sameSite,
+            partitioned: true
+          });
+          logger.debug(`[SESSION] Cookie cleared for user ${user_id}`);
+        
           // Invalida esplicitamente la sessione anche in Redis
           redisStore.destroy(sessionID, (redisErr) => {
             if (redisErr) {
