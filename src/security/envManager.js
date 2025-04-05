@@ -112,10 +112,9 @@ function readDashboardPort(){
 }
 
 function readVersion(){
-    if(isProduction){
+    if(isProduction()){
         return readVariable("VERSION",false) || 'v1';
     }
-
     return 'test';
 }
 
