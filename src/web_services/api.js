@@ -323,6 +323,7 @@ api.get(login_path, async (req, res) => {
     const loginUser = new LoginUser(email, password);
     try {
       user_id = await database.login(loginUser);
+      
       if (validator.generic(user_id)) {
         confirmation = true;
         errorDescription = '';
@@ -338,15 +339,16 @@ api.get(login_path, async (req, res) => {
             token = req.sessionID;
             const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
             debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
-            return res.status(code).json(loginResponse.toJson());
+            res.status(code).json(loginResponse.toJson());
           } else {
             error(req.path,'SESSION','Error while saving session',code,err.message);
             code = 500;
             errorDescription = 'Failed to save session';
             const loginResponse = new LoginResponse(type, false, errorDescription,token);
-            return res.status(code).json(loginResponse.toJson());
+            res.status(code).json(loginResponse.toJson());
           }
         });
+        return;
       } else {
         code = 401;
         errorDescription = 'Login failed';
