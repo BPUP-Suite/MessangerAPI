@@ -646,7 +646,7 @@ async function create_group(group) {
   const admins = group.admins;
   const date = new Date();
 
-  const QUERY = "INSERT INTO public.groups(name, description, members, admins, date_created) VALUES ($1, $2, $3, $4, $5) RETURNING chat_id";
+  const QUERY = "INSERT INTO public.groups(name, description, members, admins, date_created, last_modification) VALUES ($1, $2, $3, $4, $5, $5) RETURNING chat_id";
   let chat_id = null;
 
   try{  
