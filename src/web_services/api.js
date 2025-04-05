@@ -388,7 +388,7 @@ api.get(logout_path, isAuthenticated, (req, res) => {
     }
 
     const logoutResponse = new LogoutResponse(type, confirmation, errorDescription);
-    debug(req.path,'RESPONSE',user_id,code,lJSON.stringify(logoutResponse.toJson()));
+    debug(req.path,'RESPONSE',user_id,code,JSON.stringify(logoutResponse.toJson()));
     return res.status(code).json(logoutResponse.toJson());
   });
 });
