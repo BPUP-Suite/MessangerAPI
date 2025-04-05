@@ -368,13 +368,17 @@ api.get(logout_path, isAuthenticated, (req, res) => {
 
   debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
+  let user_id = null;
+  if (req.session.user_id) {
+    user_id = req.session.user_id;
+  }
+
   req.session.destroy(err => {
 
     let type = logout_response_type;
     let code = 200;
     let errorDescription = '';
     let confirmation = true;
-    let user_id = null;
 
     if (err) {
       code = 500;
@@ -384,12 +388,12 @@ api.get(logout_path, isAuthenticated, (req, res) => {
     }
 
     const logoutResponse = new LogoutResponse(type, confirmation, errorDescription);
-    debug(req.path,'RESPONSE',req.session.user_id,code,lJSON.stringify(logoutResponse.toJson()));
+    debug(req.path,'RESPONSE',user_id,code,lJSON.stringify(logoutResponse.toJson()));
     return res.status(code).json(logoutResponse.toJson());
   });
 });
 
-api.get(session_path, isAuthenticated, (req, res) => {
+api.get(session_path, isAuthenticated, (req, res) => { // DEPRECATED
   
   debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
@@ -397,6 +401,7 @@ api.get(session_path, isAuthenticated, (req, res) => {
   let code = 500;
   let session_id = null;
   let errorDescription = 'Generic error';
+  let user_id = null;
 
   	
   if (req.session.user_id) {
@@ -410,7 +415,7 @@ api.get(session_path, isAuthenticated, (req, res) => {
   debug(req.path,'RESPONSE',user_id,code,JSON.stringify(sessionResponse.toJson()));
   return res.status(code).json(sessionResponse.toJson());
 
-});
+});                                               // DEPRECATED
 
 // Path: .../data
 // Path: .../check
