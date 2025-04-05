@@ -330,23 +330,23 @@ api.get(login_path, async (req, res) => {
 
         debug(req.path,'SESSION','Session opened.',code,user_id)
         req.session.user_id = user_id;
+        debug(req.path,'SESSION','Session set.',code,user_id)
 
         req.session.save((err) => {
-          if (err) {
-            error(req.path,'SESSION','Error while saving session',code,err.message);
-            code = 500;
-            errorDescription = 'Failed to save session';
-            const loginResponse = new LoginResponse(type, false, errorDescription,token);
-            res.status(code).json(loginResponse.toJson());
-          } else {
+          if (req.session.user_id && !err) {
             debug(req.path,'SESSION','Session saved.',code,user_id)
             token = req.sessionID;
             const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
             debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
-            res.status(code).json(loginResponse.toJson());
+            return res.status(code).json(loginResponse.toJson());
+          } else {
+            error(req.path,'SESSION','Error while saving session',code,err.message);
+            code = 500;
+            errorDescription = 'Failed to save session';
+            const loginResponse = new LoginResponse(type, false, errorDescription,token);
+            return res.status(code).json(loginResponse.toJson());
           }
         });
-        return; // return to avoid sending the response twice
       } else {
         code = 401;
         errorDescription = 'Login failed';
@@ -374,6 +374,7 @@ api.get(logout_path, isAuthenticated, (req, res) => {
     let code = 200;
     let errorDescription = '';
     let confirmation = true;
+    let user_id = null;
 
     if (err) {
       code = 500;
@@ -402,10 +403,11 @@ api.get(session_path, isAuthenticated, (req, res) => {
     code = 200;
     errorDescription = '';
     session_id = req.sessionID;
+    user_id = req.session.user_id;
   } 
 
   const sessionResponse = new SessionResponse(type, session_id, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(sessionResponse.toJson()));
+  debug(req.path,'RESPONSE',user_id,code,JSON.stringify(sessionResponse.toJson()));
   return res.status(code).json(sessionResponse.toJson());
 
 });
