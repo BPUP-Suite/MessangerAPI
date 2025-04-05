@@ -18,7 +18,7 @@ api.use(express.json());
 api.use(express.urlencoded({ extended: true }));
 
 const envManager = require('../security/envManager');
-const { sessionMiddleware } = require('../security/sessionMiddleware');
+const { sessionMiddleware, destroySession } = require('../security/sessionMiddleware');
 
 // api path 
 
