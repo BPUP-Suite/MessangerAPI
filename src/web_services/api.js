@@ -366,7 +366,7 @@ api.get(login_path, async (req, res) => {
 });
 
 
-api.get(logout_path, isAuthenticated, (req, res) => {
+api.get(logout_path, isAuthenticated, async (req, res) => {
 
   debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
@@ -381,7 +381,7 @@ api.get(logout_path, isAuthenticated, (req, res) => {
     user_id = req.session.user_id;
 
     try{
-      confirmation = destroySession(req, res); // destroy session in redis and in the cookie
+      confirmation = await destroySession(req, res); // destroy session in redis and in the cookie
 
       if (confirmation) {
         code = 200;

@@ -113,7 +113,7 @@ async function verifySession(session_id) {
             sameSite: sameSite,
             partitioned: true
           });
-          logger.debug(`[SESSION] Cookie cleared for user ${user_id}`);
+          logger.debug(`[SESSION] Cookie cleared for user ${user_id}`); 
         
           // Invalida esplicitamente la sessione anche in Redis
           redisStore.destroy(sessionID, (redisErr) => {
