@@ -14,6 +14,7 @@ const logger = require('../logger');
 const redisClient = require('../database/cache');
 const database = require('../database/database');
 const socketio = require('../web_services/socketio');
+const validator = require('../database/validator');
 
 const LOGS_PATH = envManager.readLogsPath();
 
@@ -22,7 +23,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/get/handle', async(req,res) => {
   const user_id = req.query.user_id;
-  const handle = await database.get_handle_from_id(user_id);
+  let handle = 'null';
+  if(validator.user_id(user_id) == false){
+    handle = await database.get_handle_from_id(user_id);
+  }
+  
   return res.status(200).json({handle:handle});
 });
 

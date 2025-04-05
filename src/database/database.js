@@ -732,10 +732,6 @@ async function get_chat_id_from_handle(handle) {
 
 async function get_handle_from_id(id) {
 
-  if(id == 'unknown' || id == null || id === undefined || id === ''){
-    return null;
-  }
-
   const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
   let handle = null;
 

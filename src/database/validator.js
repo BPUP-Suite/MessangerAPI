@@ -1,3 +1,4 @@
+const e = require('express');
 const database = require('./database');
 
 function email(emailStr) {
@@ -73,11 +74,6 @@ function email(emailStr) {
       return false;
     }
   }
-
-  function chat_id(chat_id){
-    // da modificare usando regex e vedere se il formato corrisponse
-    return notNull(chat_id);
-  }
   
   function generic(text){
     return notNull(text);
@@ -92,5 +88,61 @@ function email(emailStr) {
       return false;
     }
   } 
+
+  function user_id(user_id){
+    if(notNull(user_id)){
+      const user_idStr = String(user_id);
   
-module.exports = { email, password,name,surname,handle,api_key,message,chat_id,generic,datetime};
+      // Regex per validare user_id:
+      // 1. Deve iniziare con 1 (per user_id)
+      // 2. Deve essere seguito da esattamente 17 cifre numeriche
+      // 3. Deve essere un numero tra 1000000000000000000 e 1999999999999999999
+      const regex = /^1\d{17}$/;
+      
+      if (!regex.test(user_idStr)) {
+        return false;
+      }
+      
+      // Verifica il range numerico
+      const numValue = BigInt(user_idStr);
+      return numValue >= 1000000000000000000n && numValue <= 1999999999999999999n;
+    }
+
+    return false;
+  }
+
+  function chat_id(chat_id){
+    if(notNull(chat_id)){
+      const chat_idStr = String(chat_id);
+  
+      // Regex per validare chat_id:
+      // 1. Deve iniziare con 2 (per chat_id)
+      // 2. Deve essere seguito da esattamente 17 cifre numeriche
+      // 3. Deve essere un numero tra 2000000000000000000 e 2999999999999999999
+      const regex = /^1\d{17}$/;
+      
+      if (!regex.test(chat_idStr)) {
+        return false;
+      }
+      
+      // Verifica il range numerico
+      const numValue = BigInt(chat_idStr);
+      return numValue >= 2000000000000000000n && numValue <= 2999999999999999999n;
+    }
+
+    return false;
+  }
+  
+module.exports = { 
+  email, 
+  password,
+  name,
+  surname,
+  handle,
+  api_key,
+  message,
+  chat_id,
+  generic,
+  datetime,
+  user_id,
+}

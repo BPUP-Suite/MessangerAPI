@@ -151,6 +151,8 @@ const limiter = rateLimit({
     res.status(code).json(jsonResponse);
 
     log(req.path,'ALERT',`IP ${req.ip} has exceeded the rate limit!`,code,jsonResponse);
+
+    next(new Error(errorDescription));
   }
 });
 
