@@ -356,10 +356,9 @@ api.get(login_path, async (req, res) => {
   }
 
   // if the user is not logged in, send the error response
-  if (!confirmation) {
-    const loginResponse = new LoginResponse(type, confirmation, errorDescription);
-    res.status(code).json(loginResponse.toJson());
-  }
+  const loginResponse = new LoginResponse(type, confirmation, errorDescription);
+  debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
+  return res.status(code).json(loginResponse.toJson());
 });
 
 
