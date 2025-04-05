@@ -42,7 +42,7 @@ async function query(text, params) {
   const client = await pool.connect();
   try {
     const res = await client.query(text, params);
-    logger.debug(`[POSTGRES] Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows)}`);
+    logger.debug(`[POSTGRES] Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows).substring(0, 200) + "..."}`);
     return res.rows;
   } catch (error) {
     logger.error(`[POSTGRES] Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${error}`);
