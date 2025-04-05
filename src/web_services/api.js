@@ -307,6 +307,7 @@ api.get(login_path, async (req, res) => {
   let errorDescription = 'Generic error';
   let validated = true;
   let user_id = null;
+  let token = null; 
 
   if (!validator.email(email)) {
     code = 400;
@@ -335,11 +336,12 @@ api.get(login_path, async (req, res) => {
             error(req.path,'SESSION','Error while saving session',code,err.message);
             code = 500;
             errorDescription = 'Failed to save session';
-            const loginResponse = new LoginResponse(type, false, errorDescription);
+            const loginResponse = new LoginResponse(type, false, errorDescription,token);
             res.status(code).json(loginResponse.toJson());
           } else {
             debug(req.path,'SESSION','Session saved.',code,user_id)
-            const loginResponse = new LoginResponse(type, confirmation, errorDescription);
+            token = req.sessionID;
+            const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
             debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
             res.status(code).json(loginResponse.toJson());
           }
@@ -356,7 +358,7 @@ api.get(login_path, async (req, res) => {
   }
 
   // if the user is not logged in, send the error response
-  const loginResponse = new LoginResponse(type, confirmation, errorDescription);
+  const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
   debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
   return res.status(code).json(loginResponse.toJson());
 });

@@ -27,7 +27,7 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
      
 ## To-dos
 
-- [ ] Aggiungi dizionario per errori
+- [x] Aggiungi dizionario per errori
 - [x] Provare le checklist
 - [ ] Completare la nuova documentazione
 - [ ] Da aggiornare la vecchia descrizione subito qui sopra
@@ -331,7 +331,6 @@ Se il metodo ritorna risposta [200](#200) il tutto è andato a buon fine e sono 
 - [signup](#signup)
 - [login](#login)
 - [logout](#logout)
-- [session](#session)
 
 ##### access
 
@@ -403,6 +402,10 @@ Path : ```{URL}/v1/user/auth/login```
   - [email](#email)
   - [password](#password)
 
+- [Output](#Output):
+
+  - [token](#token)
+
 Example:
 ```
 Request: {URL}/v1/user/auth/login?email=test@gmail.com&password=Test1234!
@@ -410,7 +413,8 @@ Request: {URL}/v1/user/auth/login?email=test@gmail.com&password=Test1234!
 Response: 
 
 {
-  logged_in: true
+  logged_in: true,
+  token: "aNF9pCG8OWpiwXgCDKfh4gTyO7ZB7CsV"
 }
 
 ```
@@ -435,7 +439,7 @@ Response:
 
 ```
 
-##### session
+##### session (DEPRECATED)
 
 Returns session id value
 
@@ -725,7 +729,8 @@ Indica che il metodo ritornerà dei parametri in output nella risposta. È possi
 #### Variables
 
 - [access_type](#access_type)
-- [session_id](#session_id)
+- [session_id](#session_id) DEPRECATED
+- [token](#token)
 - [email](#email)
 - [password](#password)
 - [name](#name)
@@ -741,7 +746,11 @@ Indica che il metodo ritornerà dei parametri in output nella risposta. È possi
 ##### access_type
 Indicates whether an email is registered, returning either "signup" or "login"
 
-##### session_id
+##### session_id  
+DEPRECATED
+Unique identifier for a user's authenticated session
+
+##### token
 Unique identifier for a user's authenticated session
 
 ##### email

@@ -329,7 +329,7 @@
  * /v1/user/auth/login:
  *   get:
  *     summary: Authenticate a user
- *     description: Log in a user with email and password
+ *     description: Log in a user with email and password. Returns a token for session authentication.
  *     tags: [Authentication]
  *     parameters:
  *       - in: query
@@ -350,7 +350,17 @@
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/LoginResponse'
+ *               type: object
+ *               properties:
+ *                 logged_in:
+ *                   type: boolean
+ *                   description: Whether the login was successful
+ *                 token:
+ *                   type: string
+ *                   description: Authentication token to be used for session authentication
+ *                 error_message:
+ *                   type: string
+ *                   description: Error message if applicable
  *       400:
  *         description: Invalid input parameters
  *       401:
@@ -381,7 +391,17 @@
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/LoginResponse'
+ *               type: object
+ *               properties:
+ *                 logged_in:
+ *                   type: boolean
+ *                   description: Whether the login was successful
+ *                 token:
+ *                   type: string
+ *                   description: Authentication token to be used for session authentication
+ *                 error_message:
+ *                   type: string
+ *                   description: Error message if applicable
  *       400:
  *         description: Invalid input parameters
  *       401:
@@ -433,8 +453,10 @@
  * @swagger
  * /v1/user/auth/session:
  *   get:
- *     summary: Get session information
- *     description: Retrieve information about the current session
+ *     summary: Get session information (DEPRECATED)
+ *     description: >
+ *       DEPRECATED - This endpoint will be removed in the next version. Use the token returned by the login endpoint instead.
+ *       Retrieve information about the current session.
  *     tags: [Authentication]
  *     security:
  *       - cookieAuth: []
@@ -450,8 +472,10 @@
  *       500:
  *         description: Server error
  *   post:
- *     summary: Get session information
- *     description: Same as GET
+ *     summary: Get session information (DEPRECATED)
+ *     description: >
+ *       DEPRECATED - This endpoint will be removed in the next version. Use the token returned by the login endpoint instead.
+ *       Same as GET.
  *     tags: [Authentication]
  *     security:
  *       - cookieAuth: []

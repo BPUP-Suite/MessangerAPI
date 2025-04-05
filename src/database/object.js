@@ -45,8 +45,15 @@ class Response {
     }
   }
   class LoginResponse extends Response {
-    constructor(type, type_response, error_message) {
+    constructor(type, type_response, error_message,token) {
       super(type, type_response, error_message);
+      this.token = token;
+    }
+    toJson() {
+      return {
+        ...super.toJson(),
+        token: this.token
+      };
     }
   }
   class LoginUser {
