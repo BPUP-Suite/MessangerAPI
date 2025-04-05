@@ -231,7 +231,12 @@ api.get(signup_path, async (req, res) => {
   const handle = req.query.handle;
   const password = req.query.password;
 
-  debug(req.path,'REQUEST','','',JSON.stringify(req.query));
+  const sanitizedQuery = { ...req.query };
+  if (sanitizedQuery.password) {
+    sanitizedQuery.password = '*'.repeat(sanitizedQuery.password.length);
+  }
+
+  debug(req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
 
   const type = signup_response_type;
   let code = 500;
@@ -289,7 +294,12 @@ api.get(login_path, async (req, res) => {
   const email = req.query.email;
   const password = req.query.password;
 
-  debug(req.path,'REQUEST','','',JSON.stringify(req.query));
+  const sanitizedQuery = { ...req.query };
+  if (sanitizedQuery.password) {
+    sanitizedQuery.password = '*'.repeat(sanitizedQuery.password.length);
+  }
+
+  debug(req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
 
   const type = login_response_type;
   let code = 500;
