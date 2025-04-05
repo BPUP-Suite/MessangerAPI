@@ -323,7 +323,7 @@ api.get(login_path, async (req, res) => {
     const loginUser = new LoginUser(email, password);
     try {
       user_id = await database.login(loginUser);
-      
+
       if (validator.generic(user_id)) {
         confirmation = true;
         errorDescription = '';
@@ -371,28 +371,31 @@ api.get(logout_path, isAuthenticated, (req, res) => {
   debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   let user_id = null;
+
+  let type = logout_response_type;
+  let confirmation = false;
+  let code = 500;
+  let errorDescription = 'Generic error';
+
   if (req.session.user_id) {
     user_id = req.session.user_id;
-  }
 
-  req.session.destroy(err => {
+    try{
+      confirmation = destroySession(req, res); // destroy session in redis and in the cookie
 
-    let type = logout_response_type;
-    let code = 200;
-    let errorDescription = '';
-    let confirmation = true;
-
-    if (err) {
-      code = 500;
-      errorDescription = 'Generic error';
-      confirmation = false;
+      if (confirmation) {
+        code = 200;
+        errorDescription = '';
+      }
+    }catch (err) {
       error(req.path,'SESSION','session.destroy',code,err);
     }
+  } 
 
     const logoutResponse = new LogoutResponse(type, confirmation, errorDescription);
     debug(req.path,'RESPONSE',user_id,code,JSON.stringify(logoutResponse.toJson()));
     return res.status(code).json(logoutResponse.toJson());
-  });
+
 });
 
 api.get(session_path, isAuthenticated, (req, res) => { // DEPRECATED

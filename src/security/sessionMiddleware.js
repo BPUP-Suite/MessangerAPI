@@ -88,9 +88,54 @@ async function verifySession(session_id) {
     });
   }
 
+  async function destroySession(req, res) {
+    return new Promise((resolve, reject) => {
+      if (!req.session) {
+        logger.debug('[SESSION] No session to destroy during logout');
+        return resolve(false);
+      }
+      
+      const user_id = req.session.user_id;
+      const sessionID = req.sessionID;
+      
+      req.session.destroy(err => {
+        if (err) {
+          logger.error(`[SESSION] Error during logout: ${err.message}`);
+          reject(err);
+        } else {
+          logger.debug(`[SESSION] Session destroyed for user ${user_id}`);
+          
+          // Rimuovi il cookie con gli stessi parametri usati per crearlo
+          if (clearCookie) {
+            res.clearCookie('_' + DOMAIN + '_sid', {
+              path: '/',
+              domain: DOMAIN,
+              httpOnly: true,
+              secure: NODE_ENV === 'production',
+              sameSite: sameSite,
+              partitioned: true
+            });
+            logger.debug(`[SESSION] Cookie cleared for user ${user_id}`);
+          }
+          
+          // Invalida esplicitamente la sessione anche in Redis
+          redisStore.destroy(sessionID, (redisErr) => {
+            if (redisErr) {
+              logger.warn(`[SESSION] Failed to destroy session in Redis: ${redisErr.message}`);
+            } else {
+              logger.debug(`[SESSION] Session explicitly destroyed in Redis for user ${user_id}`);
+            }
+            resolve(true);
+          });
+        }
+      });
+    });
+  }
+
 logger.log('[SESSION] Session middleware started');
 
 module.exports = {
   sessionMiddleware,
-  verifySession
+  verifySession,
+  destroySession
 };
