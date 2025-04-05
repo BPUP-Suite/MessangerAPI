@@ -342,7 +342,6 @@ api.get(login_path, async (req, res) => {
             const loginResponse = new LoginResponse(type, confirmation, errorDescription);
             debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
             res.status(code).json(loginResponse.toJson());
-            debug(req.path,'SESSION','Set-Cookie header set.',code,res.get('Set-Cookie'))
           }
         });
         return; // return to avoid sending the response twice
