@@ -99,8 +99,7 @@ io.on('connection', (socket) => {
 
   // WebRTC
 
-  socket.on('join', (data) => {
-    const chat_id = data.chat_id;
+  socket.on('join', (chat_id) => {
 
     socket.join(chat_id);
     logger.debug(`[IO] User ${socket.user_id} joined room ${chat_id}`);
@@ -112,11 +111,12 @@ io.on('connection', (socket) => {
       chat_id: chat_id,
       sender: sender
     };
-
-    send_to_all(recipients_list,offer_data,'join');
+    socket.emit('joined', {chat_id: chat_id,success: true});
+    send_to_all_except_sender(recipients_list,offer_data,'join',socket.id);
   });
 
   socket.on('leave', (chat_id) => {
+    
     socket.leave(chat_id);
     logger.debug(`[IO] User ${socket.user_id} left room ${room}`);
     
@@ -127,11 +127,13 @@ io.on('connection', (socket) => {
       chat_id: chat_id,
       sender: sender
     };
-    send_to_all(recipients_list,leave_data,'leave');
+
+    socket.emit('left', {chat_id: chat_id,success: true});
+    send_to_all_except_sender(recipients_list,leave_data,'leave',socket.id);
   });
 
   socket.on('candidate', (data) => {
-    socket.to(data.chat_id).emit('candidate', data);
+    socket.to(data.to).emit('candidate', data);
   }); 
 
   // End of IO
@@ -178,6 +180,14 @@ function send_to_all(recipient_list,data,type){
 function send_to_a_room(room,data,type){
   io.to(room).emit(type,data);
   logger.debug(`[IO] [RESPONSE] Event ${type} sent to ${room}: ${JSON.stringify(data)}`);
+}
+
+function send_to_all_except_sender(recipient_list, data, type, sender_socket_id) {
+  for (const recipient of recipient_list) {
+    // For each recipient user_id, emit to all their sockets except the sender socket
+    io.to(recipient).except(sender_socket_id).emit(type, data);
+    logger.debug(`[IO] [RESPONSE] Event ${type} sent to user ${recipient} (except sender): ${JSON.stringify(data)}`);
+  }
 }
 
 function getActiveSockets() {
