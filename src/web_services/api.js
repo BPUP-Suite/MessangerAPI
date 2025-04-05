@@ -335,7 +335,7 @@ api.get(login_path, async (req, res) => {
         req.session.user_id = user_id;
         debug(req.path,'SESSION','Session set.',code,user_id)
 
-        req.session.save((err) => {
+        req.session.save(async (err) => {
           if (req.session.user_id && !err) {
             debug(req.path,'SESSION','Session saved.',code,user_id)
             token = req.sessionID;
@@ -344,6 +344,7 @@ api.get(login_path, async (req, res) => {
             res.status(code).json(loginResponse.toJson());
           } else {
             error(req.path,'SESSION','Error while saving session',code,err.message);
+            await destroySession(req, res); // destroy session in redis and in the cookie
             code = 500;
             errorDescription = 'Failed to save session';
             const loginResponse = new LoginResponse(type, false, errorDescription,token);
