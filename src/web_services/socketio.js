@@ -99,7 +99,9 @@ io.on('connection', (socket) => {
 
   // WebRTC
 
-  socket.on('join', (chat_id) => {
+  socket.on('join', (data) => {
+
+    const chat_id = data.chat_id;
 
     socket.join(chat_id);
     logger.debug(`[IO] User ${socket.user_id} joined room ${chat_id}`);
@@ -111,11 +113,14 @@ io.on('connection', (socket) => {
       chat_id: chat_id,
       sender: sender
     };
-    socket.emit('joined', {chat_id: chat_id,success: true});
-    send_to_all_except_sender(recipients_list,offer_data,'join',socket.id);
+    // controla se l'utente ha accesso alla chat
+    socket.emit('join', {chat_id: chat_id,success: true});
+    send_to_all_except_sender(recipients_list,offer_data,'joined',socket.id);
   });
 
-  socket.on('leave', (chat_id) => {
+  socket.on('leave', (data) => {
+
+    const chat_id = data.chat_id;
     
     socket.leave(chat_id);
     logger.debug(`[IO] User ${socket.user_id} left room ${room}`);
@@ -127,9 +132,9 @@ io.on('connection', (socket) => {
       chat_id: chat_id,
       sender: sender
     };
-
-    socket.emit('left', {chat_id: chat_id,success: true});
-    send_to_all_except_sender(recipients_list,leave_data,'leave',socket.id);
+    // controla se l'utente ha accesso alla chat
+    socket.emit('leave', {chat_id: chat_id,success: true});
+    send_to_all_except_sender(recipients_list,leave_data,'left',socket.id);
   });
 
   socket.on('candidate', (data) => {
