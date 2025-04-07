@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 
 const logger = require('../logger');
 const { io_log:log, io_debug:debug, io_warn:warn, io_error:error, io_info:info } = require('../logger');
+const validator = require('../utils/validator');
 
 
 const envManager = require('../security/envManager');
@@ -15,6 +16,7 @@ const app = express();
 const server = http.createServer(app);
 
 const activeSockets = new Map();
+
 
 // CORS config
 
@@ -101,38 +103,66 @@ io.on('connection', (socket) => {
 
   socket.on('join', (data) => {
 
+    const user_id = socket.user_id;
+
+    debug('join','ON','User ' + user_id + ' wants to join room ' + data.chat_id, data);
+
     const chat_id = data.chat_id;
 
+    if(!(validator.chat_id(chat_id))){
+      socket.emit('join', {chat_id: chat_id,success: false,error_message: 'Invalid chat_id'});
+      return;
+    }
+
+    if(!(database.is_member(user_id, chat_id))){
+      socket.emit('join', {chat_id: chat_id,success: false,error_message: 'User is not a member of the chat'});
+      return;
+    }
+
     socket.join(chat_id);
-    logger.debug(`[IO] User ${socket.user_id} joined room ${chat_id}`);
+    debug('join','ON','User ' + user_id + ' joined room ' + data.chat_id, data);
+
     const recipients_list = database.get_members_as_user_id(chat_id);
-    const sender_id = socket.user_id;
-    const sender = database.get_handle_from_id(sender_id);
+    const sender = database.get_handle_from_id(user_id); // handle of the sender
 
     const offer_data = {
       chat_id: chat_id,
       sender: sender
     };
-    // controla se l'utente ha accesso alla chat
+
     socket.emit('join', {chat_id: chat_id,success: true});
     send_to_all_except_sender(recipients_list,offer_data,'joined',socket.id);
   });
 
   socket.on('leave', (data) => {
 
+    const user_id = socket.user_id;
+
+    debug('join','ON','User ' + user_id + ' wants to leave room ' + data.chat_id, data);
+
     const chat_id = data.chat_id;
+
+    if(!(validator.chat_id(chat_id))){
+      socket.emit('join', {chat_id: chat_id,success: false,error_message: 'Invalid chat_id'});
+      return;
+    }
+
+    if(!(database.is_member(user_id, chat_id))){
+      socket.emit('join', {chat_id: chat_id,success: false,error_message: 'User is not a member of the chat'});
+      return;
+    }
     
     socket.leave(chat_id);
-    logger.debug(`[IO] User ${socket.user_id} left room ${room}`);
+    debug('join','ON','User ' + user_id + ' left room ' + data.chat_id, data);
     
     const recipients_list = database.get_members_as_user_id(chat_id);
-    const sender_id = socket.user_id;
-    const sender = database.get_handle_from_id(sender_id);
+    const sender = database.get_handle_from_id(user_id); // handle of the sender
+
     const leave_data = {
       chat_id: chat_id,
       sender: sender
     };
-    // controla se l'utente ha accesso alla chat
+
     socket.emit('leave', {chat_id: chat_id,success: true});
     send_to_all_except_sender(recipients_list,leave_data,'left',socket.id);
   });

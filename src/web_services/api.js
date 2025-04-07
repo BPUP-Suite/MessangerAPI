@@ -646,7 +646,7 @@ api.get(message_path, isAuthenticated, async (req, res) => {
     code = 400;
     errorDescription = 'Text message not valid (Too long [max 2056 char] or missing)';
     validated = false;
-  }else if (!(validator.generic(chat_id))) {
+  }else if (!(validator.chat_id(chat_id))) {
     code = 400;
     errorDescription = 'Chat_id not valid';
     validated = false;

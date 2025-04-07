@@ -824,6 +824,40 @@ async function check_chat_existance(handle,other_handle) {
   return confirmation;
 }
 
+async function is_member(user_id,chat_id){
+
+  let chat_type = get_chat_type(chat_id);
+  let QUERY = null;
+
+  if(chat_type == "personal"){
+    QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND ($2 = ANY(user1) OR $2 = ANY(user2))";
+  }
+  if(chat_type == "group"){
+    QUERY = "SELECT members FROM public.groups WHERE chat_id = $1 AND $2 = ANY(members)";
+  }
+  if(chat_type == "channel"){
+    return false;
+  }
+
+  let confirmation = false;
+
+
+  if(QUERY != null){
+    let result = null;
+    try{
+      result = await query(QUERY, [chat_id, user_id]);
+      if(result.length != 0){
+        confirmation = true;
+      }
+    }catch(error){
+      logger.error("[POSTGRES] database.is_member: " + error);
+    }
+  }
+
+  return confirmation;
+
+}
+
 module.exports = {
   testConnection,
   check_email_existence,
@@ -845,5 +879,6 @@ module.exports = {
   add_members_to_group,
   get_group_name_from_chat_id,
   check_chat_existance,
-  get_chat_messages
+  get_chat_messages,
+  is_member
 };

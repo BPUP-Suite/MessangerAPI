@@ -107,12 +107,12 @@ function api_info(type,message,data){
 
 // SOCKET.IO
 
-function io_log(event,type,message){
-    log(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+function io_log(event,type,message,data){
+    log(`[SOCKET.IO] [${type}] - ${event} - ${message} -> ${data}`);
 }
 
-function io_debug(event,type,message){
-    debug(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+function io_debug(event,type,message,data){
+    debug(`[SOCKET.IO] [${type}] - ${event} - ${message} -> ${data}`);
 }
 
 function io_warn(event,type,message){

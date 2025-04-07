@@ -1,4 +1,3 @@
-const e = require('express');
 const database = require('./database');
 
 function email(emailStr) {
@@ -111,47 +110,48 @@ function email(emailStr) {
     return false;
   }
 
-  function chat_id(chatId) {
-    if (!notNull(chatId)) {
+  function chat_id(chat_id) {
+    if (notNull(chat_id)) {
+      
+      const chat_idStr = String(chat_id);
+      
+      // Per le chat private (iniziano con 2)
+      if (chat_idStr.startsWith('2')) {
+        // Corretto a \d{18} per numeri di 19 cifre totali
+        const regex = /^2\d{18}$/;
+        if (!regex.test(chat_idStr)) {
+          return false;
+        }
+        const numValue = BigInt(chat_idStr);
+        return numValue >= 2000000000000000000n && numValue <= 2999999999999999999n;
+      }
+      
+      // Per i gruppi (iniziano con 3)
+      if (chat_idStr.startsWith('3')) {
+        // Corretto a \d{18} per numeri di 19 cifre totali
+        const regex = /^3\d{18}$/;
+        if (!regex.test(chat_idStr)) {
+          return false;
+        }
+        const numValue = BigInt(chat_idStr);
+        return numValue >= 3000000000000000000n && numValue <= 3999999999999999999n;
+      }   
+  
       return false;
-    }
-    
-    const chatIdStr = String(chatId);
-    
-    // Per le chat private (iniziano con 2)
-    if (chatIdStr.startsWith('2')) {
-      const regex = /^2\d{17}$/;
-      if (!regex.test(chatIdStr)) {
-        return false;
+  
+      // NOT IMPLEMENTED YET
+  
+      // Per i canali (iniziano con 4)
+      if (chat_idStr.startsWith('4')) {
+        // Corretto a \d{18} per numeri di 19 cifre totali
+        const regex = /^4\d{18}$/;
+        if (!regex.test(chat_idStr)) {
+          return false;
+        }
+        const numValue = BigInt(chat_idStr);
+        return numValue >= 4000000000000000000n && numValue <= 4999999999999999999n;
       }
-      const numValue = BigInt(chatIdStr);
-      return numValue >= 2000000000000000000n && numValue <= 2999999999999999999n;
     }
-    
-    // Per i gruppi (iniziano con 3)
-    if (chatIdStr.startsWith('3')) {
-      const regex = /^3\d{17}$/;
-      if (!regex.test(chatIdStr)) {
-        return false;
-      }
-      const numValue = BigInt(chatIdStr);
-      return numValue >= 3000000000000000000n && numValue <= 3999999999999999999n;
-    }   
-
-    return false;
-
-    // NOT IMPLEMENTED YET
-
-    // Per i canali (iniziano con 4)
-    if (chatIdStr.startsWith('4')) {
-      const regex = /^4\d{17}$/;
-      if (!regex.test(chatIdStr)) {
-        return false;
-      }
-      const numValue = BigInt(chatIdStr);
-      return numValue >= 4000000000000000000n && numValue <= 4999999999999999999n;
-    }
-    
     return false;
   }
   
