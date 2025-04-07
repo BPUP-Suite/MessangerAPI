@@ -241,7 +241,7 @@ async function get_members_as_user_id(chat_id) {
       break;
   }
 
-  let members_id = null;
+  let members_id = [];
 
   try{
     const result = await query(QUERY, [chat_id]);
