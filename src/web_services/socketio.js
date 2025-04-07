@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 
 const logger = require('../logger');
 const { io_log:log, io_debug:debug, io_warn:warn, io_error:error, io_info:info } = require('../logger');
-const validator = require('../utils/validator');
+const validator = require('../database/validator');
 
 
 const envManager = require('../security/envManager');
