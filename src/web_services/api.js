@@ -1060,7 +1060,7 @@ api.all('*', (req, res) => {
 
   res.status(code).json(jsonResponse);
 
-  error(req.path,'REQUEST',`Endpoint not found: ${req.method} ${req.originalUrl}`,code,jsonResponse);
+  error(req.path,'REQUEST',`Endpoint not found: ${req.method} ${req.originalUrl}`,code,JSON.stringify(jsonResponse));
 });
 
 module.exports = api;
