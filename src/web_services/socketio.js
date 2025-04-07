@@ -102,7 +102,7 @@ io.on('connection', (socket) => {
 
   // WebRTC
 
-  socket.on('join', (data) => {
+  socket.on('join', async (data) => {
 
     const user_id = socket.user_id;
 
@@ -115,7 +115,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if(!(database.is_member(user_id, chat_id))){
+    if(!(await database.is_member(user_id, chat_id))){
       socket.emit('join', {chat_id: chat_id,success: false,error_message: 'User is not a member of the chat'});
       return;
     }
@@ -123,8 +123,8 @@ io.on('connection', (socket) => {
     socket.join(chat_id);
     debug('join','ON','User ' + user_id + ' joined room ' + data.chat_id, JSON.stringify(data));
 
-    const recipient_list = database.get_members_as_user_id(chat_id);
-    const sender = database.get_handle_from_id(user_id); // handle of the sender
+    const recipient_list = await database.get_members_as_user_id(chat_id);
+    const sender = await database.get_handle_from_id(user_id); // handle of the sender
 
     const join_data = {
       chat_id: chat_id,
@@ -141,7 +141,7 @@ io.on('connection', (socket) => {
     send_to_all_except_sender(recipient_list,joined_data,'joined',socket.id);
   });
 
-  socket.on('leave', (data) => {
+  socket.on('leave', async (data) => {
 
     const user_id = socket.user_id;
 
@@ -154,7 +154,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if(!(database.is_member(user_id, chat_id))){
+    if(!(await database.is_member(user_id, chat_id))){
       socket.emit('join', {chat_id: chat_id,success: false,error_message: 'User is not a member of the chat'});
       return;
     }
@@ -162,8 +162,8 @@ io.on('connection', (socket) => {
     socket.leave(chat_id);
     debug('join','ON','User ' + user_id + ' left room ' + data.chat_id, JSON.stringify(data));
     
-    const recipients_list = database.get_members_as_user_id(chat_id);
-    const sender = database.get_handle_from_id(user_id); // handle of the sender
+    const recipients_list = await database.get_members_as_user_id(chat_id);
+    const sender = await database.get_handle_from_id(user_id); // handle of the sender
 
     const leave_data = {
       chat_id: chat_id,
