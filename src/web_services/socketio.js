@@ -11,6 +11,7 @@ const envManager = require('../security/envManager');
 const { verifySession } = require('../security/sessionMiddleware');
 
 const database = require('../database/database');  
+const { join } = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -105,7 +106,7 @@ io.on('connection', (socket) => {
 
     const user_id = socket.user_id;
 
-    debug('join','ON','User ' + user_id + ' wants to join room ' + data.chat_id, data);
+    debug('join','ON','User ' + user_id + ' wants to join room ' + data.chat_id, JSON.stringify(data));
 
     const chat_id = data.chat_id;
 
@@ -120,25 +121,31 @@ io.on('connection', (socket) => {
     }
 
     socket.join(chat_id);
-    debug('join','ON','User ' + user_id + ' joined room ' + data.chat_id, data);
+    debug('join','ON','User ' + user_id + ' joined room ' + data.chat_id, JSON.stringify(data));
 
-    const recipients_list = database.get_members_as_user_id(chat_id);
+    const recipient_list = database.get_members_as_user_id(chat_id);
     const sender = database.get_handle_from_id(user_id); // handle of the sender
 
-    const offer_data = {
+    const join_data = {
+      chat_id: chat_id,
+      success: true
+    };
+
+    const joined_data = {
       chat_id: chat_id,
       sender: sender
     };
 
-    socket.emit('join', {chat_id: chat_id,success: true});
-    send_to_all_except_sender(recipients_list,offer_data,'joined',socket.id);
+    socket.emit('join', join_data);
+    debug('join','EMIT','User ' + user_id + ' joined room ' + data.chat_id, JSON.stringify(join_data));
+    send_to_all_except_sender(recipient_list,joined_data,'joined',socket.id);
   });
 
   socket.on('leave', (data) => {
 
     const user_id = socket.user_id;
 
-    debug('join','ON','User ' + user_id + ' wants to leave room ' + data.chat_id, data);
+    debug('join','ON','User ' + user_id + ' wants to leave room ' + data.chat_id, JSON.stringify(data));
 
     const chat_id = data.chat_id;
 
@@ -153,18 +160,24 @@ io.on('connection', (socket) => {
     }
     
     socket.leave(chat_id);
-    debug('join','ON','User ' + user_id + ' left room ' + data.chat_id, data);
+    debug('join','ON','User ' + user_id + ' left room ' + data.chat_id, JSON.stringify(data));
     
     const recipients_list = database.get_members_as_user_id(chat_id);
     const sender = database.get_handle_from_id(user_id); // handle of the sender
 
     const leave_data = {
       chat_id: chat_id,
+      success: true
+    }; 
+
+    const left_data = {
+      chat_id: chat_id,
       sender: sender
     };
 
-    socket.emit('leave', {chat_id: chat_id,success: true});
-    send_to_all_except_sender(recipients_list,leave_data,'left',socket.id);
+    socket.emit('leave', leave_data);
+    debug('leave','EMIT','User ' + user_id + ' left room ' + data.chat_id, JSON.stringify(leave_data));
+    send_to_all_except_sender(recipients_list,left_data,'left',socket.id);
   });
 
   socket.on('candidate', (data) => {
@@ -206,22 +219,34 @@ function send_member_member_joined(member,group_data){
 // 
 
 function send_to_all(recipient_list,data,type){
+
+  if(!recipient_list || recipient_list.length === 0) {
+    debug(type,'EMIT','No recipients to send to', JSON.stringify(data));
+    return; // No recipients to send to
+  }
+
   for (const recipient of recipient_list){
     io.to(recipient).emit(type,data);
-    logger.debug(`[IO] [RESPONSE] Event ${type} sent to ${recipient}: ${JSON.stringify(data)}`);
+    debug(type,'EMIT','User '+recipient, JSON.stringify(data));
   }
 }
 
 function send_to_a_room(room,data,type){
   io.to(room).emit(type,data);
-  logger.debug(`[IO] [RESPONSE] Event ${type} sent to ${room}: ${JSON.stringify(data)}`);
+  debug(type,'EMIT','Room '+room, JSON.stringify(data));
 }
 
 function send_to_all_except_sender(recipient_list, data, type, sender_socket_id) {
+
+  if(!recipient_list || recipient_list.length === 0) {
+    debug(type,'EMIT','No recipients to send to', JSON.stringify(data));
+    return; // No recipients to send to
+  }
+
   for (const recipient of recipient_list) {
     // For each recipient user_id, emit to all their sockets except the sender socket
     io.to(recipient).except(sender_socket_id).emit(type, data);
-    logger.debug(`[IO] [RESPONSE] Event ${type} sent to user ${recipient} (except sender): ${JSON.stringify(data)}`);
+    debug(type,'EMIT','User '+recipient+' (except sender)', JSON.stringify(data));
   }
 }
 

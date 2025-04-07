@@ -248,6 +248,7 @@ async function get_members_as_user_id(chat_id) {
 
     if(personal){
       members_id = [result[0].user1, result[0].user2];
+      logger.debug("[POSTGRES] Members found for personal chat: " + members_id);
     }else{
       members_id = result[0].members;
     }
@@ -826,21 +827,23 @@ async function check_chat_existance(handle,other_handle) {
 
 async function is_member(user_id,chat_id){
 
-  let chat_type = get_chat_type(chat_id);
-  let QUERY = null;
+  let QUERY = "";
 
-  if(chat_type == "personal"){
-    QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND ($2 = ANY(user1) OR $2 = ANY(user2))";
-  }
-  if(chat_type == "group"){
-    QUERY = "SELECT members FROM public.groups WHERE chat_id = $1 AND $2 = ANY(members)";
-  }
-  if(chat_type == "channel"){
-    return false;
+  switch(get_chat_type(chat_id)){
+    case "personal":
+      QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND ($2 = ANY(user1) OR $2 = ANY(user2))";
+      break;
+    case "group":
+      QUERY = "SELECT members FROM public.groups WHERE chat_id = $1 AND $2 = ANY(members)";
+      break;
+    case "channel":
+      QUERY = "";
+      break;
+    default:
+      break;
   }
 
   let confirmation = false;
-
 
   if(QUERY != null){
     let result = null;
