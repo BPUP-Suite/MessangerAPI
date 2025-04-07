@@ -831,7 +831,7 @@ async function is_member(user_id,chat_id){
 
   switch(get_chat_type(chat_id)){
     case "personal":
-      QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND ($2 = ANY(user1) OR $2 = ANY(user2))";
+      QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND $2 = user1 OR $2 = user2";
       break;
     case "group":
       QUERY = "SELECT members FROM public.groups WHERE chat_id = $1 AND $2 = ANY(members)";
