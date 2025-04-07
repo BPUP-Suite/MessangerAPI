@@ -255,6 +255,9 @@ async function get_members_as_user_id(chat_id) {
   }catch(error){
     logger.error("[POSTGRES] database.get_members_as_handle: " + error);
   }
+  
+  logger.debug("[POSTGRES] Members found for group chat: " + members_id);
+
 
   return members_id;
 
