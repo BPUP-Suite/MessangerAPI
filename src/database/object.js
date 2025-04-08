@@ -190,6 +190,20 @@ class Response {
     }
   }
 
+  class JoinCommsResponse extends Response
+  {
+    constructor(type, confirmation, error_message) {
+      super(type, confirmation, error_message);
+    }
+  }
+
+  class LeaveCommsResponse extends Response
+  {
+    constructor(type, confirmation, error_message) {
+      super(type, confirmation, error_message);
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
@@ -211,5 +225,7 @@ class Response {
     MembersResponse,
     UpdateResponse,
     CreateGroupResponse,
-    JoinGroupResponse
+    JoinGroupResponse,
+    JoinCommsResponse,
+    LeaveCommsResponse
   };

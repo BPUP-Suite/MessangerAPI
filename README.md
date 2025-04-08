@@ -37,6 +37,8 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
 
 # Documentation
 
+ATTENZIONE: NON AGGIORNATA, PER LA VERA DOCUMENTAZIONE RIFERIRSI ALLA PAGINA SWAGGER ASSOCIATA ALL'API RITROVABILE AL PERCORSO /test/docs in DEVELOPMENT E /v1/docs in PRODUCTION
+
 ## Docker
 
 _docker-compose.yml:_

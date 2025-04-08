@@ -11,6 +11,8 @@
  *     description: Operations for managing chats and messages
  *   - name: Groups
  *     description: Operations for managing groups
+ *   - name: Communications
+ *     description: Operations for real-time communications management
  */
 
 /**
@@ -179,6 +181,26 @@
  *         data:
  *           type: object
  *           description: Data about the joined group
+ *     
+ *     JoinCommsResponse:
+ *       type: object
+ *       properties:
+ *         comms_joined:
+ *           type: boolean
+ *           description: Whether the user successfully joined the communications
+ *         error_message:
+ *           type: string
+ *           description: Error message if applicable
+ *     
+ *     LeaveCommsResponse:
+ *       type: object
+ *       properties:
+ *         comms_left:
+ *           type: boolean
+ *           description: Whether the user successfully left the communications
+ *         error_message:
+ *           type: string
+ *           description: Error message if applicable
  */
 
 /**
@@ -1101,6 +1123,207 @@
  *               $ref: '#/components/schemas/JoinGroupResponse'
  *       400:
  *         description: Invalid handle format
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /v1/comms/join:
+ *   get:
+ *     summary: Join a chat's communications
+ *     description: Join the real-time communications for a chat room
+ *     tags: [Communications]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: chat_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the chat to join communications
+ *     responses:
+ *       200:
+ *         description: Successfully joined communications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/JoinCommsResponse'
+ *       400:
+ *         description: Invalid chat ID or user not a member of the chat
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ *   post:
+ *     summary: Join a chat's communications
+ *     description: Same as GET, but accepts parameters in the request body
+ *     tags: [Communications]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/x-www-form-urlencoded:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               chat_id:
+ *                 type: string
+ *             required:
+ *               - chat_id
+ *     responses:
+ *       200:
+ *         description: Successfully joined communications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/JoinCommsResponse'
+ *       400:
+ *         description: Invalid chat ID or user not a member of the chat
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /v1/comms/leave:
+ *   get:
+ *     summary: Leave a chat's communications
+ *     description: Leave the real-time communications for a chat room
+ *     tags: [Communications]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: chat_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the chat to leave communications
+ *     responses:
+ *       200:
+ *         description: Successfully left communications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LeaveCommsResponse'
+ *       400:
+ *         description: Invalid chat ID or user not a member of the chat
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ *   post:
+ *     summary: Leave a chat's communications
+ *     description: Same as GET, but accepts parameters in the request body
+ *     tags: [Communications]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/x-www-form-urlencoded:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               chat_id:
+ *                 type: string
+ *             required:
+ *               - chat_id
+ *     responses:
+ *       200:
+ *         description: Successfully left communications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LeaveCommsResponse'
+ *       400:
+ *         description: Invalid chat ID or user not a member of the chat
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /v1/comms/get/members:
+ *   get:
+ *     summary: Get members in communications
+ *     description: Get a list of users currently connected to the communications for a specific chat
+ *     tags: [Communications]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: chat_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the chat to get connected members
+ *     responses:
+ *       200:
+ *         description: Members retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 comms_members_list:
+ *                   type: array
+ *                   description: List of handles of connected users
+ *                   items:
+ *                     type: string
+ *                 error_message:
+ *                   type: string
+ *                   description: Error message if applicable
+ *       400:
+ *         description: Invalid chat ID or user not a member of the chat
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ *   post:
+ *     summary: Get members in communications
+ *     description: Same as GET, but accepts parameters in the request body
+ *     tags: [Communications]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/x-www-form-urlencoded:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               chat_id:
+ *                 type: string
+ *             required:
+ *               - chat_id
+ *     responses:
+ *       200:
+ *         description: Members retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 comms_members_list:
+ *                   type: array
+ *                   description: List of handles of connected users
+ *                   items:
+ *                     type: string
+ *                 error_message:
+ *                   type: string
+ *                   description: Error message if applicable
+ *       400:
+ *         description: Invalid chat ID or user not a member of the chat
  *       401:
  *         description: Not authenticated
  *       500:

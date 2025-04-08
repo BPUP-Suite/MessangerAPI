@@ -10,7 +10,7 @@ const swaggerRouter = require('./swagger/api-swagger');
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse,JoinCommsResponse,LeaveCommsResponse} = require('../database/object');
 
 const io = require('./socketio');
 
@@ -77,6 +77,14 @@ const join_base = chat_base + 'join/';
 const join_group_path = join_base + 'group';
 const join_channel_path = join_base + 'channel';
 
+// /comms
+const comms_base = version + 'comms/';
+
+const join_comms_path = comms_base + 'join';
+const leave_comms_path = comms_base + 'leave';
+
+const comms_get_base = comms_base + 'get/';
+const comms_members_path = comms_get_base + 'members';
 
 // api response type
 
@@ -104,6 +112,11 @@ const get_members_response_type = 'members_list';
 
 const join_group_response_type = 'group_joined';
 const join_channel_response_type = 'channel_joined';
+
+const join_comms_response_type = 'comms_joined';
+const leave_comms_response_type = 'comms_left';
+
+const comms_members_response_type = 'comms_members_list';
 
 // api configurations
 
@@ -177,7 +190,7 @@ function isAuthenticated(req, res, next) {
 
     res.status(code).json(jsonResponse);
 
-    error(req.path,'AUTH','User unauthorized',code,jsonResponse);
+    error(req.path,'AUTH','User unauthorized',code,JSON.stringify(jsonResponse));
   }
 }
 
@@ -384,7 +397,12 @@ api.get(logout_path, isAuthenticated, async (req, res) => {
     user_id = req.session.user_id;
 
     try{
+      const session_id = req.session.id;
+      const socket_id = io.get_socket_id(session_id); // get the socket id from the activeSessions map using the session_id
+
+      io.close_socket(socket_id); // close socket connection
       confirmation = await destroySession(req, res); // destroy session in redis and in the cookie
+
 
       if (confirmation) {
         code = 200;
@@ -678,8 +696,9 @@ api.get(message_path, isAuthenticated, async (req, res) => {
 
   // Send messages to recipients after sending the response to sender
   if (message_data != null && recipient_list != null) {
+    const sender_socket_id = io.get_socket_id(req.session.id); 
     setImmediate(() => {
-      io.send_messages_to_recipients(recipient_list, message_data);
+      io.send_messages_to_recipients(recipient_list, message_data,sender_socket_id);
     });
   }
 
@@ -839,7 +858,8 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     };
 
     setImmediate(() => {
-      io.send_groups_to_recipients(members, group_data);
+      const sender_socket_id = io.get_socket_id(req.session.id); 
+      io.send_groups_to_recipients(members, group_data,sender_socket_id);
     });
   }
 
@@ -1004,12 +1024,201 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
       };
 
       setImmediate(() => {
-        io.send_group_member_joined(members, user_data);
-        io.send_member_member_joined(user_id, data);
+        const sender_socket_id = io.get_socket_id(req.session.id); 
+        io.send_group_member_joined(members, user_data, sender_socket_id);
+        io.send_member_member_joined(user_id, data, sender_socket_id);
       });
   }
 
   return;
+});
+
+// Path: /comms
+
+api.get(join_comms_path, isAuthenticated, async (req, res) => {
+
+  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+
+  const type = join_comms_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  const chat_id = req.query.chat_id;
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+
+      const socket_id = io.get_socket_id(req.session.id);
+      io.socket_join(socket_id, chat_id); // join the socket to the room
+
+      confirmation = true;
+      code = 200;
+      errorDescription = '';
+
+    } catch (err) {
+      error(req.path,'DATABASE','database.get_members',code,err);
+    }
+  }
+
+  const joinCommsResponse = new JoinCommsResponse(type, confirmation, errorDescription);
+  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(joinCommsResponse.toJson()));
+  res.status(code).json(joinCommsResponse.toJson());
+
+  if(confirmation){
+
+    let recipient_list = null;
+    let sender = null;
+
+    try{
+      recipient_list = await database.get_members_as_user_id(chat_id);
+    }catch (err) {
+      error(req.path,'DATABASE','database.get_members_as_user_id',code,err);
+    }
+    try{
+      sender = await database.get_handle_from_id(user_id); // handle of the sender
+    }catch (err) {
+      error(req.path,'DATABASE','database.get_handle_from_id',code,err);
+    }
+
+    if(recipient_list != null || sender != null) {
+      const join_data = {
+        chat_id: chat_id,
+        sender: sender
+      };
+     const sender_socket_id = io.get_socket_id(req.session.id); 
+     io.send_joined_member_to_comms(recipient_list,join_data,sender_socket_id);
+    }
+  }
+});
+
+api.get(leave_comms_path, isAuthenticated, async (req, res) => {
+  
+  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+
+  const type = leave_comms_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  const chat_id = req.query.chat_id;
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+
+      const socket_id = io.get_socket_id(req.session.id);
+      io.socket_leave(socket_id, chat_id); // join the socket to the room
+
+      confirmation = true;
+      code = 200;
+      errorDescription = '';
+
+    } catch (err) {
+      error(req.path,'DATABASE','database.get_members',code,err);
+    }
+  }
+
+  const leaveCommsResponse = new LeaveCommsResponse(type, confirmation, errorDescription);
+  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(leaveCommsResponse.toJson()));
+  res.status(code).json(leaveCommsResponse.toJson());
+
+  if(confirmation){
+
+    let recipient_list = null;
+    let sender = null;
+
+    try{
+      recipient_list = await database.get_members_as_user_id(chat_id);
+    }catch (err) {
+      error(req.path,'DATABASE','database.get_members_as_user_id',code,err);
+    }
+    try{
+      sender = await database.get_handle_from_id(user_id); // handle of the sender
+    }catch (err) {
+      error(req.path,'DATABASE','database.get_handle_from_id',code,err);
+    }
+
+    if(recipient_list != null || sender != null) {
+      const left_data = {
+        chat_id: chat_id,
+        sender: sender
+      };
+     
+      const sender_socket_id = io.get_socket_id(req.session.id); 
+     io.send_left_member_to_comms(recipient_list,left_data,sender_socket_id);
+    }
+  }
+});
+
+api.get(comms_members_path, isAuthenticated, async (req, res) => {
+
+  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+
+  const type = comms_members_response_type;
+  let code = 500;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  const chat_id = req.query.chat_id;
+  
+  let members_handle = [];
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      const members_id = await io.get_user_id_room(chat_id);
+      
+      for (let i = 0; i < members_id.length; i++) {
+        try{
+          const handle = await database.get_handle_from_id(members_id[i]);
+          members_handle.push(handle);
+        }catch (err) {
+          error(req.path,'DATABASE','database.get_handle_from_id',code,err);
+        }
+      }
+        
+      code = 200;
+      errorDescription = '';
+    } catch (err) {
+      error(req.path,'DATABASE','database.get_members',code,err);
+    }
+  }
+
+  const membersResponse = new MembersResponse(type, members_handle, errorDescription);
+  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
+  return res.status(code).json(membersResponse.toJson());
+
 });
 
 
@@ -1049,6 +1258,11 @@ postToGetWrapper(search_all_path);
 postToGetWrapper(search_users_path);
 
 postToGetWrapper(join_group_path);
+
+postToGetWrapper(join_comms_path);
+postToGetWrapper(leave_comms_path);
+
+postToGetWrapper(comms_members_path);
 
 // Middleware per gestire richieste a endpoints non esistenti
 api.all('*', (req, res) => {

@@ -4,20 +4,16 @@ const { Server } = require('socket.io');
 
 const logger = require('../logger');
 const { io_log:log, io_debug:debug, io_warn:warn, io_error:error, io_info:info } = require('../logger');
-const validator = require('../database/validator');
 
 
 const envManager = require('../security/envManager');
 const { verifySession } = require('../security/sessionMiddleware');
 
-const database = require('../database/database');  
-const { join } = require('path');
-
 const app = express();
 const server = http.createServer(app);
 
 const activeSockets = new Map();
-
+const activeSessions = new Map();
 
 // CORS config
 
@@ -49,7 +45,6 @@ const io = new Server(server, {
 
 io.use(async (socket, next) => {
   try {
-    //logger.debug('[IO] IO authentication starting... with header: ' + JSON.stringify(socket.request.headers)); disabled for security reasons
 
     // takes session_id from the socket handshake
     const session_id = socket.handshake.auth.sessionId;
@@ -73,18 +68,35 @@ io.use(async (socket, next) => {
       return next(error);
     }
 
+    if (activeSessions.has(session_id)) {
+      const existingSocketId = activeSessions.get(session_id);
+      
+      // check if the socket is already connected
+      // if it is, disconnect it
+      // this is to prevent multiple sockets from being connected with the same session id
+      const existingSocket = io.sockets.sockets.get(existingSocketId);
+      if (existingSocket) {
+        logger.warn(`[IO] Another socket already connected with session ${session_id}. Disconnecting previous socket.`);
+        existingSocket.disconnect(true);
+      }
+      activeSessions.delete(session_id);
+    }
+
     const user_id = session.user_id;
     logger.debug(`[IO] IO authentication successful: user_id ${user_id}, added to group`);
     
+    socket.session_id = session_id;
     socket.user_id = user_id;
     socket.join(user_id);
 
+    activeSessions.set(session_id, socket.id);
 
     // add the socket to the activeSockets map
-    // activeSockets is a Map that stores the socket.id and user_id of each connected socket
+    // activeSockets is a Map that stores the socket.id, user_id and session_id of each connected socket
     activeSockets.set(socket.id, {
       socket_id: socket.id,
       user_id: user_id,
+      session_id: session_id,
       connected_at: new Date()
     });
 
@@ -102,86 +114,8 @@ io.on('connection', (socket) => {
 
   // WebRTC
 
-  socket.on('join', async (data) => {
-
-    const user_id = socket.user_id;
-
-    debug('join','ON','User ' + user_id + ' wants to join room ' + data.chat_id, JSON.stringify(data));
-
-    const chat_id = data.chat_id;
-
-    if(!(validator.chat_id(chat_id))){
-      socket.emit('join', {chat_id: chat_id,success: false,error_message: 'Invalid chat_id'});
-      return;
-    }
-
-    if(!(await database.is_member(user_id, chat_id))){
-      socket.emit('join', {chat_id: chat_id,success: false,error_message: 'User is not a member of the chat'});
-      return;
-    }
-
-    socket.join(chat_id);
-    debug('join','ON','User ' + user_id + ' joined room ' + data.chat_id, JSON.stringify(data));
-
-    const recipient_list = await database.get_members_as_user_id(chat_id);
-    const sender = await database.get_handle_from_id(user_id); // handle of the sender
-
-    const join_data = {
-      chat_id: chat_id,
-      success: true
-    };
-
-    const joined_data = {
-      chat_id: chat_id,
-      sender: sender
-    };
-
-    socket.emit('join', join_data);
-    debug('join','EMIT','User ' + user_id + ' joined room ' + data.chat_id, JSON.stringify(join_data));
-    send_to_all_except_sender(recipient_list,joined_data,'joined',socket.id);
-  });
-
-  socket.on('leave', async (data) => {
-
-    const user_id = socket.user_id;
-
-    debug('join','ON','User ' + user_id + ' wants to leave room ' + data.chat_id, JSON.stringify(data));
-
-    const chat_id = data.chat_id;
-
-    if(!(validator.chat_id(chat_id))){
-      socket.emit('join', {chat_id: chat_id,success: false,error_message: 'Invalid chat_id'});
-      return;
-    }
-
-    if(!(await database.is_member(user_id, chat_id))){
-      socket.emit('join', {chat_id: chat_id,success: false,error_message: 'User is not a member of the chat'});
-      return;
-    }
-    
-    socket.leave(chat_id);
-    debug('join','ON','User ' + user_id + ' left room ' + data.chat_id, JSON.stringify(data));
-    
-    const recipients_list = await database.get_members_as_user_id(chat_id);
-    const sender = await database.get_handle_from_id(user_id); // handle of the sender
-
-    const leave_data = {
-      chat_id: chat_id,
-      success: true
-    }; 
-
-    const left_data = {
-      chat_id: chat_id,
-      sender: sender
-    };
-
-    socket.emit('leave', leave_data);
-    debug('leave','EMIT','User ' + user_id + ' left room ' + data.chat_id, JSON.stringify(leave_data));
-    send_to_all_except_sender(recipients_list,left_data,'left',socket.id);
-  });
-
   socket.on('candidate', (data) => {
-    socket.to(data.to).emit('candidate', data);
+    send_to_a_room(data.to, data, 'candidate');
   }); 
 
   // End of IO
@@ -189,34 +123,73 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     logger.debug(`[IO] User ${socket.user_id} disconnected`);
     activeSockets.delete(socket.id);
+    activeSessions.delete(socket.session_id);
   });
 });
 
+// Close socket connection on logout
+function close_socket(socket_id) {
+  const socket = io.sockets.sockets.get(socket_id);
+  if (socket) {
+    socket.disconnect(true);
+    debug('close_socket','FUNCTION','Socket '+socket_id+' disconnected');
+  }
+  else {
+    error('close_socket','FUNCTION','Socket '+socket_id+' not found');
+  }
+}
 
 
 // Message to all sockets in a group
-function send_messages_to_recipients(recipient_list,message_data) {
-  send_to_all(recipient_list,message_data,'receive_message');
+function send_messages_to_recipients(recipient_list,message_data,sender_socket_id) {
+  send_to_all_except_sender(recipient_list,message_data,'receive_message',sender_socket_id);
 }
 
 // Group creating alert to all sockets in a group
-function send_groups_to_recipients(members,group_data){
-  send_to_all(members,group_data,'group_created');
+function send_groups_to_recipients(members,group_data,sender_socket_id){
+  send_to_all_except_sender(members,group_data,'group_created',sender_socket_id);
 }
 
 // Alert of a new member joined to a group
-function send_group_member_joined(members,group_data){
-  send_to_all(members,group_data,'group_member_joined');
+function send_group_member_joined(members,group_data,sender_socket_id){
+  send_to_all_except_sender(members,group_data,'group_member_joined',sender_socket_id);
 }
 
 // Alert of a new member joined to a group (to the member that joined)
-function send_member_member_joined(member,group_data){
-  send_to_all([member],group_data,'member_joined_group');
+function send_member_member_joined(member,group_data,sender_socket_id){
+  send_to_all_except_sender([member],group_data,'member_joined_group',sender_socket_id);
 }
 
 // Alert of a member left a group
 
-// 
+// ....
+
+// New member in comms chat
+
+function send_joined_member_to_comms(members,comms_data){
+  send_to_all(members,comms_data,'member_joined_comms');
+}
+
+function send_left_member_to_comms(members,comms_data){
+  send_to_all(members,comms_data,'member_left_comms');
+}
+
+
+// Join / Left rooms
+
+function join_room(socket,room_id) {
+  socket.join(room_id);
+  debug('join_room','FUNCTION','User '+socket.user_id+' joined room',room_id);
+}
+
+function leave_room(socket,room_id) {
+  socket.leave(room_id);
+  debug('leave_room','FUNCTION','User '+socket.user_id+' left room',room_id);
+}
+
+
+
+// Sending methods
 
 function send_to_all(recipient_list,data,type){
 
@@ -236,6 +209,8 @@ function send_to_a_room(room,data,type){
   debug(type,'EMIT','Room '+room, JSON.stringify(data));
 }
 
+// Send to a all but a specific socket
+
 function send_to_all_except_sender(recipient_list, data, type, sender_socket_id) {
 
   if(!recipient_list || recipient_list.length === 0) {
@@ -250,15 +225,53 @@ function send_to_all_except_sender(recipient_list, data, type, sender_socket_id)
   }
 }
 
+// Get methods
+
+async function get_user_id_room(chat_id) {
+  try {
+    // Get all socket instances in the room
+    const sockets = await io.in(chat_id).fetchSockets();
+    
+    // Extract unique user_ids from the sockets
+    const members_id = [...new Set(sockets.map(socket => socket.user_id))];
+    
+    debug('getUserIdsInRoom', 'FUNCTION', `Retrieved ${members_id.length} user_ids from room ${chat_id}`, JSON.stringify(members_id));
+    return members_id;
+  } catch (err) {
+    error('getUserIdsInRoom', 'FUNCTION', `Error getting user_ids from room ${chat_id}`, err);
+    return [];
+  }
+}
+
+
+function get_socket_id(session_id) { 
+  // get the socket id from the activeSessions map using the session_id
+  const socket_id = activeSessions.get(session_id);
+  if (!socket_id) {
+    logger.error(`[IO] Error getting socket id for session ${session_id}`);
+    return null;
+  }
+  return socket_id;
+}
+
+
 function getActiveSockets() {
   return Array.from(activeSockets.values());
 }
 
 module.exports = { 
   server, 
+  close_socket,
   send_messages_to_recipients, 
   send_groups_to_recipients,
   getActiveSockets,
   send_group_member_joined,
-  send_member_member_joined
+  send_member_member_joined,
+  get_user_id_room,
+  send_left_member_to_comms,
+  send_joined_member_to_comms,
+  join_room,
+  leave_room,
+  get_socket_id,
+  send_to_all_except_sender,
 };
