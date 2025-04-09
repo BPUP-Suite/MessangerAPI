@@ -52,9 +52,9 @@ io.use(async (socket, next) => {
 
     if(!session_id) {
       logger.error('[IO] IO authentication error: no session_id provided');
-      const error = new Error('Authentication error - No session_id provided');
-      error.data = { status: 401 };
-      return next(error);
+      const err = new Error('Authentication error - No session_id provided');
+      err.data = { status: 401 };
+      return next(err);
     }
 
     // verify session_id returning a session object
@@ -63,9 +63,9 @@ io.use(async (socket, next) => {
     // if no session is returned, the session id is invalid
     if (!session || !session.user_id) {
       logger.error('[IO] IO authentication error: no active session');
-      const error = new Error('Authentication error - No active session');
-      error.data = { status: 401 };
-      return next(error);
+      const err = new Error('Authentication error - No active session');
+      err.data = { status: 401 };
+      return next(err);
     }
 
     if (activeSessions.has(session_id)) {
@@ -174,20 +174,68 @@ function send_left_member_to_comms(members,comms_data){
   send_to_all(members,comms_data,'member_left_comms');
 }
 
+// Join Comms / Leave Comms
 
-// Join / Left rooms
+function join_comms(socket_id,room_id) {
 
-function join_room(socket,room_id) {
+  const socket = io.sockets.sockets.get(socket_id);
+  
+  // Check if the socket is already in another room
+  const existingRoom = is_already_in_room(socket);
+  if (existingRoom) {
+    debug('join_comms','FUNCTION','User '+socket.user_id+' is already in comms',existingRoom);
+    return false; // User is already in another room
+  }
+
   socket.join(room_id);
-  debug('join_room','FUNCTION','User '+socket.user_id+' joined room',room_id);
+  debug('join_comms','FUNCTION','User '+socket.user_id+' joined comms',room_id);
+
+  return true;
 }
 
-function leave_room(socket,room_id) {
-  socket.leave(room_id);
-  debug('leave_room','FUNCTION','User '+socket.user_id+' left room',room_id);
+function leave_comms(socket_id) {
+
+  const socket = io.sockets.sockets.get(socket_id);
+
+  // Check if the socket is already in another room
+  const existingRoom = is_already_in_room(socket);
+
+  if (existingRoom) {
+
+    socket.leave(existingRoom);
+    debug('leave_comms','FUNCTION','User '+socket.user_id+' left comms',existingRoom);
+    return existingRoom;
+  }
+
+  debug('leave_comms','FUNCTION','User '+socket.user_id+' is not in any room','');
+  return null; // User is not in any room
 }
 
+// Check if already in another room
 
+function is_already_in_room(socket) {
+  try {
+    // Get all rooms this socket is in
+    const rooms = Array.from(socket.rooms);
+    
+    // Filter out the socket's own room (socket.id) and user_id room
+    const chat_rooms = rooms.filter(room => {
+      return room !== socket.id && 
+             room !== socket.user_id
+    });
+    
+    if (chat_rooms.length > 0) {
+      debug('is_already_in_room', 'FUNCTION', `User ${socket.user_id} is already in rooms:`, JSON.stringify(chat_rooms));
+      return chat_rooms[0]; // Return the first room found
+    }
+    
+    debug('is_already_in_room', 'FUNCTION', `User ${socket.user_id} is not in any other room`);
+    return null;
+  }catch (err) {
+    error('is_already_in_room', 'FUNCTION', `Error checking rooms for user ${socket.user_id}`, err);
+    return null;
+  }
+}
 
 // Sending methods
 
@@ -270,8 +318,8 @@ module.exports = {
   get_user_id_room,
   send_left_member_to_comms,
   send_joined_member_to_comms,
-  join_room,
-  leave_room,
+  join_comms,
+  leave_comms,
   get_socket_id,
   send_to_all_except_sender,
 };

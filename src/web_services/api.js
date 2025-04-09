@@ -1061,14 +1061,24 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
     try {
 
       const socket_id = io.get_socket_id(req.session.id);
-      io.socket_join(socket_id, chat_id); // join the socket to the room
 
-      confirmation = true;
-      code = 200;
-      errorDescription = '';
+      if(socket_id != null){
+        confirmation = io.join_comms(socket_id, chat_id); // join the socket to the room
 
+        if(confirmation) {
+          code = 200;
+          errorDescription = '';
+        }else{
+          code = 400;
+          errorDescription = 'User already in a comms';
+        }
+      }else{
+        code = 400;
+        errorDescription = 'No opened socket.io found.';
+        confirmation = false;
+      }
     } catch (err) {
-      error(req.path,'DATABASE','database.get_members',code,err);
+      error(req.path,'IO','io.join_comms',code,err);
     }
   }
 
@@ -1113,30 +1123,34 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
   let errorDescription = 'Generic error';
   let validated = true;
 
-  const chat_id = req.query.chat_id;
-
-  if (!(validator.chat_id(chat_id))) {
-    code = 400;
-    errorDescription = 'Chat_id not valid';
-    validated = false;
-  }else if (!(await database.is_member(req.session.user_id,chat_id))){
-    code = 400;
-    errorDescription = 'No access to request chat';
-    validated = false;
-  }
+  let chat_id = null;
 
   if (validated) {
     try {
 
       const socket_id = io.get_socket_id(req.session.id);
-      io.socket_leave(socket_id, chat_id); // join the socket to the room
 
-      confirmation = true;
-      code = 200;
-      errorDescription = '';
+      if(socket_id != null) {
+        
+        chat_id = io.leave_comms(socket_id); // leave room
+
+        if(chat_id) {
+          confirmation = true;
+          code = 200;
+          errorDescription = '';
+        }else{
+          confirmation = false;
+          code = 400;
+          errorDescription = 'User is not in a comms';
+        }
+      }else{
+        code = 400;
+        errorDescription = 'No opened socket.io found.';
+        confirmation = false;
+      }
 
     } catch (err) {
-      error(req.path,'DATABASE','database.get_members',code,err);
+      error(req.path,'IO','io.leave_comms',code,err);
     }
   }
 
@@ -1211,7 +1225,7 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
       code = 200;
       errorDescription = '';
     } catch (err) {
-      error(req.path,'DATABASE','database.get_members',code,err);
+      error(req.path,'IO','io.get_user_id_room',code,err);
     }
   }
 
