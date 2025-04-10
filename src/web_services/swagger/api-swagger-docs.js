@@ -1199,13 +1199,6 @@
  *     tags: [Communications]
  *     security:
  *       - cookieAuth: []
- *     parameters:
- *       - in: query
- *         name: chat_id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the chat to leave communications
  *     responses:
  *       200:
  *         description: Successfully left communications
