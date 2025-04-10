@@ -4,4 +4,4 @@ global:
 scrape_configs:
   - job_name: "server"
     static_configs:
-      - targets: ["localhost:3000"] # da pensare a cosa succede se qualcuno cambia porta alla dashboard
+      - targets: ["172.17.0.1:3000"]

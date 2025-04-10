@@ -50,8 +50,15 @@ services:
       ports:
           - 9090:9090
       volumes:
-          - ./metrics/prometheus/config.yml:/etc/prometheus/prometheus.yml"
-      image: prom/prometheus:v2.20.0
+          - ./metrics/prometheus/config.yml:/etc/prometheus/prometheus.yml
+      image: prom/prometheus:latest
+      healthcheck:
+        test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      restart: unless-stopped
+
 
   grafana:
       ports:
@@ -64,4 +71,8 @@ services:
           - ./metrics/grafana/config.yml:/etc/grafana/provisioning/datasources/datasources.yml
           - ./metrics/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
           - ./metrics/grafana/dashboards:/var/lib/grafana/dashboards
-      image: grafana/grafana:7.1.5
+      image: grafana/grafana:latest
+      depends_on:
+          prometheus:
+              condition: service_healthy
+      restart: unless-stopped

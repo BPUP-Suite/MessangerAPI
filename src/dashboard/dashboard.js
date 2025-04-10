@@ -18,7 +18,7 @@ const socketio = require('../web_services/socketio');
 const LOGS_PATH = envManager.readLogsPath();
 
 // Metrics setup
-const register = require('./metrics').register;
+const {register} = require('./metrics');
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
