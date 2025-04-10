@@ -148,7 +148,7 @@
         "options": {},
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le))",
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_milliseconds_bucket[10s])) by (le))",
             "interval": "",
             "legendFormat": "95th percentile",
             "refId": "D"

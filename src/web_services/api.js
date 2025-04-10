@@ -190,7 +190,7 @@ api.use('/'+envManager.readVersion()+'/docs', swaggerRouter);
 
 function isAuthenticated(req, res, next) {
   if (req.session.user_id) {
-    debug(req.path,'AUTH', 'User is authenticated!', 200, req.session.user_id);
+    debug('',req.path,'AUTH', 'User is authenticated!', 200, req.session.user_id);
     next();
   } else {
     const code = 401;
@@ -213,7 +213,8 @@ api.get(access_path, async (req, res) => {
 
   const email = req.query.email;
 
-  debug(req.path,'REQUEST','','',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST','','',JSON.stringify(req.query));
 
   const type = access_response_type;
   let code = 500;
@@ -242,7 +243,7 @@ api.get(access_path, async (req, res) => {
   }
 
   const accessResponse = new AccessResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE','',code,JSON.stringify(accessResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(accessResponse.toJson()));
   return res.status(code).json(accessResponse.toJson());
 });
 
@@ -261,7 +262,8 @@ api.get(signup_path, async (req, res) => {
     sanitizedQuery.password = '*'.repeat(sanitizedQuery.password.length);
   }
 
-  debug(req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
 
   const type = signup_response_type;
   let code = 500;
@@ -310,7 +312,7 @@ api.get(signup_path, async (req, res) => {
   }
 
   const signupResponse = new SignupResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE','',code,JSON.stringify(signupResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(signupResponse.toJson()));
   return res.status(code).json(signupResponse.toJson());
 
 });
@@ -324,7 +326,8 @@ api.get(login_path, async (req, res) => {
     sanitizedQuery.password = '*'.repeat(sanitizedQuery.password.length);
   }
 
-  debug(req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
 
   const type = login_response_type;
   let code = 500;
@@ -354,16 +357,16 @@ api.get(login_path, async (req, res) => {
         errorDescription = '';
         code = 200;
 
-        debug(req.path,'SESSION','Session opened.',code,user_id)
+        debug('',req.path,'SESSION','Session opened.',code,user_id)
         req.session.user_id = user_id;
-        debug(req.path,'SESSION','Session set.',code,user_id)
+        debug('',req.path,'SESSION','Session set.',code,user_id)
 
         req.session.save(async (err) => {
           if (req.session.user_id && !err) {
-            debug(req.path,'SESSION','Session saved.',code,user_id)
+            debug('',req.path,'SESSION','Session saved.',code,user_id)
             token = req.sessionID;
             const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
-            debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
+            debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
             res.status(code).json(loginResponse.toJson());
           } else {
             error(req.path,'SESSION','Error while saving session',code,err.message);
@@ -387,14 +390,15 @@ api.get(login_path, async (req, res) => {
 
   // if the user is not logged in, send the error response
   const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
-  debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
   return res.status(code).json(loginResponse.toJson());
 });
 
 
 api.get(logout_path, isAuthenticated, async (req, res) => {
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   let user_id = null;
 
@@ -424,14 +428,15 @@ api.get(logout_path, isAuthenticated, async (req, res) => {
   } 
 
     const logoutResponse = new LogoutResponse(type, confirmation, errorDescription);
-    debug(req.path,'RESPONSE',user_id,code,JSON.stringify(logoutResponse.toJson()));
+    debug(Date.now() - start,req.path,'RESPONSE',user_id,code,JSON.stringify(logoutResponse.toJson()));
     return res.status(code).json(logoutResponse.toJson());
 
 });
 
 api.get(session_path, isAuthenticated, (req, res) => { // DEPRECATED
   
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = session_response_type;
   let code = 500;
@@ -448,7 +453,7 @@ api.get(session_path, isAuthenticated, (req, res) => { // DEPRECATED
   } 
 
   const sessionResponse = new SessionResponse(type, session_id, errorDescription);
-  debug(req.path,'RESPONSE',user_id,code,JSON.stringify(sessionResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',user_id,code,JSON.stringify(sessionResponse.toJson()));
   return res.status(code).json(sessionResponse.toJson());
 
 });                                               // DEPRECATED
@@ -462,7 +467,8 @@ api.get(handle_availability_path, async (req, res) => {
 
   const handle = req.query.handle;
 
-  debug(req.path,'REQUEST','','',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST','','',JSON.stringify(req.query));
 
   const type = handle_availability_response_type;
   let code = 500;
@@ -490,7 +496,7 @@ api.get(handle_availability_path, async (req, res) => {
   }
 
   const handleResponse = new HandleResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE','',code,JSON.stringify(handleResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(handleResponse.toJson()));
   return res.status(code).json(handleResponse.toJson());
 
 });
@@ -500,7 +506,8 @@ api.get(init_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = init_response_type;
   let code = 500;
@@ -530,7 +537,7 @@ api.get(init_path, isAuthenticated, async (req, res) => {
   }
 
   const initResponse = new InitResponse(type, confirmation, errorDescription, init_data);
-  debug(req.path, 'RESPONSE', req.session.user_id, code, JSON.stringify(initResponse.toJson()).substring(0, 200) + "...");
+  debug('',req.path, 'RESPONSE', req.session.user_id, code, JSON.stringify(initResponse.toJson()).substring(0, 200) + "...");
   return res.status(code).json(initResponse.toJson());
 
 });
@@ -539,7 +546,8 @@ api.get(update_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const latest_update_datetime = req.query.latest_update_datetime;
 
@@ -574,7 +582,7 @@ api.get(update_path, isAuthenticated, async (req, res) => {
   }
 
   const updateResponse = new UpdateResponse(type, confirmation, errorDescription, update_data);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(updateResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(updateResponse.toJson()));
   return res.status(code).json(updateResponse.toJson());
 
 });
@@ -585,7 +593,8 @@ api.get(search_users_path, isAuthenticated,async (req, res) => {
 
   const handle = req.query.handle;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = search_response_type;
   let code = 500;
@@ -610,7 +619,7 @@ api.get(search_users_path, isAuthenticated,async (req, res) => {
   }
 
   const searchResponse = new SearchResponse(type, searched_list, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(searchResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(searchResponse.toJson()));
   return res.status(code).json(searchResponse.toJson());
 
 });
@@ -619,7 +628,8 @@ api.get(search_all_path, isAuthenticated,async (req, res) => {
 
   const handle = req.query.handle;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = search_response_type;
   let code = 500;
@@ -644,7 +654,7 @@ api.get(search_all_path, isAuthenticated,async (req, res) => {
   }
 
   const searchResponse = new SearchResponse(type, searched_list, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(searchResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(searchResponse.toJson()));
   return res.status(code).json(searchResponse.toJson());
 
 });
@@ -660,7 +670,8 @@ api.get(message_path, isAuthenticated, async (req, res) => {
   const text = req.query.text;
   const chat_id = req.query.chat_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = message_response_type;
   let code = 500;
@@ -701,7 +712,7 @@ api.get(message_path, isAuthenticated, async (req, res) => {
   }
 
   const messageResponse = new MessageResponse(type, confirmation, errorDescription, message_data);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(messageResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(messageResponse.toJson()));
   res.status(code).json(messageResponse.toJson());
 
   // Send messages to recipients after sending the response to sender
@@ -721,7 +732,8 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const handle = await database.get_handle_from_id(user_id);
   const other_handle = req.query.handle;
@@ -776,7 +788,7 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
   }
 
   const createChatResponse = new CreateChatResponse(type, confirmation, errorDescription, chat_id);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(createChatResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(createChatResponse.toJson()));
   return res.status(code).json(createChatResponse.toJson());
 
 });
@@ -785,7 +797,8 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const name = req.query.name;
   let handle = req.query.handle;
@@ -852,7 +865,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
   }
 
   const createGroupResponse = new CreateGroupResponse(type, confirmation, errorDescription, chat_id);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(createGroupResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(createGroupResponse.toJson()));
   res.status(code).json(createGroupResponse.toJson());
 
 
@@ -881,7 +894,8 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
 api.get(members_path, isAuthenticated, async (req, res) => {
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = get_members_response_type;
   let code = 500;
@@ -908,7 +922,7 @@ api.get(members_path, isAuthenticated, async (req, res) => {
   }
 
   const membersResponse = new MembersResponse(type, members_list, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
   return res.status(code).json(membersResponse.toJson());
 
 });
@@ -920,7 +934,8 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id; // all public groups are visible to all users
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = join_group_response_type;
   let code = 500;
@@ -1017,7 +1032,7 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
 
   
   const joinGroupResponse = new JoinGroupResponse(type, confirmation, errorDescription, data);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(joinGroupResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(joinGroupResponse.toJson()));
   res.status(code).json(joinGroupResponse.toJson());
 
   // Send group to recipients after sending the response to sender
@@ -1047,7 +1062,8 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
 
 api.get(join_comms_path, isAuthenticated, async (req, res) => {
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = join_comms_response_type;
   let code = 500;
@@ -1093,7 +1109,7 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
   }
 
   const joinCommsResponse = new JoinCommsResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(joinCommsResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(joinCommsResponse.toJson()));
   res.status(code).json(joinCommsResponse.toJson());
 
   if(confirmation){
@@ -1125,7 +1141,8 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
 
 api.get(leave_comms_path, isAuthenticated, async (req, res) => {
   
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = leave_comms_response_type;
   let code = 500;
@@ -1165,7 +1182,7 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
   }
 
   const leaveCommsResponse = new LeaveCommsResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(leaveCommsResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(leaveCommsResponse.toJson()));
   res.status(code).json(leaveCommsResponse.toJson());
 
   if(confirmation){
@@ -1198,7 +1215,8 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
 
 api.get(comms_members_path, isAuthenticated, async (req, res) => {
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = comms_members_response_type;
   let code = 500;
@@ -1240,7 +1258,7 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
   }
 
   const membersResponse = new MembersResponse(type, members_handle, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
   return res.status(code).json(membersResponse.toJson());
 
 });

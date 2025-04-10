@@ -89,8 +89,9 @@ function api_log(path,type,message,code,data){
     log(`[API] [${type}] - ${path} - ${message} |${code}| -> ${data}`);
 }
 
-function api_debug(path,type,message,code,data){
-    debug(`[API] [${type}] - ${path} - ${message} |${code}| -> ${data}`);
+function api_debug(duration,path,type,message,code,data){
+    const durationPart = duration !== '' ? `|${duration}ms| ` : '';
+    debug(`[API] ${durationPart}[${type}] - ${path} - ${message} |${code}| -> ${data}`);
 }
 
 function api_warn(type,message,data){

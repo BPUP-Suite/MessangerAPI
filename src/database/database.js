@@ -43,15 +43,17 @@ const {dbQueryDuration } = require('../dashboard/metrics');
 
 async function query(text, params) {
   const end = dbQueryDuration.startTimer();
-
+  const start = Date.now();
   logger.debug(`[POSTGRES] Executing query: ${text} with parameters: ${JSON.stringify(params)}`);
   const client = await pool.connect();
   try {
     const res = await client.query(text, params);
-    logger.debug(`[POSTGRES] Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows).substring(0, 200) + "..."}`);
+    const duration = Date.now() - start;
+    logger.debug(`[POSTGRES] |${duration}ms| Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows).substring(0, 200) + "..."}`);
     return res.rows;
   } catch (error) {
-    logger.error(`[POSTGRES] Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${error}`);
+    const duration = Date.now() - start;
+    logger.error(`[POSTGRES] |${duration}ms| Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${error}`);
     throw error;
   } finally {
     client.release();

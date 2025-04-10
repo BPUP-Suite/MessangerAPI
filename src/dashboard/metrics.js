@@ -13,19 +13,20 @@ register.setDefaultLabels({
 
 prometheus.collectDefaultMetrics({ register });
 // Set up a histogram for request duration
-const httpRequestDurationSeconds = new prometheus.Histogram({
-  name: 'http_request_duration_seconds',
+const httpRequestDurationMilliSeconds = new prometheus.Histogram({
+  name: 'http_request_duration_milliseconds',
   help: 'Duration of HTTP requests in seconds',
   labelNames: ['method', 'route', 'code'],
   registers: [register],
-  buckets: [0.1, 0.5, 1, 2, 5, 10] // Customize the buckets as needed
+  buckets: [0.001, 0.002, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10]
 });
 
-register.registerMetric(httpRequestDurationSeconds);
+register.registerMetric(httpRequestDurationMilliSeconds);
 
 // Middleware to measure request duration
 const metricsDurationMiddleware = (req, res, next) => {
-  const end = httpRequestDurationSeconds.startTimer();
+  const end = httpRequestDurationMilliSeconds.startTimer();
+  res.locals.start = Date.now();
   res.on('finish', () => {
     end({ method: req.method, route: req.route ? req.route.path : req.path, code: res.statusCode });
   });
