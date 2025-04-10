@@ -170,6 +170,16 @@ const limiter = rateLimit({
 });
 
 api.use(limiter);
+
+
+// Metrics
+
+const {metricsDurationMiddleware,apiCallMiddleware} = require('../dashboard/metrics');
+
+api.use(metricsDurationMiddleware);
+api.use(apiCallMiddleware);
+
+// Documentation on Swagger
 api.use('/'+envManager.readVersion()+'/docs', swaggerRouter);
 
 // Api methods

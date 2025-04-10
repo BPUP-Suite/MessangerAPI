@@ -3,7 +3,6 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { promisify } = require('util');
-const prometheus = require('prom-client');
 const WebSocket = require('ws');
 
 const app = express();
@@ -19,14 +18,7 @@ const socketio = require('../web_services/socketio');
 const LOGS_PATH = envManager.readLogsPath();
 
 // Metrics setup
-
-// Create a Registry which registers the metrics
-const register = new prometheus.Registry();
-
-// Add a default label which is added to all metrics
-register.setDefaultLabels({
-  app: 'server'
-});
+const register = require('./metrics').register;
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));

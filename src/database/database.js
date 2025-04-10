@@ -37,7 +37,13 @@ const pool = new Pool({
 });    
 logger.debug('[POSTGRES] PostgreSQL pool created');
 
+// Metrics
+const {dbQueryDuration } = require('../dashboard/metrics');
+
+
 async function query(text, params) {
+  const end = dbQueryDuration.startTimer();
+
   logger.debug(`[POSTGRES] Executing query: ${text} with parameters: ${JSON.stringify(params)}`);
   const client = await pool.connect();
   try {
@@ -49,6 +55,7 @@ async function query(text, params) {
     throw error;
   } finally {
     client.release();
+    end({ query_type: text });
   }
 }
 
