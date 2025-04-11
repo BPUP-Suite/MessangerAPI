@@ -144,8 +144,8 @@ function io_debug(event,type,message,data){
     debug(`[SOCKET.IO] [${type}] - ${event} - ${message} -> ${data}`);
 }
 
-function io_warn(event,type,message){
-    warn(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+function io_warn(type,message){
+    warn(`[SOCKET.IO] [${type}] - ${message}`);
 }
 
 function io_error(event,type,message){

@@ -5,7 +5,6 @@ const cors = require('cors');
 
 const api = express();
 const { api_log:log, api_debug:debug, api_warn:warn, api_error:error, api_info:info } = require('../logger');
-const swaggerRouter = require('./swagger/api-swagger');
 
 const validator = require('../database/validator');
 const database = require('../database/database');
@@ -130,7 +129,7 @@ api.use(trackSessionCreationMiddleware);
 let WEB_DOMAIN = envManager.readDomain();
 
 if (WEB_DOMAIN == 'localhost') {
-  WEB_DOMAIN = 'http://localhost' + envManager.readAPIPort();
+  WEB_DOMAIN = 'http://localhost:' + envManager.readAPIPort();
   warn('CORS','Running on localhost, CORS will be set to localhost',WEB_DOMAIN);
 } else {
   WEB_DOMAIN = 'https://web.' + WEB_DOMAIN;
@@ -180,8 +179,10 @@ const {metricsDurationMiddleware,apiCallMiddleware} = require('../dashboard/metr
 api.use(metricsDurationMiddleware);
 api.use(apiCallMiddleware);
 
-// Documentation on Swagger
-api.use('/'+envManager.readVersion()+'/docs', swaggerRouter);
+// Documentation on Scalar
+const scalarRouter = require('./scalar/api-scalar');
+
+api.use('/'+envManager.readVersion()+'/docs', scalarRouter);
 
 // Api methods
 
@@ -1318,7 +1319,7 @@ api.all('*', (req, res) => {
 
   res.status(code).json(jsonResponse);
 
-  error(req.path,'REQUEST',`Endpoint not found: ${req.method} ${req.originalUrl}`,code,JSON.stringify(jsonResponse));
+  error(req.path,'RESPONSE',`Endpoint not found: ${req.method} ${req.originalUrl}`,code,JSON.stringify(jsonResponse));
 });
 
 module.exports = api;

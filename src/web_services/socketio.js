@@ -21,7 +21,7 @@ let WEB_DOMAIN = envManager.readDomain();
 
 if (WEB_DOMAIN == 'localhost') {
   WEB_DOMAIN = 'http://localhost' + envManager.readIOPort();
-  warn('STARTING','',`Running on localhost, CORS will be set to localhost`);
+  warn('STARTING',`Running on localhost, CORS will be set to localhost`);
 } else {
   WEB_DOMAIN = 'https://web.' + WEB_DOMAIN;
   info('STARTING',`Running on domain, CORS will be set to ${WEB_DOMAIN}`,null);
