@@ -129,10 +129,18 @@ function api_info(type,message,data){
 // SOCKET.IO
 
 function io_log(event,type,message,data){
+    if(!data){
+        log(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+        return;
+    }
     log(`[SOCKET.IO] [${type}] - ${event} - ${message} -> ${data}`);
 }
 
 function io_debug(event,type,message,data){
+    if(!data){
+        debug(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+        return;
+    }
     debug(`[SOCKET.IO] [${type}] - ${event} - ${message} -> ${data}`);
 }
 
@@ -145,6 +153,10 @@ function io_error(event,type,message){
 }
 
 function io_info(type,message,data){
+    if(!data){
+        info(`[SOCKET.IO] [${type}] - ${message}`);
+        return;
+    }
     info(`[SOCKET.IO] [${type}] - ${message} -> ${data}`);
 }
 
