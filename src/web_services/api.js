@@ -18,7 +18,7 @@ api.use(express.json());
 api.use(express.urlencoded({ extended: true }));
 
 const envManager = require('../security/envManager');
-const { sessionMiddleware, destroySession } = require('../security/sessionMiddleware');
+const { sessionMiddleware, trackSessionCreationMiddleware, destroySession, enforceSessionLimit, verifySession } = require('../security/sessionMiddleware');
 
 // api path 
 
@@ -123,6 +123,7 @@ const comms_members_response_type = 'comms_members_list';
 // Sessions configuration
 
 api.use(sessionMiddleware);
+api.use(trackSessionCreationMiddleware);
 
 // CORS Rules
 
@@ -163,7 +164,7 @@ const limiter = rateLimit({
 
     res.status(code).json(jsonResponse);
 
-    log(req.path,'ALERT',`IP ${req.ip} has exceeded the rate limit!`,code,jsonResponse);
+    log(req.path,'ALERT',`IP ${req.ip} has exceeded the rate limit!`,code,JSON.stringify(jsonResponse));
 
     next(new Error(errorDescription));
   }
@@ -188,8 +189,8 @@ api.use('/'+envManager.readVersion()+'/docs', swaggerRouter);
 
 // Auth based on session
 
-function isAuthenticated(req, res, next) {
-  if (req.session.user_id) {
+async function isAuthenticated(req, res, next) {
+  if (await verifySession(req.sessionID)) {
     debug('',req.path,'AUTH', 'User is authenticated!', 200, req.session.user_id);
     next();
   } else {
@@ -364,6 +365,7 @@ api.get(login_path, async (req, res) => {
         req.session.save(async (err) => {
           if (req.session.user_id && !err) {
             debug('',req.path,'SESSION','Session saved.',code,user_id)
+            await enforceSessionLimit(req, res);
             token = req.sessionID;
             const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
             debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
@@ -537,7 +539,7 @@ api.get(init_path, isAuthenticated, async (req, res) => {
   }
 
   const initResponse = new InitResponse(type, confirmation, errorDescription, init_data);
-  debug('',req.path, 'RESPONSE', req.session.user_id, code, JSON.stringify(initResponse.toJson()).substring(0, 200) + "...");
+  debug(Date.now() - start,req.path, 'RESPONSE', req.session.user_id, code, JSON.stringify(initResponse.toJson()).substring(0, 200) + "...");
   return res.status(code).json(initResponse.toJson());
 
 });
