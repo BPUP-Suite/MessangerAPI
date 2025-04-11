@@ -118,6 +118,10 @@ function readVersion(){
     return 'test';
 }
 
+function readMaxSessionPerUser(){
+    return readVariable("MAX_SESSION_PER_USER",false) || 10;
+}
+
 
 module.exports = {
     readPostgresqlDb,
@@ -141,4 +145,5 @@ module.exports = {
     readDomain,
     readDashboardPort,
     readVersion,
+    readMaxSessionPerUser
 };

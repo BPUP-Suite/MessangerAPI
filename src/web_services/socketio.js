@@ -21,10 +21,10 @@ let WEB_DOMAIN = envManager.readDomain();
 
 if (WEB_DOMAIN == 'localhost') {
   WEB_DOMAIN = 'http://localhost' + envManager.readIOPort();
-  logger.warn('[IO] Running on localhost, CORS will be set to localhost');
+  warn('STARTING','',`Running on localhost, CORS will be set to localhost`);
 } else {
   WEB_DOMAIN = 'https://web.' + WEB_DOMAIN;
-  logger.debug(`[IO] Running on domain, CORS will be set to ${WEB_DOMAIN}`);
+  info('STARTING',`Running on domain, CORS will be set to ${WEB_DOMAIN}`,null);
 }
 
 // init socket server
@@ -32,7 +32,7 @@ if (WEB_DOMAIN == 'localhost') {
 const version = envManager.readVersion();
 const path = '/' + version + '/' + 'io';
 
-logger.debug(`[IO] IO base path: ${path}`);
+info('STARTING',`Base path: ${path}`,null);
 
 const io = new Server(server, {
   path: path,
@@ -48,7 +48,7 @@ io.use(async (socket, next) => {
 
     // takes session_id from the socket handshake
     const session_id = socket.handshake.auth.sessionId;
-    logger.debug(`[IO] session_id: ${session_id}`);
+    
 
     if(!session_id) {
       logger.error('[IO] IO authentication error: no session_id provided');
@@ -56,6 +56,8 @@ io.use(async (socket, next) => {
       err.data = { status: 401 };
       return next(err);
     }
+
+    logger.debug(`[IO] session_id: ${session_id}`);
 
     // verify session_id returning a session object
     const session = await verifySession(session_id);

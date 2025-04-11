@@ -13,6 +13,7 @@ logger.log('[SESSION] Session middleware starting...');
 logger.debug('[SESSION] Getting session data...');
 const SESSION = fileManager.getSessionKey();
 const NODE_ENV = envManager.readNodeEnv();
+const MAX_SESSIONS = envManager.readMaxSessionPerUser();
 
 let DOMAIN = '';
 
@@ -27,6 +28,7 @@ if(envManager.readDomain() == 'localhost') {
 logger.debug(`[SESSION] DOMAIN: ${DOMAIN}`);
 logger.debug(`[SESSION] NODE_ENV: ${NODE_ENV}`);
 logger.debug(`[SESSION] SESSION KEY: ${SESSION}`);  
+logger.debug(`[SESSION] MAX_SESSIONS: ${MAX_SESSIONS}`);
 
 const sameSite = NODE_ENV == 'production' ? 'none' : 'lax';
 const COOKIE_NAME = '_' + DOMAIN + '_sid';
@@ -133,7 +135,6 @@ async function destroySession(req, res) {
   async function enforceSessionLimit(req,res) {
 
     const user_id = req.session.user_id;
-    const MAX_SESSIONS = 3;
   
     const sessionKeysPattern = "sess:*" 
     const keys = await redis.keys(sessionKeysPattern);

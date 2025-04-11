@@ -39,6 +39,8 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
 
 ## Docker
 
+WARNING: Prometheus e Grafana sono in fase di testing e attualmente non è stato deciso nessun modo per garantire la sicurezza delle metriche, esattamente come la dashboard personalizzata e la documentazione dell'api. 
+
 _docker-compose.yml:_
 ```
 
@@ -62,16 +64,15 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile
-    container_name: ${SERVER_HOST}
     ports:
-      - 3000:${DASHBOARD_PORT}    # admin dashboard
-      - 8000:${API_PORT}          # api
-      - 8001:${IO_PORT}           # socket.io
+      - ${DASHBOARD_PORT}:${DASHBOARD_PORT}    # admin dashboard
+      - ${API_PORT}:${API_PORT}                # api
+      - ${IO_PORT}:${IO_PORT}                  # socket.io
     env_file:
       - .env
     volumes:
       - ./data/server/logs:${LOGS_FOLDER_PATH}
-      - ./data/server/security:${SECURITY_FOLDER_PATH} 
+      - ./data/server/security:${SECURITY_FOLDER_PATH}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -90,11 +91,43 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  prometheus:
+      ports:
+          - ${PROMETHEUS_PORT}:9090
+      volumes:
+          - ./metrics/prometheus/config.yml:/etc/prometheus/prometheus.yml
+      image: prom/prometheus:latest
+      healthcheck:
+        test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      restart: unless-stopped
+
+
+  grafana:
+      ports:
+          - ${GRAFANA_PORT}:3000
+      environment:
+          - GF_AUTH_DISABLE_LOGIN_FORM=true
+          - GF_AUTH_ANONYMOUS_ENABLED=true
+          - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      volumes:
+          - ./metrics/grafana/config.yml:/etc/grafana/provisioning/datasources/datasources.yml
+          - ./metrics/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+          - ./metrics/grafana/dashboards:/var/lib/grafana/dashboards
+      image: grafana/grafana:latest
+      depends_on:
+          prometheus:
+              condition: service_healthy
+      restart: unless-stopped
+
 ```
 
 ## Environmental
 
-Ogni campo con tag (# needed) è fondamentale per l'avvio e il funzionamento dell'applicazione. In caso contrario sarà richiesto nei log di inserire i valori e il server non partirà. Al contrario, se non è necessario allora verrà assegnato un valore di default in caso di sua assenza
+Ogni campo con tag (# needed) è fondamentale per l'avvio e il funzionamento dell'applicazione. In caso contrario sarà richiesto nei log di inserire i valori e il server non partirà. Al contrario, se non è necessario allora verrà assegnato un valore di default in caso di sua assenza (questo NON è valido nel caso in cui il valore venga utilizzato nel docker-compose.yml, in quel caso darà errore all'inizializzazione dei container, questo riguarda tutte le porte e i path alle folder nell'api)
 
 _.env:_
 ```
@@ -112,13 +145,16 @@ REDIS_PORT = 6379                              # | default=6379
 SERVER_IP=0.0.0.0                              # | default=0.0.0.0
 API_PORT=8000                                  # | default=8000
 IO_PORT=8001                                   # | default=8001
+PROMETHEUS_PORT=9090                           # | not used in nodejs
+GRAFANA_PORT=3001                              # | not used in nodejs
 DASHBOARD_PORT=3000                            # | default=3000
 LOGS_FOLDER_PATH=/logs                         # | default=/logs
 SECURITY_FOLDER_PATH=/security                 # | default=/security
 DEBUG_MODE=true                                # | default=false (or true in development mode)
-TIMEZONE=Europe/Rome                           # | default=Europe/ROme
+TIMEZONE=Europe/Rome                           # | default=Europe/Rome
 RATE_LIMITER_NUMBER=100                        # | default=100
 RATE_LIMITER_MILLISECONDS=10000                # | default=10000
+MAX_SESSION_PER_USER=10                        # | default=10
 ```
 
 NODE_ENV -> (if not on production will not use DOMAIN and will be only HTTP, es: 'developement')

@@ -24,7 +24,7 @@ const { sessionMiddleware, trackSessionCreationMiddleware, destroySession, enfor
 
 const version = '/' + envManager.readVersion() + '/';
 
-info('EXPRESS','API base path', version);
+info('EXPRESS','API base path: '+version, null);
 
 // /user
 const user_base = version + 'user/';

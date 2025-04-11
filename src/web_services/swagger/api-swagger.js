@@ -5,7 +5,7 @@ const express = require('express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
-const logger = require('../../logger');
+const { api_log:log, api_debug:debug, api_warn:warn, api_error:error, api_info:info } = require('../../logger');
 const envManager = require('../../security/envManager');
 
 const DOMAIN = envManager.readDomain();
@@ -16,9 +16,9 @@ let swagger_url = 'http://localhost'+':'+API_PORT+'/'+VERSION+'/docs'; // URL pa
 
 if(DOMAIN != 'localhost'){
   swagger_url = 'https://api.'+DOMAIN+'/'+VERSION+'/docs'; // URL path for the Swagger UI
-  logger.debug('[SWAGGER] Running on domain, Swagger URL set to: ' + swagger_url);
+  info('SWAGGER','Running on domain, Swagger URL set to: '+swagger_url, null);
 }else{
-  logger.warn('[SWAGGER] Running on localhost, Swagger URL set to: ' + swagger_url);
+  warn('SWAGGER','Running on localhost, Swagger URL set to: '+swagger_url, null);
 }
 
 
@@ -102,6 +102,6 @@ router.get('/swagger.json', (req, res) => {
 });
 
 
-logger.debug('[SWAGGER] Swagger documentation initialized on path: ' + swagger_url);
+info('SWAGGER', 'Swagger documentation initialized on path: '+ swagger_url,'');
 
 module.exports = router;
