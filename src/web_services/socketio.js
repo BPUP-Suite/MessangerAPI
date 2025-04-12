@@ -178,7 +178,7 @@ function send_left_member_to_comms(members,comms_data){
 
 // Join Comms / Leave Comms
 
-function join_comms(socket_id,room_id) {
+function join_comms(socket_id,room_id,comms_id) {
 
   const socket = io.sockets.sockets.get(socket_id);
   
@@ -190,6 +190,7 @@ function join_comms(socket_id,room_id) {
   }
 
   socket.join(room_id);
+  socket.comms_id = comms_id;
   debug('join_comms','FUNCTION','User '+socket.user_id+' joined comms',room_id);
 
   return true;
@@ -205,12 +206,13 @@ function leave_comms(socket_id) {
   if (existingRoom) {
 
     socket.leave(existingRoom);
-    debug('leave_comms','FUNCTION','User '+socket.user_id+' left comms',existingRoom);
-    return existingRoom;
+    const comms_id = socket.comms_id;
+    debug('leave_comms','FUNCTION','User '+socket.user_id+' left comms with comms_id -> '+ comms_id +'and room ',existingRoom);
+    return [existingRoom,comms_id];
   }
 
   debug('leave_comms','FUNCTION','User '+socket.user_id+' is not in any room','');
-  return null; // User is not in any room
+  return [null,null]; // User is not in any room
 }
 
 // Check if already in another room
@@ -304,6 +306,14 @@ function get_socket_id(session_id) {
   return socket_id;
 }
 
+function get_comms_id(socket_id) {
+  const socket = io.sockets.sockets.get(socket_id);
+  if (!socket) {
+    logger.error(`[IO] Error getting comms id for socket ${socket_id}`);
+    return null;
+  }
+  return socket.comms_id;
+}
 
 function getActiveSockets() {
   return Array.from(activeSockets.values());
@@ -323,5 +333,6 @@ module.exports = {
   join_comms,
   leave_comms,
   get_socket_id,
+  get_comms_id,
   send_to_all_except_sender,
 };

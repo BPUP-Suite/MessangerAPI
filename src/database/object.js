@@ -192,15 +192,31 @@ class Response {
 
   class JoinCommsResponse extends Response
   {
-    constructor(type, confirmation, error_message) {
+    constructor(type, confirmation, comms_id, error_message) {
       super(type, confirmation, error_message);
+      this.comms_id = comms_id;
+    }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        comms_id: this.comms_id
+      };
     }
   }
 
   class LeaveCommsResponse extends Response
   {
-    constructor(type, confirmation, error_message) {
+    constructor(type, confirmation, comms_id, error_messaged) {
       super(type, confirmation, error_message);
+      this.comms_id = comms_id;
+    }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        comms_id: this.comms_id
+      };
     }
   }
 
