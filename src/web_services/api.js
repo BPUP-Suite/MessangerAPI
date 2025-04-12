@@ -1126,7 +1126,7 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
       error(req.path,'DATABASE','database.get_members_as_user_id',code,err);
     }
     try{
-      sender = await database.get_handle_from_id(user_id); // handle of the sender
+      sender = await database.get_handle_from_id(req.session.user_id); // handle of the sender
     }catch (err) {
       error(req.path,'DATABASE','database.get_handle_from_id',code,err);
     }
