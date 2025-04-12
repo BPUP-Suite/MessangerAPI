@@ -1191,7 +1191,7 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
     }
   }
 
-  const leaveCommsResponse = new LeaveCommsResponse(type, confirmation, comms_id, errorDescription);
+  const leaveCommsResponse = new LeaveCommsResponse(type, confirmation, chat_id, comms_id, errorDescription);
   debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(leaveCommsResponse.toJson()));
   res.status(code).json(leaveCommsResponse.toJson());
 

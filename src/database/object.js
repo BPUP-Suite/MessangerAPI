@@ -1,3 +1,5 @@
+const { chat_id } = require("./validator");
+
 class Response {
     constructor(type, type_response, error_message) {
       this.type = type;
@@ -207,14 +209,16 @@ class Response {
 
   class LeaveCommsResponse extends Response
   {
-    constructor(type, confirmation, comms_id, error_message) {
+    constructor(type, confirmation, chat_id, comms_id, error_message) {
       super(type, confirmation, error_message);
+      this.chat_id = chat_id;
       this.comms_id = comms_id;
     }
 
     toJson() {
       return {
         ...super.toJson(),
+        chat_id: this.chat_id,
         comms_id: this.comms_id
       };
     }
