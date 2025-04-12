@@ -207,7 +207,7 @@ class Response {
 
   class LeaveCommsResponse extends Response
   {
-    constructor(type, confirmation, comms_id, error_messaged) {
+    constructor(type, confirmation, comms_id, error_message) {
       super(type, confirmation, error_message);
       this.comms_id = comms_id;
     }

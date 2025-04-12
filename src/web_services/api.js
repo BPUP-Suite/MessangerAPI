@@ -1101,12 +1101,12 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
           errorDescription = '';
         }else{
           comms_id = null;
-          code = 400;
+          code = 200;
           errorDescription = 'User already in a comms';
         }
       }else{
         comms_id = null;
-        code = 400;
+        code = 200;
         errorDescription = 'No opened socket.io found.';
         confirmation = false;
       }
@@ -1177,11 +1177,11 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
           errorDescription = '';
         }else{
           confirmation = false;
-          code = 400;
+          code = 200;
           errorDescription = 'User is not in a comms';
         }
       }else{
-        code = 400;
+        code = 200;
         errorDescription = 'No opened socket.io found.';
         confirmation = false;
       }
