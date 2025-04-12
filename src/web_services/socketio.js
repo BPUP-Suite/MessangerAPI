@@ -168,12 +168,12 @@ function send_member_member_joined(member,group_data,sender_socket_id){
 
 // New member in comms chat
 
-function send_joined_member_to_comms(members,comms_data){
-  send_to_all(members,comms_data,'member_joined_comms');
+function send_joined_member_to_comms(members,comms_data,sender_socket_id){
+  send_to_all_except_sender(members,comms_data,'member_joined_comms',sender_socket_id);
 }
 
-function send_left_member_to_comms(members,comms_data){
-  send_to_all(members,comms_data,'member_left_comms');
+function send_left_member_to_comms(members,comms_data,sender_socket_id){
+  send_to_all_except_sender(members,comms_data,'member_left_comms',sender_socket_id);
 }
 
 // Join Comms / Leave Comms
