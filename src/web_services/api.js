@@ -1139,7 +1139,7 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
     if(recipient_list != null || sender != null) {
       const join_data = {
         chat_id: chat_id,
-        sender: sender,
+        handle: sender,
         comms_id: comms_id
       };
      const sender_socket_id = io.get_socket_id(req.session.id); 
@@ -1214,7 +1214,7 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
     if(recipient_list != null || sender != null || comms_id != null) {
       const left_data = {
         chat_id: chat_id,
-        sender: sender,
+        handle: sender,
         comms_id: comms_id
       };
      
