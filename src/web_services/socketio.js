@@ -279,16 +279,17 @@ function send_to_all_except_sender(recipient_list, data, type, sender_socket_id)
 
 // Get methods
 
-async function get_user_id_room(chat_id) {
+async function get_users_info_room(chat_id) {
   try {
     // Get all socket instances in the room
     const sockets = await io.in(chat_id).fetchSockets();
     
     // Extract unique user_ids from the sockets
-    const members_id = [...new Set(sockets.map(socket => socket.user_id))];
+    const members_ids = [...new Set(sockets.map(socket => socket.user_id))];
+    const comms_ids = [...new Set(sockets.map(socket => socket.comms_id))];
     
-    debug('getUserIdsInRoom', 'FUNCTION', `Retrieved ${members_id.length} user_ids from room ${chat_id}`, JSON.stringify(members_id));
-    return members_id;
+    debug('getUserIdsInRoom', 'FUNCTION', `Retrieved ${members_ids.length} user_ids and ${comms_ids.length} comms_ids from room ${chat_id}`, JSON.stringify(members_ids));
+    return [members_ids,comms_ids];
   } catch (err) {
     error('getUserIdsInRoom', 'FUNCTION', `Error getting user_ids from room ${chat_id}`, err);
     return [];
@@ -327,7 +328,7 @@ module.exports = {
   getActiveSockets,
   send_group_member_joined,
   send_member_member_joined,
-  get_user_id_room,
+  get_users_info_room,
   send_left_member_to_comms,
   send_joined_member_to_comms,
   join_comms,

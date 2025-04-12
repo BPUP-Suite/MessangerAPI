@@ -1100,15 +1100,18 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
           code = 200;
           errorDescription = '';
         }else{
+          comms_id = null;
           code = 400;
           errorDescription = 'User already in a comms';
         }
       }else{
+        comms_id = null;
         code = 400;
         errorDescription = 'No opened socket.io found.';
         confirmation = false;
       }
     } catch (err) {
+      comms_id = null;
       error(req.path,'IO','io.join_comms',code,err);
     }
   }
@@ -1247,12 +1250,12 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
 
   if (validated) {
     try {
-      const members_id = await io.get_user_id_room(chat_id);
+      const [members_ids,comms_ids] = await io.get_users_info_room(chat_id);
       
-      for (let i = 0; i < members_id.length; i++) {
+      for (let i = 0; i < members_ids.length; i++) {
         try{
-          const handle = await database.get_handle_from_id(members_id[i]);
-          const comms_id = io.get_comms_id(io.get_socket_id(members_id[i])); 
+          const handle = await database.get_handle_from_id(members_ids[i]);
+          const comms_id = comms_ids[i];
 
           members_handle.push({
             handle: handle,
