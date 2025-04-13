@@ -117,7 +117,15 @@ io.on('connection', (socket) => {
   // WebRTC
 
   socket.on('candidate', (data) => {
-    send_to_a_room(data.to, data, 'candidate');
+    send_to_comms_id(data.to, data, 'candidate');
+  }); 
+
+  socket.on('offer', (data) => {
+    send_to_comms_id(data.to, data, 'offer');
+  }); 
+
+  socket.on('answer', (data) => {
+    send_to_comms_id(data.to, data, 'answer');
   }); 
 
   // End of IO
@@ -261,6 +269,19 @@ function send_to_a_room(room,data,type){
   debug(type,'EMIT','Room '+room, JSON.stringify(data));
 }
 
+// Send to a single comms_id
+
+function send_to_comms_id(comms_id,data,type){
+  // Send to a single socket id
+  const socket_id = get_socket_id_from_comms_id(comms_id);
+  if (!socket_id) {
+    logger.error(`[IO] Error getting socket id for comms ${comms_id}`);
+    return;
+  }
+  io.to(socket_id).emit(type,data);
+  debug(type,'EMIT','Comms '+comms_id, JSON.stringify(data));
+}
+
 // Send to a all but a specific socket
 
 function send_to_all_except_sender(recipient_list, data, type, sender_socket_id) {
@@ -314,6 +335,16 @@ function get_comms_id(socket_id) {
     return null;
   }
   return socket.comms_id;
+}
+
+function get_socket_id_from_comms_id(comms_id) {
+  // get the socket id from the activeSockets map using the comms_id
+  const socket = Array.from(activeSockets.values()).find(socket => socket.comms_id === comms_id);
+  if (!socket) {
+    logger.error(`[IO] Error getting socket id for comms ${comms_id}`);
+    return null;
+  }
+  return socket.socket_id;
 }
 
 function getActiveSockets() {

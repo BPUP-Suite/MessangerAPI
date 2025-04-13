@@ -184,7 +184,8 @@ const scalarRouter = require('./scalar/api-scalar');
 
 api.use('/'+envManager.readVersion()+'/docs', scalarRouter);
 
-// Favicon fixed
+// Favicon.ico request
+// This is a workaround to avoid the favicon.ico request to be logged in the console
 
 api.all('/favicon.ico', (req, res) => {
   res.status(204).end();
