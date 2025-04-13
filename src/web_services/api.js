@@ -184,6 +184,13 @@ const scalarRouter = require('./scalar/api-scalar');
 
 api.use('/'+envManager.readVersion()+'/docs', scalarRouter);
 
+// Favicon fixed
+
+api.all('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+
 // Api methods
 
 // GET METHODS
