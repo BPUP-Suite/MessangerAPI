@@ -202,7 +202,7 @@ class Response {
     toJson() {
       return {
         ...super.toJson(),
-        comms_id: this.comms_id
+        from: this.comms_id
       };
     }
   }
@@ -219,7 +219,7 @@ class Response {
       return {
         ...super.toJson(),
         chat_id: this.chat_id,
-        comms_id: this.comms_id
+        from: this.comms_id
       };
     }
   }
