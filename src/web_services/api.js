@@ -1131,7 +1131,7 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
   if(confirmation){
 
     let recipient_list = null;
-    let sender = null;
+    let from_handle = null;
 
     try{
       recipient_list = await database.get_members_as_user_id(chat_id);
@@ -1139,19 +1139,19 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
       error(req.path,'DATABASE','database.get_members_as_user_id',code,err);
     }
     try{
-      sender = await database.get_handle_from_id(req.session.user_id); // handle of the sender
+      from_handle = await database.get_handle_from_id(req.session.user_id); // handle of the sender
     }catch (err) {
       error(req.path,'DATABASE','database.get_handle_from_id',code,err);
     }
 
-    if(recipient_list != null || sender != null) {
+    if(recipient_list != null || from_handle != null) {
       const join_data = {
         chat_id: chat_id,
-        handle: sender,
-        comms_id: comms_id
+        handle: from_handle,
+        from: comms_id
       };
-     const sender_socket_id = io.get_socket_id(req.session.id); 
-     io.send_joined_member_to_comms(recipient_list,join_data,sender_socket_id);
+     const from_socket_id = io.get_socket_id(req.session.id); 
+     io.send_joined_member_to_comms(recipient_list,join_data,from_socket_id);
     }
   }
 });
@@ -1206,7 +1206,7 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
   if(confirmation){
 
     let recipient_list = null;
-    let sender = null;
+    let from_handle = null;
 
     try{
       recipient_list = await database.get_members_as_user_id(chat_id);
@@ -1214,20 +1214,20 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
       error(req.path,'DATABASE','database.get_members_as_user_id',code,err);
     }
     try{
-      sender = await database.get_handle_from_id(user_id); // handle of the sender
+      from_handle = await database.get_handle_from_id(user_id); // handle of the sender
     }catch (err) {
       error(req.path,'DATABASE','database.get_handle_from_id',code,err);
     }
 
-    if(recipient_list != null || sender != null || comms_id != null) {
+    if(recipient_list != null || from_handle != null || from != null) {
       const left_data = {
         chat_id: chat_id,
-        handle: sender,
-        comms_id: comms_id
+        handle: from_handle,
+        from: comms_id
       };
      
-     const sender_socket_id = io.get_socket_id(req.session.id); 
-     io.send_left_member_to_comms(recipient_list,left_data,sender_socket_id);
+     const from_socket_id = io.get_socket_id(req.session.id); 
+     io.send_left_member_to_comms(recipient_list,left_data,from_socket_id);
     }
   }
 });
@@ -1244,7 +1244,7 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
 
   const chat_id = req.query.chat_id;
   
-  let members_handle = [];
+  let members_data = [];
 
   if (!(validator.chat_id(chat_id))) {
     code = 400;
@@ -1265,9 +1265,9 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
           const handle = await database.get_handle_from_id(members_ids[i]);
           const comms_id = comms_ids[i];
 
-          members_handle.push({
+          members_data.push({
             handle: handle,
-            comms_id: comms_id
+            from: comms_id
           });
 
         }catch (err) {
@@ -1282,7 +1282,7 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
     }
   }
 
-  const membersResponse = new MembersResponse(type, members_handle, errorDescription);
+  const membersResponse = new MembersResponse(type, members_data, errorDescription);
   debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
   return res.status(code).json(membersResponse.toJson());
 
