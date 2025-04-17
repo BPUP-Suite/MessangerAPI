@@ -155,7 +155,7 @@ io.on('connection', (socket) => {
       }
 
       }catch(err){
-          error('disconnecting', 'FUNCTION', `Error getting room info for ${room}`, err);
+          error('disconnecting', 'FUNCTION', `Error getting room info`, err);
       }
    });
 
