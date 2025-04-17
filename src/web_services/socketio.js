@@ -131,28 +131,44 @@ io.on('connection', (socket) => {
 
   // End of IO
 
+  socket.on('disconnecting', () => {
+
+    logger.debug(`[IO] User ${socket.user_id} disconnecting from IO`);
+
+    // When a socket is disconnecting
+
+    try{
+      // quit from the room
+      const [room,comms_id] = leave_comms(socket.id);
+      if (room) {
+        const [members_ids,comms_ids] = get_users_info_room(chat_id);
+        const left_data = {
+          chat_id: room,
+          from: comms_id,
+        };
+        // Filter out the disconnecting user's ID if necessary before sending
+        const recipients = members_ids.filter(id => id !== socket.user_id);
+        if (recipients.length > 0) {
+            send_left_member_to_comms(recipients, left_data, socket.id);
+        }
+        debug('disconnect','FUNCTION','User '+socket.user_id+' left room',room);
+      }
+
+      }catch(err){
+          error('disconnecting', 'FUNCTION', `Error getting room info for ${room}`, err);
+      }
+   });
+
   socket.on('disconnect', () => {
     logger.debug(`[IO] User ${socket.user_id} disconnected`);
     // When a socket disconnects
-    
-
-    // quit from the room
-    const [room,chat_id] = leave_comms(socket.id);
-    if (room) {
-      const [members_ids,comms_ids] = get_users_info_room(chat_id);
-      const left_data = {
-        chat_id: chat_id,
-        from: socket.comms_id,
-      };
-      send_left_member_to_comms(members_ids,left_data,socket.id);
-      debug('disconnect','FUNCTION','User '+socket.user_id+' left room',room);
-    }
 
     // remove it from the activeSockets map
     // and the activeSessions map
     activeSockets.delete(socket.id);
     activeSessions.delete(socket.session_id);
   });
+
 });
 
 // Close socket connection on logout
