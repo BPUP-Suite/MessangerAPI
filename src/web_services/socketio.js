@@ -99,6 +99,7 @@ io.use(async (socket, next) => {
       socket_id: socket.id,
       user_id: user_id,
       session_id: session_id,
+      comms_id: null,
       connected_at: new Date()
     });
 
@@ -199,7 +200,14 @@ function join_comms(socket_id,room_id,comms_id) {
 
   socket.join(room_id);
   socket.comms_id = comms_id;
-  debug('join_comms','FUNCTION','User '+socket.user_id+' joined comms',room_id);
+
+  // Store the comms_id in the activeSockets map
+  // This is to keep track of the comms_id for each socket
+  const socketData = activeSockets.get(socket.id) || {};
+  socketData.comms_id = comms_id;
+  activeSockets.set(socket.id, socketData);
+
+  debug('join_comms','FUNCTION','User '+socket.user_id+' joined comms with comms_id'+comms_id,room_id);
 
   return true;
 }

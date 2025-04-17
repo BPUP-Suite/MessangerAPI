@@ -103,6 +103,8 @@ document.addEventListener('DOMContentLoaded', function() {
               <div class="socket-id">Socket ID: ${socket.id}</div>
               <div class="socket-time">Connected at: ${formattedDate}</div>
               <div class="socket-user">User ID: ${socket.user_id}</div>
+              <div class="socket-user">User ID: ${socket.session_id}</div>
+              <div class="socket-user">User ID: ${socket.comms_id}</div>
             `;
             
             socketList.appendChild(socketItem);
