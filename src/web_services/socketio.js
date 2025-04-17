@@ -133,6 +133,23 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     logger.debug(`[IO] User ${socket.user_id} disconnected`);
+    // When a socket disconnects
+    
+
+    // quit from the room
+    const [room,chat_id] = leave_comms(socket.id);
+    if (room) {
+      const [members_ids,comms_ids] = get_users_info_room(chat_id);
+      const left_data = {
+        chat_id: chat_id,
+        from: socket.comms_id,
+      };
+      send_left_member_to_comms(members_ids,left_data,socket.id);
+      debug('disconnect','FUNCTION','User '+socket.user_id+' left room',room);
+    }
+
+    // remove it from the activeSockets map
+    // and the activeSessions map
     activeSockets.delete(socket.id);
     activeSessions.delete(socket.session_id);
   });

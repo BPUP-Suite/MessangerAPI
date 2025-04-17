@@ -1206,23 +1206,16 @@ api.get(leave_comms_path, isAuthenticated, async (req, res) => {
   if(confirmation){
 
     let recipient_list = null;
-    let from_handle = null;
 
     try{
       recipient_list = await database.get_members_as_user_id(chat_id);
     }catch (err) {
       error(req.path,'DATABASE','database.get_members_as_user_id',code,err);
     }
-    try{
-      from_handle = await database.get_handle_from_id(user_id); // handle of the sender
-    }catch (err) {
-      error(req.path,'DATABASE','database.get_handle_from_id',code,err);
-    }
 
-    if(recipient_list != null || from_handle != null || from != null) {
+    if(recipient_list != null  || from != null) {
       const left_data = {
         chat_id: chat_id,
-        handle: from_handle,
         from: comms_id
       };
      
