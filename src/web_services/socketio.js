@@ -155,7 +155,7 @@ io.on('connection', (socket) => {
       }
 
       }catch(err){
-          error('disconnecting', 'FUNCTION', `Error getting room info`, err);
+          error('disconnecting', 'FUNCTION', `Error getting room info` + err);
       }
    });
 
@@ -285,7 +285,7 @@ function is_already_in_room(socket) {
     debug('is_already_in_room', 'FUNCTION', `User ${socket.user_id} is not in any other room`);
     return null;
   }catch (err) {
-    error('is_already_in_room', 'FUNCTION', `Error checking rooms for user ${socket.user_id}`, err);
+    error('is_already_in_room', 'FUNCTION', `Error checking rooms for user ${socket.user_id}. `+ err);
     return null;
   }
 }
@@ -353,7 +353,7 @@ async function get_users_info_room(chat_id) {
     debug('getUserIdsInRoom', 'FUNCTION', `Retrieved ${members_ids.length} user_ids and ${comms_ids.length} comms_ids from room ${chat_id}`, JSON.stringify(members_ids));
     return [members_ids,comms_ids];
   } catch (err) {
-    error('getUserIdsInRoom', 'FUNCTION', `Error getting user_ids from room ${chat_id}`, err);
+    error('getUserIdsInRoom', 'FUNCTION', `Error getting user_ids from room ${chat_id}` + err);
     return [];
   }
 }
