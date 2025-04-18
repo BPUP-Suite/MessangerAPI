@@ -141,7 +141,7 @@ io.on('connection', (socket) => {
       // quit from the room
       const [room,comms_id] = leave_comms(socket.id);
       if (room) {
-        const [members_ids,comms_ids] = get_users_info_room(chat_id);
+        const [members_ids,comms_ids] = get_users_info_room(room);
         const left_data = {
           chat_id: room,
           from: comms_id,
@@ -316,7 +316,7 @@ function send_to_comms_id(comms_id,data,type){
   // Send to a single socket id
   const socket_id = get_socket_id_from_comms_id(comms_id);
   if (!socket_id) {
-    logger.error(`[IO] Error getting socket id for comms ${comms_id}`);
+    logger.error(`[IO] Error getting socket id for comms ${comms_id} [DEPRECATED]`);
     return;
   }
   io.to(socket_id).emit(type,data);
