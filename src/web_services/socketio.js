@@ -131,7 +131,7 @@ io.on('connection', (socket) => {
 
   // End of IO
 
-  socket.on('disconnecting', () => {
+  socket.on('disconnecting', async () => {
 
     logger.debug(`[IO] User ${socket.user_id} disconnecting from IO`);
 
@@ -141,7 +141,7 @@ io.on('connection', (socket) => {
       // quit from the room
       const [room,comms_id] = leave_comms(socket.id);
       if (room) {
-        const [members_ids,comms_ids] = get_users_info_room(room);
+        const [members_ids,comms_ids] = await get_users_info_room(room);
         const left_data = {
           chat_id: room,
           from: comms_id,
