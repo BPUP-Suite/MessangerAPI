@@ -13,6 +13,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - novyse_default
 
   server:
     build:
@@ -33,6 +35,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - novyse_default
 
   redis:
     image: redis:latest
@@ -45,6 +49,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - novyse_default
 
   prometheus:
       ports:
@@ -57,6 +63,8 @@ services:
         interval: 10s
         timeout: 5s
         retries: 5
+      networks:
+        - novyse_default
       restart: unless-stopped
 
 
@@ -76,3 +84,8 @@ services:
           prometheus:
               condition: service_healthy
       restart: unless-stopped
+      networks:
+        - novyse_default
+networks:
+  novyse_default:
+    external: true
