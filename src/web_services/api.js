@@ -294,7 +294,11 @@ api.get(signup_path, async (req, res) => {
     code = 400;
     errorDescription = 'Surname not valid';
     validated = false;
-  }else if (!(await validator.handle(handle))) {
+  }else if (!(validator.generic(handle))) {
+    code = 400;
+    errorDescription = 'Handle not valid';
+    validated = false;
+  } else if(!(await database.check_handle_availability(handle))){ // handle should not exist
     code = 400;
     errorDescription = 'Handle not valid';
     validated = false;
