@@ -20,10 +20,10 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile
-    ports:
-      - ${DASHBOARD_PORT}:${DASHBOARD_PORT}    # admin dashboard
-      - ${API_PORT}:${API_PORT}                # api
-      - ${IO_PORT}:${IO_PORT}                  # socket.io
+    #ports:
+      #- ${DASHBOARD_PORT}:${DASHBOARD_PORT}    # admin dashboard
+      #- ${API_PORT}:${API_PORT}                # api
+      #- ${IO_PORT}:${IO_PORT}                  # socket.io
     env_file:
       - .env
     volumes:
@@ -53,8 +53,8 @@ services:
       - novyse_default
 
   prometheus:
-      ports:
-          - ${PROMETHEUS_PORT}:9090
+      #ports:
+      #    - ${PROMETHEUS_PORT}:9090
       volumes:
           - ./metrics/prometheus/config.yml:/etc/prometheus/prometheus.yml
       image: prom/prometheus:latest
@@ -69,8 +69,8 @@ services:
 
 
   grafana:
-      ports:
-          - ${GRAFANA_PORT}:3000
+      #ports:
+      #    - ${GRAFANA_PORT}:3000
       environment:
           - GF_AUTH_DISABLE_LOGIN_FORM=true
           - GF_AUTH_ANONYMOUS_ENABLED=true
