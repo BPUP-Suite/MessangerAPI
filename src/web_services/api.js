@@ -277,7 +277,7 @@ api.get(signup_path, async (req, res) => {
 
   const type = signup_response_type;
   let code = 500;
-  let confirmation = null;
+  let confirmation = false;
   let errorDescription = 'Generic error';
   let validated = true;
 
