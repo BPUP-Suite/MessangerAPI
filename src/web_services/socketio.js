@@ -52,8 +52,7 @@ io.use(async (socket, next) => {
 
     if(!session_id) {
       logger.error('[IO] IO authentication error: no session_id provided');
-      const err = new Error('Authentication error - No session_id provided');
-      err.status = 401;
+      const err = {message:'Authentication error - No active session', status: 401};
       return next(err);
     }
 
@@ -65,8 +64,7 @@ io.use(async (socket, next) => {
     // if no session is returned, the session id is invalid
     if (!session || !session.user_id) {
       logger.error('[IO] IO authentication error: no active session');
-      const err = new Error('Authentication error - No active session');
-      err.status = 401;
+      const err = {message:'Authentication error - No active session', status: 401};
       return next(err);
     }
 
