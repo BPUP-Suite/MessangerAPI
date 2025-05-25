@@ -136,11 +136,11 @@ io.on('connection', (socket) => {
   // Information signaling for WebRTC
 
   socket.on('speaking', (data) => {
-    send_to_comms_id(data.to, data, 'speaking');
+    send_to_a_room(data.to, data, 'speaking');
   }); 
 
   socket.on('not_speaking', (data) => {
-    send_to_comms_id(data.to, data, 'not_speaking');
+    send_to_a_room(data.to, data, 'not_speaking');
   }); 
 
   // End of IO
