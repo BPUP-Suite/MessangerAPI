@@ -119,6 +119,8 @@ io.on('connection', (socket) => {
 
   // WebRTC
 
+  // Negotiate WebRTC connections
+
   socket.on('candidate', (data) => {
     send_to_comms_id(data.to, data, 'candidate');
   }); 
@@ -131,9 +133,19 @@ io.on('connection', (socket) => {
     send_to_comms_id(data.to, data, 'answer');
   }); 
 
+  // Information signaling for WebRTC
+
+  socket.on('speaking', (data) => {
+    send_to_comms_id(data.to, data, 'speaking');
+  }); 
+
+  socket.on('not_speaking', (data) => {
+    send_to_comms_id(data.to, data, 'not_speaking');
+  }); 
+
   // End of IO
 
-  socket.on('disconnecting', async () => {
+  socket.on('disconnecting', async () => {  
 
     logger.debug(`[IO] User ${socket.user_id} disconnecting from IO`);
 
