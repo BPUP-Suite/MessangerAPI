@@ -143,6 +143,14 @@ io.on('connection', (socket) => {
     send_to_a_room(data.to, data, 'not_speaking');
   }); 
 
+  socket.on('screen_share_started', (data) => {
+    send_to_a_room(data.to, data, 'screen_share_started');
+  }); 
+
+  socket.on('screen_share_stopped', (data) => {
+    send_to_a_room(data.to, data, 'screen_share_stopped');
+  }); 
+
   // End of IO
 
   socket.on('disconnecting', async () => {  
