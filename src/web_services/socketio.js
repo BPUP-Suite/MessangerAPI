@@ -8,6 +8,7 @@ const { io_log:log, io_debug:debug, io_warn:warn, io_error:error, io_info:info }
 
 const envManager = require('../security/envManager');
 const { verifySession } = require('../security/sessionMiddleware');
+const { start } = require('repl');
 
 const app = express();
 const server = http.createServer(app);
@@ -102,7 +103,9 @@ io.use(async (socket, next) => {
       user_id: user_id,
       session_id: session_id,
       comms_id: null,
-      connected_at: new Date()
+      connected_at: new Date(),
+      is_speaking: false,
+      active_screen_shares: []
     });
 
     return next();
@@ -136,19 +139,43 @@ io.on('connection', (socket) => {
   // Information signaling for WebRTC
 
   socket.on('speaking', (data) => {
+    // Update speaking status
+    const socketData = activeSockets.get(socket.id);
+    if (socketData) {
+      socketData.is_speaking = true;
+      activeSockets.set(socket.id, socketData);
+    }
     send_to_a_room(data.to, data, 'speaking');
   }); 
 
   socket.on('not_speaking', (data) => {
+    // Update speaking status
+    const socketData = activeSockets.get(socket.id);
+    if (socketData) {
+      socketData.is_speaking = false;
+      activeSockets.set(socket.id, socketData);
+    }
     send_to_a_room(data.to, data, 'not_speaking');
   }); 
 
-  socket.on('screen_share_started', (data) => {
-    send_to_a_room(data.to, data, 'screen_share_started');
+  socket.on('speaking', (data) => {
+    // Update speaking status
+    const socketData = activeSockets.get(socket.id);
+    if (socketData) {
+      socketData.is_speaking = true;
+      activeSockets.set(socket.id, socketData);
+    }
+    send_to_a_room(data.to, data, 'speaking');
   }); 
 
-  socket.on('screen_share_stopped', (data) => {
-    send_to_a_room(data.to, data, 'screen_share_stopped');
+  socket.on('not_speaking', (data) => {
+    // Update speaking status
+    const socketData = activeSockets.get(socket.id);
+    if (socketData) {
+      socketData.is_speaking = false;
+      activeSockets.set(socket.id, socketData);
+    }
+    send_to_a_room(data.to, data, 'not_speaking');
   }); 
 
   // End of IO
@@ -371,12 +398,20 @@ async function get_users_info_room(chat_id) {
     // Extract unique user_ids from the sockets
     const members_ids = [...new Set(sockets.map(socket => socket.user_id))];
     const comms_ids = [...new Set(sockets.map(socket => socket.comms_id))];
+    const is_speaking = sockets.map(socket => {
+      const socketData = activeSockets.get(socket.id);
+      return socketData ? socketData.is_speaking : false;
+    });
+    const screen_shares = sockets.map(socket => {
+      const socketData = activeSockets.get(socket.id);
+      return socketData ? socketData.active_screen_shares : [];
+    });
     
-    debug('getUserIdsInRoom', 'FUNCTION', `Retrieved ${members_ids.length} user_ids and ${comms_ids.length} comms_ids from room ${chat_id}`, JSON.stringify(members_ids));
-    return [members_ids,comms_ids];
+    debug('getUserIdsInRoom', 'FUNCTION', `Retrieved ${members_ids.length} user_ids, ${comms_ids.length} comms_ids, ${is_speaking.length} speaking states, and ${screen_shares.length} screen shares from room ${chat_id}`, JSON.stringify(members_ids));
+    return [members_ids, comms_ids, is_speaking, screen_shares];
   } catch (err) {
     error('getUserIdsInRoom', 'FUNCTION', `Error getting user_ids from room ${chat_id}` + err);
-    return [];
+    return [[], [], [], []];
   }
 }
 
@@ -414,6 +449,48 @@ function getActiveSockets() {
   return Array.from(activeSockets.values());
 }
 
+
+function start_screen_share(socket_id, chat_id) {
+  // Start screen sharing
+  const socketData = activeSockets.get(socket_id);
+  if (socketData) {
+    // Generate a unique screen share ID
+    const screen_share_id = `screen_${socket_id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    socketData.active_screen_shares.push(screen_share_id);
+    activeSockets.set(socket_id, socketData);
+    
+    // Add the generated ID to the data being sent
+    data.screen_share_id = screen_share_id;
+  } 
+
+  const data = {
+    to: chat_id,
+    from: socketData.id,
+    screen_share_id: screen_share_id
+  };
+  
+  send_to_a_room(data.to, data, 'screen_share_started');
+  return screen_share_id;
+}
+
+function stop_screen_share(socket_id, chat_id,screen_share_id) {
+  // Stop screen sharing
+  const socketData = activeSockets.get(socket_id);
+  if (socketData) {
+    socketData.active_screen_shares = socketData.active_screen_shares.filter(id => id !== screen_share_id);
+    activeSockets.set(socket_id, socketData);
+  }
+  const data = {
+    to: chat_id,
+    from: socket_id,
+    screen_share_id: screen_share_id
+  };
+
+  send_to_a_room(data.to, data, 'screen_share_stopped');
+  return true;
+}
+
 module.exports = { 
   server, 
   close_socket,
@@ -430,4 +507,6 @@ module.exports = {
   get_socket_id,
   get_comms_id,
   send_to_all_except_sender,
+  start_screen_share,
+  stop_screen_share,
 };

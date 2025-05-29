@@ -82,6 +82,9 @@ const comms_base = version + 'comms/';
 const join_comms_path = comms_base + 'join';
 const leave_comms_path = comms_base + 'leave';
 
+const start_screen_share_path = comms_base + 'screen_share/start';
+const stop_screen_share_path = comms_base + 'screen_share/stop';
+
 const comms_get_base = comms_base + 'get/';
 const comms_members_path = comms_get_base + 'members';
 
@@ -114,6 +117,9 @@ const join_channel_response_type = 'channel_joined';
 
 const join_comms_response_type = 'comms_joined';
 const leave_comms_response_type = 'comms_left';
+
+const start_screen_share_response_type = 'screen_share_started';
+const stop_screen_share_response_type = 'screen_share_stopped';
 
 const comms_members_response_type = 'comms_members_list';
 
@@ -1255,7 +1261,7 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
 
   if (validated) {
     try {
-      const [members_ids,comms_ids] = await io.get_users_info_room(chat_id);
+      const [members_ids,comms_ids,is_speaking,active_screen_shares] = await io.get_users_info_room(chat_id);
       
       for (let i = 0; i < members_ids.length; i++) {
         try{
@@ -1264,7 +1270,9 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
 
           members_data.push({
             handle: handle,
-            from: comms_id
+            from: comms_id,
+            is_speaking: is_speaking[i],
+            active_screen_share: active_screen_shares[i]
           });
 
         }catch (err) {
@@ -1285,6 +1293,108 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
 
 });
 
+api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
+
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const type = start_screen_share_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;   
+
+  const chat_id = req.query.chat_id;
+  let comms_id = null;
+  let screen_share_id = null;
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+  if (validated) {
+    try {
+      const socket_id = io.get_socket_id(req.session.id);
+
+      if(socket_id != null) {
+        screen_share_id = io.start_screen_share(socket_id, chat_id); // start screen share
+
+        if(screen_share_id != null) {
+          confirmation = true;
+          code = 200;
+          errorDescription = '';
+        }else{
+          code = 200;
+          errorDescription = 'User already started a screen share';
+        }
+      }else{
+        code = 200;
+        errorDescription = 'No opened socket.io found.';
+      }
+    } catch (err) {
+      error(req.path,'IO','io.start_screen_share',code,err);
+    }
+  }
+  const startScreenShareResponse = new StartScreenShareResponse(type, confirmation, screen_share_id, errorDescription);
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(startScreenShareResponse.toJson()));
+  res.status(code).json(startScreenShareResponse.toJson());
+});
+
+api.get(stop_screen_share_path, isAuthenticated, async (req, res) => {
+
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const type = stop_screen_share_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;
+  const chat_id = req.query.chat_id;
+  let screen_share_id = req.query.screen_share_id;
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+  if (!(validator.generic(screen_share_id))) {
+    code = 400;
+    errorDescription = 'Screen share id not valid';
+    validated = false;
+  }
+  if (validated) {
+    try {
+      const socket_id = io.get_socket_id(req.session.id);
+
+      if(socket_id != null) {
+        confirmation = io.stop_screen_share(socket_id, chat_id, screen_share_id); // stop screen share
+
+        if(confirmation) {
+          code = 200;
+          errorDescription = '';
+        }else{
+          code = 200;
+          errorDescription = 'User is not sharing the screen';
+        }
+      }else{
+        code = 200;
+        errorDescription = 'No opened socket.io found.';
+      }
+    } catch (err) {
+      error(req.path,'IO','io.stop_screen_share',code,err);
+    }
+  }
+  const stopScreenShareResponse = new StopScreenShareResponse(type, confirmation, screen_share_id, errorDescription);
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(stopScreenShareResponse.toJson()));
+  res.status(code).json(stopScreenShareResponse.toJson());
+
+});
 
 
 // POST METHODS
@@ -1325,6 +1435,9 @@ postToGetWrapper(join_group_path);
 
 postToGetWrapper(join_comms_path);
 postToGetWrapper(leave_comms_path);
+
+postToGetWrapper(start_screen_share_path);
+postToGetWrapper(stop_screen_share_path);
 
 postToGetWrapper(comms_members_path);
 
