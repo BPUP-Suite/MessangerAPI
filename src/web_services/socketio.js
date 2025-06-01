@@ -476,7 +476,15 @@ function getActiveSockets() {
 function start_screen_share(socket_id, chat_id) {
   // Start screen sharing
   const socketData = activeSockets.get(socket_id);
+
+  let data = {
+    to: chat_id,
+    from: null,
+    screen_share_id: null
+  };
+
   if (socketData) {
+    data.from = socketData.id;
     // Generate a unique screen share ID
     const screen_share_id = `screen_${socket_id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -487,11 +495,7 @@ function start_screen_share(socket_id, chat_id) {
     data.screen_share_id = screen_share_id;
   } 
 
-  const data = {
-    to: chat_id,
-    from: socketData.id,
-    screen_share_id: screen_share_id
-  };
+
   
   send_to_a_room(data.to, data, 'screen_share_started');
   return screen_share_id;
