@@ -305,6 +305,8 @@ function leave_comms(socket_id) {
 
     socket.leave(existingRoom);
     const comms_id = socket.comms_id;
+
+    const socketData = activeSockets.get(socket_id);
     // Check if there are active screen shares and destroy them
     if (socketData && socketData.active_screen_shares && socketData.active_screen_shares.length > 0) {
       const activeScreenShares = [...socketData.active_screen_shares];
@@ -488,7 +490,7 @@ function start_screen_share(socket_id, chat_id) {
   
 
   if (socketData) {
-    data.from = socketData.id;
+    data.from = socket_id;
     // Generate a unique screen share ID
     screen_share_id = `screen_${socket_id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -498,8 +500,6 @@ function start_screen_share(socket_id, chat_id) {
     // Add the generated ID to the data being sent
     data.screen_share_id = screen_share_id;
   } 
-
-
   
   send_to_a_room(data.to, data, 'screen_share_started');
   return screen_share_id;
