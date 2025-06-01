@@ -1321,7 +1321,8 @@ api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
       const socket_id = io.get_socket_id(req.session.id);
 
       if(socket_id != null) {
-        screen_share_id = io.start_screen_share(socket_id, chat_id); // start screen share
+        const recipient_list = await database.get_members_as_user_id(chat_id);
+        screen_share_id = io.start_screen_share(socket_id, chat_id,recipient_list); // start screen share
 
         if(screen_share_id != null) {
           confirmation = true;
@@ -1375,7 +1376,8 @@ api.get(stop_screen_share_path, isAuthenticated, async (req, res) => {
       const socket_id = io.get_socket_id(req.session.id);
 
       if(socket_id != null) {
-        confirmation = io.stop_screen_share(socket_id, chat_id, screen_share_id); // stop screen share
+        const recipient_list = await database.get_members_as_user_id(chat_id);
+        confirmation = io.stop_screen_share(socket_id, chat_id, screen_share_id,recipient_list); // stop screen share
 
         if(confirmation) {
           code = 200;

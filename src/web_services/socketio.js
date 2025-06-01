@@ -475,7 +475,7 @@ function getActiveSockets() {
 }
 
 
-function start_screen_share(socket_id, chat_id) {
+function start_screen_share(socket_id, chat_id,members) {
   // Start screen sharing
   const socketData = activeSockets.get(socket_id);
 
@@ -498,11 +498,11 @@ function start_screen_share(socket_id, chat_id) {
     data.screen_share_id = screen_share_id;
   } 
   
-  send_to_a_room(data.to, data, 'screen_share_started');
+  send_to_all_except_sender(members,data,'member_joined_comms',socket_id);
   return screen_share_id;
 }
 
-function stop_screen_share(socket_id, chat_id,screen_share_id) {
+function stop_screen_share(socket_id, chat_id,screen_share_id,members) {
   // Stop screen sharing
   const socketData = activeSockets.get(socket_id);
   if (socketData) {
@@ -515,7 +515,7 @@ function stop_screen_share(socket_id, chat_id,screen_share_id) {
     screen_share_id: screen_share_id
   };
 
-  send_to_a_room(data.to, data, 'screen_share_stopped');
+  send_to_all_except_sender(members,data,'screen_share_stopped',socket_id);
   return true;
 }
 
