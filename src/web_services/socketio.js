@@ -483,14 +483,11 @@ function start_screen_share(socket_id, chat_id) {
 
   let data = {
     to: chat_id,
-    from: null,
+    from: socket_id,
     screen_share_id: screen_share_id
   };
 
-  
-
   if (socketData) {
-    data.from = socket_id;
     // Generate a unique screen share ID
     screen_share_id = `screen_${socket_id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
