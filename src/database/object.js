@@ -226,7 +226,7 @@ class Response {
 
   class StartScreenShareResponse extends Response
   {
-    constructor(type, confirmation, error_message, screen_share_id) {
+    constructor(type, confirmation, screen_share_id, error_message ) {
       super(type, confirmation, error_message);
       this.screen_share_id = screen_share_id;
     }
@@ -241,7 +241,7 @@ class Response {
 
   class StopScreenShareResponse extends Response
   {
-    constructor(type, confirmation, error_message, screen_share_id) {
+    constructor(type, confirmation, screen_share_id, error_message) {
       super(type, confirmation, error_message);
       this.screen_share_id = screen_share_id;
     }
