@@ -305,6 +305,29 @@ function leave_comms(socket_id) {
 
     socket.leave(existingRoom);
     const comms_id = socket.comms_id;
+    // Check if there are active screen shares and destroy them
+    if (socketData && socketData.active_screen_shares && socketData.active_screen_shares.length > 0) {
+      const activeScreenShares = [...socketData.active_screen_shares];
+      
+      // Notify users about each stopped screen share
+      for (const screen_share_id of activeScreenShares) {
+        const stopData = {
+          to: existingRoom,
+          from: socket_id,
+          screen_share_id: screen_share_id
+        };
+        send_to_a_room(stopData.to, stopData, 'screen_share_stopped');
+      }
+      
+      // Clear the active screen shares array
+      socketData.active_screen_shares = [];
+      socketData.is_speaking = false; // Reset speaking status
+      activeSockets.set(socket_id, socketData);
+      
+      debug('leave_comms','FUNCTION',`Destroyed ${activeScreenShares.length} active screen shares for user ${socket.user_id}`);
+    }
+
+    socket.comms_id = null;
     debug('leave_comms','FUNCTION','User '+socket.user_id+' left comms with comms_id -> '+ comms_id +'and room ',existingRoom);
     return [existingRoom,comms_id];
   }
