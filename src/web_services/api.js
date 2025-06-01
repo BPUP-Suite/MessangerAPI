@@ -1295,6 +1295,7 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
 
 api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
 
+  const start = res.locals.start;
   debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
   const type = start_screen_share_response_type;
   let code = 500;
@@ -1345,6 +1346,7 @@ api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
 
 api.get(stop_screen_share_path, isAuthenticated, async (req, res) => {
 
+  const start = res.locals.start;
   debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
   const type = stop_screen_share_response_type;
   let code = 500;
