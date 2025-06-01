@@ -498,7 +498,7 @@ function start_screen_share(socket_id, chat_id,members) {
     data.screen_share_id = screen_share_id;
   } 
   
-  send_to_all_except_sender(members,data,'member_joined_comms',socket_id);
+  send_to_all_except_sender(members,data,'screen_share_started',socket_id);
   return screen_share_id;
 }
 
