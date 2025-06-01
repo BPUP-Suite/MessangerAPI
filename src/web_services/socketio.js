@@ -480,16 +480,21 @@ function start_screen_share(socket_id, chat_id,members) {
   const socketData = activeSockets.get(socket_id);
 
   let screen_share_id = null;
+  let comms_id = null;
 
   let data = {
     to: chat_id,
-    from: socket_id,
+    from: comms_id,
     screen_share_id: screen_share_id
   };
 
   if (socketData) {
+
+    comms_id = socketData.comms_id;
+    data.from = comms_id;
+
     // Generate a unique screen share ID
-    screen_share_id = `screen_${socket_id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    screen_share_id = `screen_${comms_id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     socketData.active_screen_shares.push(screen_share_id);
     activeSockets.set(socket_id, socketData);
@@ -505,13 +510,16 @@ function start_screen_share(socket_id, chat_id,members) {
 function stop_screen_share(socket_id, chat_id,screen_share_id,members) {
   // Stop screen sharing
   const socketData = activeSockets.get(socket_id);
+  let comms_id = null;
+
   if (socketData) {
+    comms_id = socketData.comms_id;
     socketData.active_screen_shares = socketData.active_screen_shares.filter(id => id !== screen_share_id);
     activeSockets.set(socket_id, socketData);
   }
   const data = {
     to: chat_id,
-    from: socket_id,
+    from: comms_id,
     screen_share_id: screen_share_id
   };
 
