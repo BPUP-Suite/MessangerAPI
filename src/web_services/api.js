@@ -9,7 +9,7 @@ const { api_log:log, api_debug:debug, api_warn:warn, api_error:error, api_info:i
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse,JoinCommsResponse,LeaveCommsResponse} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse,JoinCommsResponse,LeaveCommsResponse,StartScreenShareResponse,StopScreenShareResponse} = require('../database/object');
 
 const io = require('./socketio');
 

@@ -224,6 +224,36 @@ class Response {
     }
   }
 
+  class StartScreenShareResponse extends Response
+  {
+    constructor(type, confirmation, error_message, screen_share_id) {
+      super(type, confirmation, error_message);
+      this.screen_share_id = screen_share_id;
+    }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        screen_share_id: this.screen_share_id
+      };
+    }
+  }
+
+  class StopScreenShareResponse extends Response
+  {
+    constructor(type, confirmation, error_message, screen_share_id) {
+      super(type, confirmation, error_message);
+      this.screen_share_id = screen_share_id;
+    }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        screen_share_id: this.screen_share_id
+      };
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
@@ -247,5 +277,7 @@ class Response {
     CreateGroupResponse,
     JoinGroupResponse,
     JoinCommsResponse,
-    LeaveCommsResponse
+    LeaveCommsResponse,
+    StartScreenShareResponse,
+    StopScreenShareResponse,
   };
