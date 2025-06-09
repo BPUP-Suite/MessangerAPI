@@ -1305,21 +1305,11 @@ api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
 
   const chat_id = req.query.chat_id;
   const screen_share_uuid = req.query.screen_share_uuid;
-  const transceiver_mids = req.query.transceiver_mids; 
   let comms_id = null;
-  let screen_share_id = null;
 
   if (!(validator.chat_id(chat_id))) {
     code = 400;
     errorDescription = 'Chat_id not valid';
-    validated = false;
-  }else if(!(validator.generic(screen_share_uuid))){
-    code = 400;
-    errorDescription = 'Screen share uuid not valid';
-    validated = false;
-  }else if (!(validator.generic(transceiver_mids))) {
-    code = 400;
-    errorDescription = 'Transceiver mids not valid';
     validated = false;
   }else if (!(await database.is_member(req.session.user_id,chat_id))){
     code = 400;
@@ -1332,9 +1322,10 @@ api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
 
       if(socket_id != null) {
         const recipient_list = await database.get_members_as_user_id(chat_id);
-        confirmation = io.start_screen_share(socket_id, chat_id,recipient_list,screen_share_uuid,transceiver_mids); // start screen share
+        screen_share_uuid = io.start_screen_share(socket_id, chat_id,recipient_list); // start screen share
 
-        if(confirmation) {
+        if(screen_share_uuid !== null) {
+          confirmation = true;
           code = 200;
           errorDescription = '';
         }else{
@@ -1349,7 +1340,7 @@ api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
       error(req.path,'IO','io.start_screen_share',code,err);
     }
   }
-  const startScreenShareResponse = new StartScreenShareResponse(type, confirmation, errorDescription);
+  const startScreenShareResponse = new StartScreenShareResponse(type, confirmation, screen_share_uuid, errorDescription);
   debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(startScreenShareResponse.toJson()));
   res.status(code).json(startScreenShareResponse.toJson());
 });

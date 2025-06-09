@@ -475,18 +475,17 @@ function getActiveSockets() {
 }
 
 
-function start_screen_share(socket_id, chat_id,members,screen_share_uuid,transceiver_mids) {
+function start_screen_share(socket_id, chat_id,members) {
   // Start screen sharing
   const socketData = activeSockets.get(socket_id);
 
   let comms_id = null;
-  let confirmation = false;
+  let screen_share_uuid = null;
 
   let data = {
     to: chat_id,
     from: comms_id,
-    screen_share_uuid: screen_share_uuid,
-    transceiver_mids: transceiver_mids,
+    screen_share_uuid: screen_share_uuid
   };
 
   if (socketData) {
@@ -497,11 +496,12 @@ function start_screen_share(socket_id, chat_id,members,screen_share_uuid,transce
     socketData.active_screen_shares.push(screen_share_uuid);
     activeSockets.set(socket_id, socketData);
 
-    confirmation = true;
+    screen_share_uuid = crypto.randomUUID(); // Generate a unique UUID for the screen share
+    data.screen_share_uuid = screen_share_uuid;
   } 
   
   send_to_all_except_sender(members,data,'screen_share_started',socket_id);
-  return confirmation;
+  return screen_share_uuid;
 }
 
 function stop_screen_share(socket_id, chat_id,screen_share_uuid,members) {

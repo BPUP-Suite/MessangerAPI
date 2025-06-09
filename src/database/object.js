@@ -226,9 +226,18 @@ class Response {
 
   class StartScreenShareResponse extends Response
   {
-    constructor(type, confirmation, error_message ) {
+    constructor(type, confirmation, screen_share_uuid, error_message ) {
       super(type, confirmation, error_message);
+      this.screen_share_uuid = screen_share_uuid;
     }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        screen_share_uuid: this.screen_share_uuid
+      };
+    }
+
   }
 
   class StopScreenShareResponse extends Response
