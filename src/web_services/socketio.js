@@ -312,11 +312,11 @@ function leave_comms(socket_id) {
       const activeScreenShares = [...socketData.active_screen_shares];
       
       // Notify users about each stopped screen share
-      for (const screen_share_id of activeScreenShares) {
+      for (const screen_share_uuid of activeScreenShares) {
         const stopData = {
           to: existingRoom,
           from: socket_id,
-          screen_share_id: screen_share_id
+          screen_share_uuid: screen_share_uuid
         };
         send_to_a_room(stopData.to, stopData, 'screen_share_stopped');
       }
@@ -475,52 +475,48 @@ function getActiveSockets() {
 }
 
 
-function start_screen_share(socket_id, chat_id,members) {
+function start_screen_share(socket_id, chat_id,members,screen_share_uuid) {
   // Start screen sharing
   const socketData = activeSockets.get(socket_id);
 
-  let screen_share_id = null;
   let comms_id = null;
+  let confirmation = false;
 
   let data = {
     to: chat_id,
     from: comms_id,
-    screen_share_id: screen_share_id
+    screen_share_uuid: screen_share_uuid
   };
 
   if (socketData) {
 
     comms_id = socketData.comms_id;
     data.from = comms_id;
-
-    // Generate a unique screen share ID
-    screen_share_id = `screen_${comms_id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    socketData.active_screen_shares.push(screen_share_id);
+    socketData.active_screen_shares.push(screen_share_uuid);
     activeSockets.set(socket_id, socketData);
-    
-    // Add the generated ID to the data being sent
-    data.screen_share_id = screen_share_id;
+
+    confirmation = true;
   } 
   
   send_to_all_except_sender(members,data,'screen_share_started',socket_id);
-  return screen_share_id;
+  return confirmation;
 }
 
-function stop_screen_share(socket_id, chat_id,screen_share_id,members) {
+function stop_screen_share(socket_id, chat_id,screen_share_uuid,members) {
   // Stop screen sharing
   const socketData = activeSockets.get(socket_id);
   let comms_id = null;
 
   if (socketData) {
     comms_id = socketData.comms_id;
-    socketData.active_screen_shares = socketData.active_screen_shares.filter(id => id !== screen_share_id);
+    socketData.active_screen_shares = socketData.active_screen_shares.filter(id => id !== screen_share_uuid);
     activeSockets.set(socket_id, socketData);
   }
   const data = {
     to: chat_id,
     from: comms_id,
-    screen_share_id: screen_share_id
+    screen_share_uuid: screen_share_uuid
   };
 
   send_to_all_except_sender(members,data,'screen_share_stopped',socket_id);

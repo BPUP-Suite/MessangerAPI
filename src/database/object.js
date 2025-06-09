@@ -226,30 +226,22 @@ class Response {
 
   class StartScreenShareResponse extends Response
   {
-    constructor(type, confirmation, screen_share_id, error_message ) {
+    constructor(type, confirmation, error_message ) {
       super(type, confirmation, error_message);
-      this.screen_share_id = screen_share_id;
-    }
-
-    toJson() {
-      return {
-        ...super.toJson(),
-        screen_share_id: this.screen_share_id
-      };
     }
   }
 
   class StopScreenShareResponse extends Response
   {
-    constructor(type, confirmation, screen_share_id, error_message) {
+    constructor(type, confirmation, screen_share_uuid, error_message) {
       super(type, confirmation, error_message);
-      this.screen_share_id = screen_share_id;
+      this.screen_share_uuid = screen_share_uuid;
     }
 
     toJson() {
       return {
         ...super.toJson(),
-        screen_share_id: this.screen_share_id
+        screen_share_uuid: this.screen_share_uuid
       };
     }
   }
