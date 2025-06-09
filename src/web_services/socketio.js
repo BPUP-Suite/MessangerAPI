@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const logger = require('../logger');
+const crypto = require('crypto');
 const { io_log:log, io_debug:debug, io_warn:warn, io_error:error, io_info:info } = require('../logger');
 
 
