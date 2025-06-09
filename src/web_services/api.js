@@ -1305,6 +1305,7 @@ api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
 
   const chat_id = req.query.chat_id;
   let comms_id = null;
+  let screen_share_uuid = null; // uuid of the screen share
 
   if (!(validator.chat_id(chat_id))) {
     code = 400;
@@ -1321,7 +1322,7 @@ api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
 
       if(socket_id != null) {
         const recipient_list = await database.get_members_as_user_id(chat_id);
-        const screen_share_uuid = io.start_screen_share(socket_id, chat_id,recipient_list); // start screen share
+        screen_share_uuid = io.start_screen_share(socket_id, chat_id,recipient_list); // start screen share
 
         if(screen_share_uuid !== null) {
           confirmation = true;
