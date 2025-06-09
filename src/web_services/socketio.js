@@ -475,7 +475,7 @@ function getActiveSockets() {
 }
 
 
-function start_screen_share(socket_id, chat_id,members,screen_share_uuid) {
+function start_screen_share(socket_id, chat_id,members,screen_share_uuid,transceiver_mids) {
   // Start screen sharing
   const socketData = activeSockets.get(socket_id);
 
@@ -485,7 +485,8 @@ function start_screen_share(socket_id, chat_id,members,screen_share_uuid) {
   let data = {
     to: chat_id,
     from: comms_id,
-    screen_share_uuid: screen_share_uuid
+    screen_share_uuid: screen_share_uuid,
+    transceiver_mids: transceiver_mids,
   };
 
   if (socketData) {
