@@ -13,6 +13,8 @@ const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, Lo
 
 const io = require('./socketio');
 
+const crypto = require('crypto');
+
 api.use(express.json());
 api.use(express.urlencoded({ extended: true }));
 
@@ -1091,7 +1093,7 @@ api.get(join_comms_path, isAuthenticated, async (req, res) => {
   let confirmation = false;
   let errorDescription = 'Generic error';
   let validated = true;
-  let comms_id = Math.random().toString(36).substring(2, 15); // generate a random id for the comms
+  let comms_id = crypto.randomUUID();
 
   const chat_id = req.query.chat_id;
 

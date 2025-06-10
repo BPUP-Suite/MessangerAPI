@@ -497,7 +497,7 @@ function start_screen_share(socket_id, chat_id,members) {
     socketData.active_screen_shares.push(screen_share_uuid);
     activeSockets.set(socket_id, socketData);
 
-    screen_share_uuid = comms_id + "_" + crypto.randomUUID(); // Generate a unique UUID for the screen share
+    screen_share_uuid = crypto.randomUUID(); // Generate a unique UUID for the screen share
     data.screen_share_uuid = screen_share_uuid;
   } 
   
