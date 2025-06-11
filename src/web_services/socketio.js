@@ -190,6 +190,14 @@ io.on("connection", (socket) => {
     send_to_a_room(data.to, data, "not_speaking");
   });
 
+  socket.on("mid_to_uuid_mapping", (data) => {
+    send_to_comms_id(
+      data.to,
+      data,
+      "mid_to_uuid_mapping"
+    );
+  });
+
   // End of IO
 
   socket.on("disconnecting", async () => {
