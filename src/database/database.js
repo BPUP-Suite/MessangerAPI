@@ -4,14 +4,15 @@
 const { Pool } = require('pg');
 const { SignupUser, LoginUser, Message} = require('./object');
 
-const logger = require('../logger');
-const encrypter = require('../security/encrypter');
+const logger = require('../logger'); //DEPRECATED
+const { postgres_log:log, postgres_debug:debug, postgres_warn:warn, postgres_error:error, postgres_info:info } = require('../logger');
 
+const encrypter = require('../security/encrypter');
 const envManager = require('../security/envManager');
 
-logger.log('[POSTGRES] Postgresql database starting...');
+log('STARTING','Postgresql database starting...',null);
 
-logger.debug('[POSTGRES] Getting PostgreSQL credentials...');
+debug('ENV MANAGER','Getting PostgreSQL credentials...',null);
 
 const POSTGRES_USER = envManager.readPostgresqlUser();
 const POSTGRES_HOST = envManager.readPostgresqlHost();
@@ -19,15 +20,15 @@ const POSTGRES_DB = envManager.readPostgresqlDb();
 const POSTGRES_PASSWORD = envManager.readPostgresqlPassword();
 const POSTGRES_PORT = envManager.readPostgresqlPort();
 
-logger.debug('[POSTGRES] PostgreSQL credentials acquired');
+debug('ENV MANAGER','PostgreSQL credentials acquired',null);
 
-logger.debug(`[POSTGRES] POSTGRES_USER: ${POSTGRES_USER}`);
-logger.debug(`[POSTGRES] POSTGRES_HOST: ${POSTGRES_HOST}`);
-logger.debug(`[POSTGRES] POSTGRES_DB: ${POSTGRES_DB}`);
-logger.debug(`[POSTGRES] POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}`);
-logger.debug(`[POSTGRES] POSTGRES_PORT: ${POSTGRES_PORT}`);
+debug('ENV MANAGER',`POSTGRES_USER: ${POSTGRES_USER}`,null);
+debug('ENV MANAGER',`POSTGRES_HOST: ${POSTGRES_HOST}`,null);
+debug('ENV MANAGER',`POSTGRES_DB: ${POSTGRES_DB}`,null);
+debug('ENV MANAGER',`POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}`,null);
+debug('ENV MANAGER',`POSTGRES_PORT: ${POSTGRES_PORT}`,null);
 
-logger.debug('[POSTGRES] Creating PostgreSQL pool...');
+debug('STARTING','Creating PostgreSQL pool...',null);
 const pool = new Pool({
   user: POSTGRES_USER,   
   host: POSTGRES_HOST,
@@ -35,17 +36,33 @@ const pool = new Pool({
   password: POSTGRES_PASSWORD,
   port: POSTGRES_PORT
 });    
-logger.debug('[POSTGRES] PostgreSQL pool created');
+debug('STARTING','PostgreSQL pool created',null);
+
+// Metrics
+const {dbQueryDuration } = require('../dashboard/metrics');
+
 
 async function query(text, params) {
+
+  const end = dbQueryDuration.startTimer();
+  const start = Date.now();
+
   logger.debug(`[POSTGRES] Executing query: ${text} with parameters: ${JSON.stringify(params)}`);
   const client = await pool.connect();
   try {
     const res = await client.query(text, params);
-    logger.debug(`[POSTGRES] Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows)}`);
+
+    const duration = Date.now() - start;
+    end({ query_type: text});
+
+    logger.debug(`[POSTGRES] |${duration}ms| Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows).substring(0, 200) + "..."}`);
     return res.rows;
   } catch (error) {
-    logger.error(`[POSTGRES] Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${error}`);
+
+    const duration = Date.now() - start;
+    end({ query_type: text});
+
+    logger.error(`[POSTGRES] |${duration}ms| Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${error}`);
     throw error;
   } finally {
     client.release();
@@ -116,7 +133,7 @@ async function add_user_to_db(signupUser) {
     const password = encrypter.generatePasswordHash(signupUser.password)
 
     const QUERY = `WITH new_user AS (INSERT INTO public.users(email, name, surname, password) VALUES($1, $2, $3, $4) RETURNING user_id) INSERT INTO public.handles(user_id, handle) VALUES((SELECT user_id FROM new_user), $5);`
-    logger.debug('[POSTGRES] ' + QUERY)
+    debug('','' + QUERY)
     try {
       await query(QUERY, [signupUser.email, signupUser.name, signupUser.surname, password, signupUser.handle]);
       confirmation = true
@@ -241,13 +258,14 @@ async function get_members_as_user_id(chat_id) {
       break;
   }
 
-  let members_id = null;
+  let members_id = [];
 
   try{
     const result = await query(QUERY, [chat_id]);
 
     if(personal){
       members_id = [result[0].user1, result[0].user2];
+      logger.debug("[POSTGRES] Members found for personal chat: " + members_id);
     }else{
       members_id = result[0].members;
     }
@@ -731,10 +749,12 @@ async function get_chat_id_from_handle(handle) {
 
 
 async function get_handle_from_id(id) {
+
   const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
   let handle = null;
 
   try{
+    
     const result = await query(QUERY, [id]);
     handle = result[0].handle;
   }catch(err){
@@ -822,6 +842,42 @@ async function check_chat_existance(handle,other_handle) {
   return confirmation;
 }
 
+async function is_member(user_id,chat_id){
+
+  let QUERY = "";
+
+  switch(get_chat_type(chat_id)){
+    case "personal":
+      QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND $2 = user1 OR $2 = user2";
+      break;
+    case "group":
+      QUERY = "SELECT members FROM public.groups WHERE chat_id = $1 AND $2 = ANY(members)";
+      break;
+    case "channel":
+      QUERY = "";
+      break;
+    default:
+      break;
+  }
+
+  let confirmation = false;
+
+  if(QUERY != null){
+    let result = null;
+    try{
+      result = await query(QUERY, [chat_id, user_id]);
+      if(result.length != 0){
+        confirmation = true;
+      }
+    }catch(error){
+      logger.error("[POSTGRES] database.is_member: " + error);
+    }
+  }
+
+  return confirmation;
+
+}
+
 module.exports = {
   testConnection,
   check_email_existence,
@@ -843,5 +899,6 @@ module.exports = {
   add_members_to_group,
   get_group_name_from_chat_id,
   check_chat_existance,
-  get_chat_messages
+  get_chat_messages,
+  is_member
 };

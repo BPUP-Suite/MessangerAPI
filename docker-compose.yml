@@ -13,15 +13,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - novyse_default
 
   server:
     build:
       context: .
       dockerfile: ./docker/Dockerfile
-    ports:
-      - 3000:${DASHBOARD_PORT}    # admin dashboard
-      - 8000:${API_PORT}          # api
-      - 8001:${IO_PORT}           # socket.io
+    #ports:
+      #- ${DASHBOARD_PORT}:${DASHBOARD_PORT}    # admin dashboard
+      #- ${API_PORT}:${API_PORT}                # api
+      #- ${IO_PORT}:${IO_PORT}                  # socket.io
     env_file:
       - .env
     volumes:
@@ -33,6 +35,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - novyse_default
 
   redis:
     image: redis:latest
@@ -45,3 +49,43 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - novyse_default
+
+  prometheus:
+      #ports:
+      #    - ${PROMETHEUS_PORT}:9090
+      volumes:
+          - ./metrics/prometheus/config.yml:/etc/prometheus/prometheus.yml
+      image: prom/prometheus:latest
+      healthcheck:
+        test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      networks:
+        - novyse_default
+      restart: unless-stopped
+
+
+  grafana:
+      #ports:
+      #    - ${GRAFANA_PORT}:3000
+      environment:
+          - GF_AUTH_DISABLE_LOGIN_FORM=true
+          - GF_AUTH_ANONYMOUS_ENABLED=true
+          - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      volumes:
+          - ./metrics/grafana/config.yml:/etc/grafana/provisioning/datasources/datasources.yml
+          - ./metrics/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+          - ./metrics/grafana/dashboards:/var/lib/grafana/dashboards
+      image: grafana/grafana:latest
+      depends_on:
+          prometheus:
+              condition: service_healthy
+      restart: unless-stopped
+      networks:
+        - novyse_default
+networks:
+  novyse_default:
+    external: true

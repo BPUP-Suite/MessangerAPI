@@ -4,7 +4,15 @@
 DO $$
 BEGIN
    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'bpup') THEN
-      CREATE ROLE bpup WITH LOGIN PASSWORD 'password';
+      CREATE ROLE bpup WITH LOGIN PASSWORD 'password'; -- Replace 'password' with a secure password
+   END IF;
+END
+$$;
+
+DO $$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'root') THEN
+      CREATE ROLE root WITH LOGIN PASSWORD 'password' SUPERUSER; -- Replace 'password' with a secure password
    END IF;
 END
 $$;

@@ -17,8 +17,17 @@ const socketio = require('../web_services/socketio');
 
 const LOGS_PATH = envManager.readLogsPath();
 
+// Metrics setup
+const {register} = require('./metrics');
+
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/metrics', async (req, res) => {
+  res.setHeader('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
 
 app.get('/api/get/handle', async(req,res) => {
   const user_id = req.query.user_id;

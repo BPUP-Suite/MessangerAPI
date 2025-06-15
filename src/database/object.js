@@ -1,3 +1,5 @@
+const { chat_id } = require("./validator");
+
 class Response {
     constructor(type, type_response, error_message) {
       this.type = type;
@@ -45,8 +47,15 @@ class Response {
     }
   }
   class LoginResponse extends Response {
-    constructor(type, type_response, error_message) {
+    constructor(type, type_response, error_message,token) {
       super(type, type_response, error_message);
+      this.token = token;
+    }
+    toJson() {
+      return {
+        ...super.toJson(),
+        token: this.token
+      };
     }
   }
   class LoginUser {
@@ -183,6 +192,69 @@ class Response {
     }
   }
 
+  class JoinCommsResponse extends Response
+  {
+    constructor(type, confirmation, comms_id, error_message) {
+      super(type, confirmation, error_message);
+      this.comms_id = comms_id;
+    }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        from: this.comms_id
+      };
+    }
+  }
+
+  class LeaveCommsResponse extends Response
+  {
+    constructor(type, confirmation, chat_id, comms_id, error_message) {
+      super(type, confirmation, error_message);
+      this.chat_id = chat_id;
+      this.comms_id = comms_id;
+    }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        chat_id: this.chat_id,
+        from: this.comms_id
+      };
+    }
+  }
+
+  class StartScreenShareResponse extends Response
+  {
+    constructor(type, confirmation, screen_share_uuid, error_message ) {
+      super(type, confirmation, error_message);
+      this.screen_share_uuid = screen_share_uuid;
+    }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        screen_share_uuid: this.screen_share_uuid
+      };
+    }
+
+  }
+
+  class StopScreenShareResponse extends Response
+  {
+    constructor(type, confirmation, screen_share_uuid, error_message) {
+      super(type, confirmation, error_message);
+      this.screen_share_uuid = screen_share_uuid;
+    }
+
+    toJson() {
+      return {
+        ...super.toJson(),
+        screen_share_uuid: this.screen_share_uuid
+      };
+    }
+  }
+
   module.exports = { 
     AccessResponse, 
     SignupResponse, 
@@ -204,5 +276,9 @@ class Response {
     MembersResponse,
     UpdateResponse,
     CreateGroupResponse,
-    JoinGroupResponse
+    JoinGroupResponse,
+    JoinCommsResponse,
+    LeaveCommsResponse,
+    StartScreenShareResponse,
+    StopScreenShareResponse,
   };

@@ -45,7 +45,7 @@ function writeLogToFile(message) {
 
 function log(message) {
     const timestamp = getTimestamp();
-    const logMessage = `[LOG] ${timestamp} - ${message}`;
+    const logMessage = ` [LOG]  ${timestamp} - ${message}`;
     console.log(logMessage);
     writeLogToFile(logMessage); 
 }
@@ -68,14 +68,14 @@ function error(message) {
 
 function warn(message){
     const timestamp = getTimestamp();
-    const warnMessage = `[WARN] ${timestamp} - ${message}`;
+    const warnMessage = `[WARN]  ${timestamp} - ${message}`;
     console.warn(warnMessage);
     writeLogToFile(warnMessage);
 }
 
 function info(message){
     const timestamp = getTimestamp();
-    const infoMessage = `[INFO] ${timestamp} - ${message}`;
+    const infoMessage = `[INFO]  ${timestamp} - ${message}`;
     console.info(infoMessage);
     writeLogToFile(infoMessage);
 }
@@ -86,37 +86,66 @@ function info(message){
 // API
 
 function api_log(path,type,message,code,data){
+    if(!data){
+        log(`[API] [${type}] - ${path} - ${message} |${code}|`);
+        return;
+    }
     log(`[API] [${type}] - ${path} - ${message} |${code}| -> ${data}`);
 }
 
-function api_debug(path,type,message,code,data){
-    debug(`[API] [${type}] - ${path} - ${message} |${code}| -> ${data}`);
+function api_debug(duration,path,type,message,code,data){
+    const durationPart = duration !== '' ? `|${duration}ms| ` : '';
+    if(!data){
+        debug(`[API] ${durationPart}[${type}] - ${path} - ${message} |${code}|`);
+        return;
+    }
+    debug(`[API] ${durationPart}[${type}] - ${path} - ${message} |${code}| -> ${data}`);
 }
 
 function api_warn(type,message,data){
-    warn(`[API] [${type}] - ${message} > ${data}`);
+    if(!data){
+        warn(`[API] [${type}] - ${message}`);
+        return;
+    }
+    warn(`[API] [${type}] - ${message} -> ${data}`);
 }
 
 function api_error(path,type,message,code,data){
+    if(!data){
+        error(`[API] [${type}] - ${path} - ${message} |${code}|`);
+        return;
+    }
     error(`[API] [${type}] - ${path} - ${message} |${code}| -> ${data}`);
 }
 
 function api_info(type,message,data){
+    if(!data){
+        info(`[API] [${type}] - ${message}`);
+        return;
+    }
     info(`[API] [${type}] - ${message} -> ${data}`);
 }
 
 // SOCKET.IO
 
-function io_log(event,type,message){
-    log(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+function io_log(event,type,message,data){
+    if(!data){
+        log(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+        return;
+    }
+    log(`[SOCKET.IO] [${type}] - ${event} - ${message} -> ${data}`);
 }
 
-function io_debug(event,type,message){
-    debug(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+function io_debug(event,type,message,data){
+    if(!data){
+        debug(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+        return;
+    }
+    debug(`[SOCKET.IO] [${type}] - ${event} - ${message} -> ${data}`);
 }
 
-function io_warn(event,type,message){
-    warn(`[SOCKET.IO] [${type}] - ${event} - ${message}`);
+function io_warn(type,message){
+    warn(`[SOCKET.IO] [${type}] - ${message}`);
 }
 
 function io_error(event,type,message){
@@ -124,10 +153,46 @@ function io_error(event,type,message){
 }
 
 function io_info(type,message,data){
+    if(!data){
+        info(`[SOCKET.IO] [${type}] - ${message}`);
+        return;
+    }
     info(`[SOCKET.IO] [${type}] - ${message} -> ${data}`);
 }
 
 // POSTGRES
+
+function postgres_log(type,message,data){
+    if(!data){
+        log(`[POSTGRES] [${type}] - ${message}`);
+        return;
+    }
+    log(`[POSTGRES] [${type}] - ${message} -> ${data}`);
+}
+
+function postgres_debug(type,message,data){
+    if(!data){
+        debug(`[POSTGRES] [${type}] - ${message}`);
+        return;
+    }
+    debug(`[POSTGRES] [${type}] - ${message} -> ${data}`);
+}
+
+function postgres_warn(type,message){
+    warn(`[POSTGRES] [${type}] - ${message}`);
+}
+
+function postgres_error(type,message){
+    error(`[POSTGRES] [${type}] - ${message}`);
+}
+
+function postgres_info(type,message,data){
+    if(!data){
+        info(`[POSTGRES] [${type}] - ${message}`);
+        return;
+    }
+    info(`[POSTGRES] [${type}] - ${message} -> ${data}`);
+}
 
 // REDIS
 
@@ -147,4 +212,9 @@ module.exports = {
     io_error,
     io_warn,
     io_info,
+    postgres_log,
+    postgres_debug,
+    postgres_error,
+    postgres_warn,
+    postgres_info,
 };

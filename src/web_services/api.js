@@ -5,26 +5,27 @@ const cors = require('cors');
 
 const api = express();
 const { api_log:log, api_debug:debug, api_warn:warn, api_error:error, api_info:info } = require('../logger');
-const swaggerRouter = require('./swagger/api-swagger');
 
 const validator = require('../database/validator');
 const database = require('../database/database');
 
-const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse} = require('../database/object');
+const { AccessResponse, SignupResponse, SignupUser, LoginResponse, LoginUser, LogoutResponse,SessionResponse, HandleResponse, SearchResponse, InitResponse, Message, MessageResponse,CreateChatResponse,Chat,CreateGroupResponse,Group,MembersResponse, UpdateResponse,JoinGroupResponse,JoinCommsResponse,LeaveCommsResponse,StartScreenShareResponse,StopScreenShareResponse} = require('../database/object');
 
 const io = require('./socketio');
+
+const crypto = require('crypto');
 
 api.use(express.json());
 api.use(express.urlencoded({ extended: true }));
 
 const envManager = require('../security/envManager');
-const { sessionMiddleware } = require('../security/sessionMiddleware');
+const { sessionMiddleware, trackSessionCreationMiddleware, destroySession, enforceSessionLimit, verifySession } = require('../security/sessionMiddleware');
 
 // api path 
 
 const version = '/' + envManager.readVersion() + '/';
 
-info('EXPRESS','API base path', version);
+info('EXPRESS','API base path: '+version, null);
 
 // /user
 const user_base = version + 'user/';
@@ -77,6 +78,17 @@ const join_base = chat_base + 'join/';
 const join_group_path = join_base + 'group';
 const join_channel_path = join_base + 'channel';
 
+// /comms
+const comms_base = version + 'comms/';
+
+const join_comms_path = comms_base + 'join';
+const leave_comms_path = comms_base + 'leave';
+
+const start_screen_share_path = comms_base + 'screen_share/start';
+const stop_screen_share_path = comms_base + 'screen_share/stop';
+
+const comms_get_base = comms_base + 'get/';
+const comms_members_path = comms_get_base + 'members';
 
 // api response type
 
@@ -105,18 +117,27 @@ const get_members_response_type = 'members_list';
 const join_group_response_type = 'group_joined';
 const join_channel_response_type = 'channel_joined';
 
+const join_comms_response_type = 'comms_joined';
+const leave_comms_response_type = 'comms_left';
+
+const start_screen_share_response_type = 'screen_share_started';
+const stop_screen_share_response_type = 'screen_share_stopped';
+
+const comms_members_response_type = 'comms_members_list';
+
 // api configurations
 
 // Sessions configuration
 
 api.use(sessionMiddleware);
+api.use(trackSessionCreationMiddleware);
 
 // CORS Rules
 
 let WEB_DOMAIN = envManager.readDomain();
 
 if (WEB_DOMAIN == 'localhost') {
-  WEB_DOMAIN = 'http://localhost' + envManager.readAPIPort();
+  WEB_DOMAIN = 'http://localhost:' + envManager.readAPIPort();
   warn('CORS','Running on localhost, CORS will be set to localhost',WEB_DOMAIN);
 } else {
   WEB_DOMAIN = 'https://web.' + WEB_DOMAIN;
@@ -150,12 +171,34 @@ const limiter = rateLimit({
 
     res.status(code).json(jsonResponse);
 
-    log(req.path,'ALERT',`IP ${req.ip} has exceeded the rate limit!`,code,jsonResponse);
+    log(req.path,'ALERT',`IP ${req.ip} has exceeded the rate limit!`,code,JSON.stringify(jsonResponse));
+
+    next(new Error(errorDescription));
   }
 });
 
 api.use(limiter);
-api.use('/'+envManager.readVersion()+'/docs', swaggerRouter);
+
+
+// Metrics
+
+const {metricsDurationMiddleware,apiCallMiddleware} = require('../dashboard/metrics');
+
+api.use(metricsDurationMiddleware);
+api.use(apiCallMiddleware);
+
+// Documentation on Scalar
+const scalarRouter = require('./scalar/api-scalar');
+
+api.use('/'+envManager.readVersion()+'/docs', scalarRouter);
+
+// Favicon.ico request
+// This is a workaround to avoid the favicon.ico request to be logged in the console
+
+api.all('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
 
 // Api methods
 
@@ -163,9 +206,9 @@ api.use('/'+envManager.readVersion()+'/docs', swaggerRouter);
 
 // Auth based on session
 
-function isAuthenticated(req, res, next) {
-  if (req.session.user_id) {
-    debug(req.path,'AUTH', 'User is authenticated!', 200, req.session.user_id);
+async function isAuthenticated(req, res, next) {
+  if (await verifySession(req.sessionID)) {
+    debug('',req.path,'AUTH', 'User is authenticated!', 200, req.session.user_id);
     next();
   } else {
     const code = 401;
@@ -175,7 +218,7 @@ function isAuthenticated(req, res, next) {
 
     res.status(code).json(jsonResponse);
 
-    error(req.path,'AUTH','User unauthorized',code,jsonResponse);
+    error(req.path,'AUTH','User unauthorized',code,JSON.stringify(jsonResponse));
   }
 }
 
@@ -188,7 +231,8 @@ api.get(access_path, async (req, res) => {
 
   const email = req.query.email;
 
-  debug(req.path,'REQUEST','','',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST','','',JSON.stringify(req.query));
 
   const type = access_response_type;
   let code = 500;
@@ -217,7 +261,7 @@ api.get(access_path, async (req, res) => {
   }
 
   const accessResponse = new AccessResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE','',code,JSON.stringify(accessResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(accessResponse.toJson()));
   return res.status(code).json(accessResponse.toJson());
 });
 
@@ -236,11 +280,12 @@ api.get(signup_path, async (req, res) => {
     sanitizedQuery.password = '*'.repeat(sanitizedQuery.password.length);
   }
 
-  debug(req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
 
   const type = signup_response_type;
   let code = 500;
-  let confirmation = null;
+  let confirmation = false;
   let errorDescription = 'Generic error';
   let validated = true;
 
@@ -257,7 +302,11 @@ api.get(signup_path, async (req, res) => {
     code = 400;
     errorDescription = 'Surname not valid';
     validated = false;
-  }else if (!(await validator.handle(handle))) {
+  }else if (!(validator.generic(handle))) {
+    code = 400;
+    errorDescription = 'Handle not valid';
+    validated = false;
+  } else if(!(await database.check_handle_availability(handle))){ // handle should not exist
     code = 400;
     errorDescription = 'Handle not valid';
     validated = false;
@@ -285,7 +334,7 @@ api.get(signup_path, async (req, res) => {
   }
 
   const signupResponse = new SignupResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE','',code,JSON.stringify(signupResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(signupResponse.toJson()));
   return res.status(code).json(signupResponse.toJson());
 
 });
@@ -299,7 +348,8 @@ api.get(login_path, async (req, res) => {
     sanitizedQuery.password = '*'.repeat(sanitizedQuery.password.length);
   }
 
-  debug(req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST','','',JSON.stringify(sanitizedQuery));
 
   const type = login_response_type;
   let code = 500;
@@ -307,6 +357,7 @@ api.get(login_path, async (req, res) => {
   let errorDescription = 'Generic error';
   let validated = true;
   let user_id = null;
+  let token = null; 
 
   if (!validator.email(email)) {
     code = 400;
@@ -322,29 +373,34 @@ api.get(login_path, async (req, res) => {
     const loginUser = new LoginUser(email, password);
     try {
       user_id = await database.login(loginUser);
+
       if (validator.generic(user_id)) {
         confirmation = true;
         errorDescription = '';
         code = 200;
 
-        debug(req.path,'SESSION','Session opened.',code,user_id)
+        debug('',req.path,'SESSION','Session opened.',code,user_id)
         req.session.user_id = user_id;
+        debug('',req.path,'SESSION','Session set.',code,user_id)
 
-        req.session.save((err) => {
-          if (err) {
-            error(req.path,'SESSION','Error while saving session',code,err.message);
-            code = 500;
-            errorDescription = 'Failed to save session';
-            const loginResponse = new LoginResponse(type, false, errorDescription);
+        req.session.save(async (err) => {
+          if (req.session.user_id && !err) {
+            debug('',req.path,'SESSION','Session saved.',code,user_id)
+            await enforceSessionLimit(req, res);
+            token = req.sessionID;
+            const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
+            debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
             res.status(code).json(loginResponse.toJson());
           } else {
-            debug(req.path,'SESSION','Session saved.',code,user_id)
-            const loginResponse = new LoginResponse(type, confirmation, errorDescription);
-            debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
+            error(req.path,'SESSION','Error while saving session',code,err.message);
+            await destroySession(req, res); // destroy session in redis and in the cookie
+            code = 500;
+            errorDescription = 'Failed to save session';
+            const loginResponse = new LoginResponse(type, false, errorDescription,token);
             res.status(code).json(loginResponse.toJson());
           }
         });
-        return; // return to avoid sending the response twice
+        return;
       } else {
         code = 401;
         errorDescription = 'Login failed';
@@ -356,57 +412,74 @@ api.get(login_path, async (req, res) => {
   }
 
   // if the user is not logged in, send the error response
-  const loginResponse = new LoginResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
+  const loginResponse = new LoginResponse(type, confirmation, errorDescription,token);
+  debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(loginResponse.toJson()));
   return res.status(code).json(loginResponse.toJson());
 });
 
 
-api.get(logout_path, isAuthenticated, (req, res) => {
+api.get(logout_path, isAuthenticated, async (req, res) => {
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
-  req.session.destroy(err => {
+  let user_id = null;
 
-    let type = logout_response_type;
-    let code = 200;
-    let errorDescription = '';
-    let confirmation = true;
+  let type = logout_response_type;
+  let confirmation = false;
+  let code = 500;
+  let errorDescription = 'Generic error';
 
-    if (err) {
-      code = 500;
-      errorDescription = 'Generic error';
-      confirmation = false;
+  if (req.session.user_id) {
+    user_id = req.session.user_id;
+
+    try{
+      const session_id = req.session.id;
+      const socket_id = io.get_socket_id(session_id); // get the socket id from the activeSessions map using the session_id
+
+      io.close_socket(socket_id); // close socket connection
+      confirmation = await destroySession(req, res); // destroy session in redis and in the cookie
+
+
+      if (confirmation) {
+        code = 200;
+        errorDescription = '';
+      }
+    }catch (err) {
       error(req.path,'SESSION','session.destroy',code,err);
     }
+  } 
 
     const logoutResponse = new LogoutResponse(type, confirmation, errorDescription);
-    debug(req.path,'RESPONSE',req.session.user_id,code,lJSON.stringify(logoutResponse.toJson()));
+    debug(Date.now() - start,req.path,'RESPONSE',user_id,code,JSON.stringify(logoutResponse.toJson()));
     return res.status(code).json(logoutResponse.toJson());
-  });
+
 });
 
-api.get(session_path, isAuthenticated, (req, res) => {
+api.get(session_path, isAuthenticated, (req, res) => { // DEPRECATED
   
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = session_response_type;
   let code = 500;
   let session_id = null;
   let errorDescription = 'Generic error';
+  let user_id = null;
 
   	
   if (req.session.user_id) {
     code = 200;
     errorDescription = '';
     session_id = req.sessionID;
+    user_id = req.session.user_id;
   } 
 
   const sessionResponse = new SessionResponse(type, session_id, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(sessionResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',user_id,code,JSON.stringify(sessionResponse.toJson()));
   return res.status(code).json(sessionResponse.toJson());
 
-});
+});                                               // DEPRECATED
 
 // Path: .../data
 // Path: .../check
@@ -417,7 +490,8 @@ api.get(handle_availability_path, async (req, res) => {
 
   const handle = req.query.handle;
 
-  debug(req.path,'REQUEST','','',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST','','',JSON.stringify(req.query));
 
   const type = handle_availability_response_type;
   let code = 500;
@@ -445,7 +519,7 @@ api.get(handle_availability_path, async (req, res) => {
   }
 
   const handleResponse = new HandleResponse(type, confirmation, errorDescription);
-  debug(req.path,'RESPONSE','',code,JSON.stringify(handleResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE','',code,JSON.stringify(handleResponse.toJson()));
   return res.status(code).json(handleResponse.toJson());
 
 });
@@ -455,7 +529,8 @@ api.get(init_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = init_response_type;
   let code = 500;
@@ -485,7 +560,7 @@ api.get(init_path, isAuthenticated, async (req, res) => {
   }
 
   const initResponse = new InitResponse(type, confirmation, errorDescription, init_data);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(initResponse.toJson()));
+  debug(Date.now() - start,req.path, 'RESPONSE', req.session.user_id, code, JSON.stringify(initResponse.toJson()).substring(0, 200) + "...");
   return res.status(code).json(initResponse.toJson());
 
 });
@@ -494,7 +569,8 @@ api.get(update_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const latest_update_datetime = req.query.latest_update_datetime;
 
@@ -529,7 +605,7 @@ api.get(update_path, isAuthenticated, async (req, res) => {
   }
 
   const updateResponse = new UpdateResponse(type, confirmation, errorDescription, update_data);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(updateResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(updateResponse.toJson()));
   return res.status(code).json(updateResponse.toJson());
 
 });
@@ -540,7 +616,8 @@ api.get(search_users_path, isAuthenticated,async (req, res) => {
 
   const handle = req.query.handle;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = search_response_type;
   let code = 500;
@@ -565,7 +642,7 @@ api.get(search_users_path, isAuthenticated,async (req, res) => {
   }
 
   const searchResponse = new SearchResponse(type, searched_list, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(searchResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(searchResponse.toJson()));
   return res.status(code).json(searchResponse.toJson());
 
 });
@@ -574,7 +651,8 @@ api.get(search_all_path, isAuthenticated,async (req, res) => {
 
   const handle = req.query.handle;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = search_response_type;
   let code = 500;
@@ -599,7 +677,7 @@ api.get(search_all_path, isAuthenticated,async (req, res) => {
   }
 
   const searchResponse = new SearchResponse(type, searched_list, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(searchResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(searchResponse.toJson()));
   return res.status(code).json(searchResponse.toJson());
 
 });
@@ -615,7 +693,8 @@ api.get(message_path, isAuthenticated, async (req, res) => {
   const text = req.query.text;
   const chat_id = req.query.chat_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = message_response_type;
   let code = 500;
@@ -656,13 +735,14 @@ api.get(message_path, isAuthenticated, async (req, res) => {
   }
 
   const messageResponse = new MessageResponse(type, confirmation, errorDescription, message_data);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(messageResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(messageResponse.toJson()));
   res.status(code).json(messageResponse.toJson());
 
   // Send messages to recipients after sending the response to sender
   if (message_data != null && recipient_list != null) {
+    const sender_socket_id = io.get_socket_id(req.session.id); 
     setImmediate(() => {
-      io.send_messages_to_recipients(recipient_list, message_data);
+      io.send_messages_to_recipients(recipient_list, message_data,sender_socket_id);
     });
   }
 
@@ -675,7 +755,8 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const handle = await database.get_handle_from_id(user_id);
   const other_handle = req.query.handle;
@@ -730,7 +811,7 @@ api.get(chat_path, isAuthenticated, async (req, res) => {
   }
 
   const createChatResponse = new CreateChatResponse(type, confirmation, errorDescription, chat_id);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(createChatResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(createChatResponse.toJson()));
   return res.status(code).json(createChatResponse.toJson());
 
 });
@@ -739,7 +820,8 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id;
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const name = req.query.name;
   let handle = req.query.handle;
@@ -806,7 +888,7 @@ api.get(group_path, isAuthenticated, async (req, res) => {
   }
 
   const createGroupResponse = new CreateGroupResponse(type, confirmation, errorDescription, chat_id);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(createGroupResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(createGroupResponse.toJson()));
   res.status(code).json(createGroupResponse.toJson());
 
 
@@ -822,7 +904,8 @@ api.get(group_path, isAuthenticated, async (req, res) => {
     };
 
     setImmediate(() => {
-      io.send_groups_to_recipients(members, group_data);
+      const sender_socket_id = io.get_socket_id(req.session.id); 
+      io.send_groups_to_recipients(members, group_data,sender_socket_id);
     });
   }
 
@@ -834,7 +917,8 @@ api.get(group_path, isAuthenticated, async (req, res) => {
 
 api.get(members_path, isAuthenticated, async (req, res) => {
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = get_members_response_type;
   let code = 500;
@@ -861,7 +945,7 @@ api.get(members_path, isAuthenticated, async (req, res) => {
   }
 
   const membersResponse = new MembersResponse(type, members_list, errorDescription);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
   return res.status(code).json(membersResponse.toJson());
 
 });
@@ -873,7 +957,8 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
 
   const user_id = req.session.user_id; // all public groups are visible to all users
 
-  debug(req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
 
   const type = join_group_response_type;
   let code = 500;
@@ -970,7 +1055,7 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
 
   
   const joinGroupResponse = new JoinGroupResponse(type, confirmation, errorDescription, data);
-  debug(req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(joinGroupResponse.toJson()));
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(joinGroupResponse.toJson()));
   res.status(code).json(joinGroupResponse.toJson());
 
   // Send group to recipients after sending the response to sender
@@ -987,14 +1072,335 @@ api.get(join_group_path, isAuthenticated, async (req, res) => {
       };
 
       setImmediate(() => {
-        io.send_group_member_joined(members, user_data);
-        io.send_member_member_joined(user_id, data);
+        const sender_socket_id = io.get_socket_id(req.session.id); 
+        io.send_group_member_joined(members, user_data, sender_socket_id);
+        io.send_member_member_joined(user_id, data, sender_socket_id);
       });
   }
 
   return;
 });
 
+// Path: /comms
+
+api.get(join_comms_path, isAuthenticated, async (req, res) => {
+
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+
+  const type = join_comms_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;
+  let comms_id = crypto.randomUUID();
+
+  const chat_id = req.query.chat_id;
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+
+      const socket_id = io.get_socket_id(req.session.id);
+
+      if(socket_id != null){
+
+        confirmation = io.join_comms(socket_id, chat_id, comms_id); // join the socket to the room
+
+        if(confirmation) {
+          code = 200;
+          errorDescription = '';
+        }else{
+          comms_id = null;
+          code = 200;
+          errorDescription = 'User already in a comms';
+        }
+      }else{
+        comms_id = null;
+        code = 200;
+        errorDescription = 'No opened socket.io found.';
+        confirmation = false;
+      }
+    } catch (err) {
+      comms_id = null;
+      error(req.path,'IO','io.join_comms',code,err);
+    }
+  }
+
+  const joinCommsResponse = new JoinCommsResponse(type, confirmation, comms_id, errorDescription);
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(joinCommsResponse.toJson()));
+  res.status(code).json(joinCommsResponse.toJson());
+
+  if(confirmation){
+
+    let recipient_list = null;
+    let from_handle = null;
+
+    try{
+      recipient_list = await database.get_members_as_user_id(chat_id);
+    }catch (err) {  
+      error(req.path,'DATABASE','database.get_members_as_user_id',code,err);
+    }
+    try{
+      from_handle = await database.get_handle_from_id(req.session.user_id); // handle of the sender
+    }catch (err) {
+      error(req.path,'DATABASE','database.get_handle_from_id',code,err);
+    }
+
+    if(recipient_list != null || from_handle != null) {
+      const join_data = {
+        chat_id: chat_id,
+        handle: from_handle,
+        from: comms_id
+      };
+     const from_socket_id = io.get_socket_id(req.session.id); 
+     io.send_joined_member_to_comms(recipient_list,join_data,from_socket_id);
+    }
+  }
+});
+
+api.get(leave_comms_path, isAuthenticated, async (req, res) => {
+  
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+
+  const type = leave_comms_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  let chat_id = null;
+  let comms_id = null;
+
+  if (validated) {
+    try {
+
+      const socket_id = io.get_socket_id(req.session.id);
+
+      if(socket_id != null) {
+        
+        [chat_id,comms_id] = io.leave_comms(socket_id); // leave room
+
+        if(chat_id && comms_id) {
+          confirmation = true;
+          code = 200;
+          errorDescription = '';
+        }else{
+          confirmation = false;
+          code = 200;
+          errorDescription = 'User is not in a comms';
+        }
+      }else{
+        code = 200;
+        errorDescription = 'No opened socket.io found.';
+        confirmation = false;
+      }
+
+    } catch (err) {
+      error(req.path,'IO','io.leave_comms',code,err);
+    }
+  }
+
+  const leaveCommsResponse = new LeaveCommsResponse(type, confirmation, chat_id, comms_id, errorDescription);
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(leaveCommsResponse.toJson()));
+  res.status(code).json(leaveCommsResponse.toJson());
+
+  if(confirmation){
+
+    let recipient_list = null;
+
+    try{
+      recipient_list = await database.get_members_as_user_id(chat_id);
+    }catch (err) {
+      error(req.path,'DATABASE','database.get_members_as_user_id',code,err);
+    }
+
+    if(recipient_list != null  || from != null) {
+      const left_data = {
+        chat_id: chat_id,
+        from: comms_id
+      };
+     
+     const from_socket_id = io.get_socket_id(req.session.id); 
+     io.send_left_member_to_comms(recipient_list,left_data,from_socket_id);
+    }
+  }
+});
+
+api.get(comms_members_path, isAuthenticated, async (req, res) => {
+
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+
+  const type = comms_members_response_type;
+  let code = 500;
+  let errorDescription = 'Generic error';
+  let validated = true;
+
+  const chat_id = req.query.chat_id;
+  
+  let members_data = [];
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      const [members_ids,comms_ids,is_speaking,active_screen_shares] = await io.get_users_info_room(chat_id);
+      
+      for (let i = 0; i < members_ids.length; i++) {
+        try{
+          const handle = await database.get_handle_from_id(members_ids[i]);
+          const comms_id = comms_ids[i];
+
+          members_data.push({
+            handle: handle,
+            from: comms_id,
+            is_speaking: is_speaking[i],
+            active_screen_share: active_screen_shares[i]
+          });
+
+        }catch (err) {
+          error(req.path,'DATABASE','database.get_handle_from_id',code,err);
+        }
+      }
+        
+      code = 200;
+      errorDescription = '';
+    } catch (err) {
+      error(req.path,'IO','io.get_user_id_room',code,err);
+    }
+  }
+
+  const membersResponse = new MembersResponse(type, members_data, errorDescription);
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(membersResponse.toJson()));
+  return res.status(code).json(membersResponse.toJson());
+
+});
+
+api.get(start_screen_share_path, isAuthenticated, async (req, res) => {
+
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const type = start_screen_share_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;   
+
+  const chat_id = req.query.chat_id;
+  let comms_id = null;
+  let screen_share_uuid = null; // uuid of the screen share
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+  if (validated) {
+    try {
+      const socket_id = io.get_socket_id(req.session.id);
+
+      if(socket_id != null) {
+        const recipient_list = await database.get_members_as_user_id(chat_id);
+        screen_share_uuid = io.start_screen_share(socket_id, chat_id,recipient_list); // start screen share
+
+        if(screen_share_uuid !== null) {
+          confirmation = true;
+          code = 200;
+          errorDescription = '';
+        }else{
+          code = 200;
+          errorDescription = 'User already started a screen share';
+        }
+      }else{
+        code = 200;
+        errorDescription = 'No opened socket.io found.';
+      }
+    } catch (err) {
+      error(req.path,'IO','io.start_screen_share',code,err);
+    }
+  }
+  const startScreenShareResponse = new StartScreenShareResponse(type, confirmation, screen_share_uuid, errorDescription);
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(startScreenShareResponse.toJson()));
+  res.status(code).json(startScreenShareResponse.toJson());
+});
+
+api.get(stop_screen_share_path, isAuthenticated, async (req, res) => {
+
+  const start = res.locals.start;
+  debug('',req.path,'REQUEST',req.session.user_id,'',JSON.stringify(req.query));
+  const type = stop_screen_share_response_type;
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = 'Generic error';
+  let validated = true;
+  const chat_id = req.query.chat_id;
+  let screen_share_uuid = req.query.screen_share_uuid;
+
+  if (!(validator.chat_id(chat_id))) {
+    code = 400;
+    errorDescription = 'Chat_id not valid';
+    validated = false;
+  }else if (!(await database.is_member(req.session.user_id,chat_id))){
+    code = 400;
+    errorDescription = 'No access to request chat';
+    validated = false;
+  }
+  if (!(validator.generic(screen_share_uuid))) {
+    code = 400;
+    errorDescription = 'Screen share id not valid';
+    validated = false;
+  }
+  if (validated) {
+    try {
+      const socket_id = io.get_socket_id(req.session.id);
+
+      if(socket_id != null) {
+        const recipient_list = await database.get_members_as_user_id(chat_id);
+        confirmation = io.stop_screen_share(socket_id, chat_id, screen_share_uuid,recipient_list); // stop screen share
+
+        if(confirmation) {
+          code = 200;
+          errorDescription = '';
+        }else{
+          code = 200;
+          errorDescription = 'User is not sharing the screen';
+        }
+      }else{
+        code = 200;
+        errorDescription = 'No opened socket.io found.';
+      }
+    } catch (err) {
+      error(req.path,'IO','io.stop_screen_share',code,err);
+    }
+  }
+  const stopScreenShareResponse = new StopScreenShareResponse(type, confirmation, screen_share_uuid, errorDescription);
+  debug(Date.now() - start,req.path,'RESPONSE',req.session.user_id,code,JSON.stringify(stopScreenShareResponse.toJson()));
+  res.status(code).json(stopScreenShareResponse.toJson());
+
+});
 
 
 // POST METHODS
@@ -1033,6 +1439,14 @@ postToGetWrapper(search_users_path);
 
 postToGetWrapper(join_group_path);
 
+postToGetWrapper(join_comms_path);
+postToGetWrapper(leave_comms_path);
+
+postToGetWrapper(start_screen_share_path);
+postToGetWrapper(stop_screen_share_path);
+
+postToGetWrapper(comms_members_path);
+
 // Middleware per gestire richieste a endpoints non esistenti
 api.all('*', (req, res) => {
     
@@ -1043,7 +1457,7 @@ api.all('*', (req, res) => {
 
   res.status(code).json(jsonResponse);
 
-  error(req.path,'REQUEST',`Endpoint not found: ${req.method} ${req.originalUrl}`,code,jsonResponse);
+  error(req.path,'RESPONSE',`Endpoint not found: ${req.method} ${req.originalUrl}`,code,JSON.stringify(jsonResponse));
 });
 
 module.exports = api;

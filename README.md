@@ -27,7 +27,7 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
      
 ## To-dos
 
-- [ ] Aggiungi dizionario per errori
+- [x] Aggiungi dizionario per errori
 - [x] Provare le checklist
 - [ ] Completare la nuova documentazione
 - [ ] Da aggiornare la vecchia descrizione subito qui sopra
@@ -38,6 +38,8 @@ Se vuoi usarla ti basta clonare la repo, cambiare il nome a example.env in .env,
 # Documentation
 
 ## Docker
+
+WARNING: Prometheus e Grafana sono in fase di testing e attualmente non è stato deciso nessun modo per garantire la sicurezza delle metriche, esattamente come la dashboard personalizzata e la documentazione dell'api. 
 
 _docker-compose.yml:_
 ```
@@ -62,16 +64,15 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile
-    container_name: ${SERVER_HOST}
     ports:
-      - 3000:${DASHBOARD_PORT}    # admin dashboard
-      - 8000:${API_PORT}          # api
-      - 8001:${IO_PORT}           # socket.io
+      - ${DASHBOARD_PORT}:${DASHBOARD_PORT}    # admin dashboard
+      - ${API_PORT}:${API_PORT}                # api
+      - ${IO_PORT}:${IO_PORT}                  # socket.io
     env_file:
       - .env
     volumes:
       - ./data/server/logs:${LOGS_FOLDER_PATH}
-      - ./data/server/security:${SECURITY_FOLDER_PATH} 
+      - ./data/server/security:${SECURITY_FOLDER_PATH}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -90,11 +91,43 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  prometheus:
+      ports:
+          - ${PROMETHEUS_PORT}:9090
+      volumes:
+          - ./metrics/prometheus/config.yml:/etc/prometheus/prometheus.yml
+      image: prom/prometheus:latest
+      healthcheck:
+        test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      restart: unless-stopped
+
+
+  grafana:
+      ports:
+          - ${GRAFANA_PORT}:3000
+      environment:
+          - GF_AUTH_DISABLE_LOGIN_FORM=true
+          - GF_AUTH_ANONYMOUS_ENABLED=true
+          - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      volumes:
+          - ./metrics/grafana/config.yml:/etc/grafana/provisioning/datasources/datasources.yml
+          - ./metrics/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+          - ./metrics/grafana/dashboards:/var/lib/grafana/dashboards
+      image: grafana/grafana:latest
+      depends_on:
+          prometheus:
+              condition: service_healthy
+      restart: unless-stopped
+
 ```
 
 ## Environmental
 
-Ogni campo con tag (# needed) è fondamentale per l'avvio e il funzionamento dell'applicazione. In caso contrario sarà richiesto nei log di inserire i valori e il server non partirà. Al contrario, se non è necessario allora verrà assegnato un valore di default in caso di sua assenza
+Ogni campo con tag (# needed) è fondamentale per l'avvio e il funzionamento dell'applicazione. In caso contrario sarà richiesto nei log di inserire i valori e il server non partirà. Al contrario, se non è necessario allora verrà assegnato un valore di default in caso di sua assenza (questo NON è valido nel caso in cui il valore venga utilizzato nel docker-compose.yml, in quel caso darà errore all'inizializzazione dei container, questo riguarda tutte le porte e i path alle folder nell'api)
 
 _.env:_
 ```
@@ -112,13 +145,16 @@ REDIS_PORT = 6379                              # | default=6379
 SERVER_IP=0.0.0.0                              # | default=0.0.0.0
 API_PORT=8000                                  # | default=8000
 IO_PORT=8001                                   # | default=8001
+PROMETHEUS_PORT=9090                           # | not used in nodejs
+GRAFANA_PORT=3001                              # | not used in nodejs
 DASHBOARD_PORT=3000                            # | default=3000
 LOGS_FOLDER_PATH=/logs                         # | default=/logs
 SECURITY_FOLDER_PATH=/security                 # | default=/security
 DEBUG_MODE=true                                # | default=false (or true in development mode)
-TIMEZONE=Europe/Rome                           # | default=Europe/ROme
+TIMEZONE=Europe/Rome                           # | default=Europe/Rome
 RATE_LIMITER_NUMBER=100                        # | default=100
 RATE_LIMITER_MILLISECONDS=10000                # | default=10000
+MAX_SESSION_PER_USER=10                        # | default=10
 ```
 
 NODE_ENV -> (if not on production will not use DOMAIN and will be only HTTP, es: 'developement')
@@ -331,7 +367,6 @@ Se il metodo ritorna risposta [200](#200) il tutto è andato a buon fine e sono 
 - [signup](#signup)
 - [login](#login)
 - [logout](#logout)
-- [session](#session)
 
 ##### access
 
@@ -403,6 +438,10 @@ Path : ```{URL}/v1/user/auth/login```
   - [email](#email)
   - [password](#password)
 
+- [Output](#Output):
+
+  - [token](#token)
+
 Example:
 ```
 Request: {URL}/v1/user/auth/login?email=test@gmail.com&password=Test1234!
@@ -410,14 +449,15 @@ Request: {URL}/v1/user/auth/login?email=test@gmail.com&password=Test1234!
 Response: 
 
 {
-  logged_in: true
+  logged_in: true,
+  token: "aNF9pCG8OWpiwXgCDKfh4gTyO7ZB7CsV"
 }
 
 ```
 
 ##### logout
 
-Delete active session
+Delete active session and disconnect current connected socket.
 
 Path : ```{URL}/v1/user/auth/logout```
 
@@ -435,7 +475,7 @@ Response:
 
 ```
 
-##### session
+##### session (DEPRECATED)
 
 Returns session id value
 
@@ -525,6 +565,15 @@ Path : ```{URL}/v1/user/data/get/init```
       - [text](#text)
       - [sender](#sender)
       - [date](#date)
+  - groups:
+    - [chat_id](#chat_id)
+    - [name](#name)
+    - [users](#users)
+    - messages:
+      - [message_id](#message_id)
+      - [text](#text)
+      - [sender](#sender)
+      - [date](#date)
 
   Where localUser contains user parameters, chats contains a list of chat and messages contains a list of message.
 
@@ -594,6 +643,26 @@ Response:
                 }
             ]
         }
+    ],
+    "groups": [
+      {
+        "name": "test_group",
+        "chat_id": "3000000000000000000",
+        "users": [
+          {
+            "user_id": "1000000000000000000",
+            "handle": "test"
+          }
+        ],
+        "messages": [
+          {
+            "message_id": "5000000000000000000",
+            "text": "Test message in group",
+            "sender": "1000000000000000000",
+            "date": "2025-04-10T07:23:20.999Z"
+          }
+        ]
+      }
     ]
 }
 
@@ -601,7 +670,119 @@ Response:
 
 ##### update
 
-metodo appena creato, scriverò la documentazione dopo aver effettuato il test del ssuo effettivo funzionamento
+Retrieve updates since a specified datetime.
+
+Path : `{URL}/v1/user/data/get/update`
+
+- [Input](#Input):
+
+  - [latest_update_datetime](#latest_update_datetime)
+
+- [Output](#Output):
+
+  - chats:
+    - [chat_id](#chat_id)
+    - messages:
+      - [message_id](#message_id)
+      - [text](#text)
+      - [sender](#sender)
+      - [date](#date)
+  - groups:
+    - [chat_id](#chat_id)
+    - [name](#name)
+    - [users](#users)
+    - messages:
+      - [message_id](#message_id)
+      - [text](#text)
+      - [sender](#sender)
+      - [date](#date)
+
+- [Authentication](#Authentication)
+
+Example:
+```
+Request: {URL}/v1/user/data/get/update?latest_update_datetime=2025-04-10T07:21:20.999Z
+
+Response: 
+
+{
+  "update": true,
+  "date": "2025-04-10T07:26:21.265Z",
+    "chats": [
+        {
+            "chat_id": "2000000000000000000",
+            "users": [
+                {
+                    "handle": "test"
+                },
+                {
+                    "handle": "test1"
+                }
+            ],
+            "messages": [
+                {
+                    "message_id": "5000000000000000000",
+                    "text": "Ciaooo come stai",
+                    "sender": "1000000000000000000",
+                    "date": "2025-04-10T07:25:21.265Z"
+                },
+                {
+                    "message_id": "5000000000000000001",
+                    "text": "Ciaooo come stai",
+                    "sender": "1000000000000000001",
+                    "date": "2025-04-10T07:25:21.265Z"
+                }
+            ]
+        },
+        {
+            "chat_id": "2000000000000000001",
+            "users": [
+                {
+                    "handle": "test"
+                },
+                {
+                    "handle": "test2"
+                }
+            ],
+            "messages": [
+                {
+                    "message_id": "5000000000000000000",
+                    "text": "Ehy son io",
+                    "sender": "1000000000000000000",
+                    "date": "2025-04-10T07:25:21.265Z"
+                },
+                {
+                    "message_id": "5000000000000000001",
+                    "text": "Ehy ciao io",
+                    "sender": "1000000000000000002",
+                    "date": "2025-04-10T07:25:21.265Z"
+                }
+            ]
+        }
+    ],
+  "groups": [
+    {
+      "name": "test_group",
+      "chat_id": "3000000000000000000",
+      "description": "",
+      "users": [
+        {
+          "user_id": "1000000000000000000",
+          "handle": "test"
+        }
+      ],
+      "messages": [
+        {
+          "message_id": "5000000000000000000",
+          "text": "Test message in group",
+          "sender": "1000000000000000000",
+          "date": "2025-04-10T07:23:20.999Z"
+        }
+      ]
+    }
+  ]
+}
+```
 
 #### search/
 
@@ -610,11 +791,62 @@ metodo appena creato, scriverò la documentazione dopo aver effettuato il test d
 
 ##### all
 
-...
+Path : `{URL}/v1/user/data/search/all`
+
+- [Input](#Input):
+
+  - [handle](#handle)
+
+- [Output](#Output):
+
+  - [handle](#handle)
+  - [type](#type)
+
+Example:
+```
+Request: {URL}/v1/user/data/search/all?handle=test
+
+Response: 
+
+[
+  {
+    "handle": "test",
+    "type": "user"
+  },
+  {
+    "handle": "test_group",
+    "type": "group"
+  }
+]
+```
 
 ##### users
 
-...
+Path : `{URL}/v1/user/data/search/users`
+
+- [Input](#Input):
+
+  - [handle](#handle)
+
+- [Output](#Output):
+
+  - [handle](#handle)
+
+Example:
+```
+Request: {URL}/v1/user/data/search/users?handle=test
+
+Response: 
+
+[
+  {
+    "handle": "test_user1"
+  },
+  {
+    "handle": "test_user2"
+  }
+]
+```
 
 ### chat/
 
@@ -629,7 +861,36 @@ metodo appena creato, scriverò la documentazione dopo aver effettuato il test d
 
 ##### message
 
-...
+Path : `{URL}/v1/chat/send/message`
+
+- [Input](#Input):
+
+  - [chat_id](#chat_id)
+  - [text](#text)
+
+- [Output](#Output):
+
+  - [chat_id](#chat_id)
+  - [message_id](#message_id)
+  - [sender](#sender)
+  - [text](#text)
+  - [date](#date)
+
+Example:
+```
+Request: {URL}/v1/chat/send/message?text=Test%20message%20in%20group&chat_id=3000000000000000000
+
+Response:   
+
+{
+  "message_sent": true,
+  "chat_id": "3000000000000000000",
+  "message_id": "5000000000000000000",
+  "sender": "1000000000000000000",
+  "text": "Test message in group",
+  "date": "2025-04-10T07:23:20.999Z"
+}
+```
 
 ##### voice-message
 
@@ -647,11 +908,52 @@ None
 
 ##### chat
 
-...
+Path : `{URL}/v1/chat/create/chat`
+
+- [Input](#Input):
+
+  - [handle](#handle)
+
+- [Output](#Output):
+
+  - [chat_id](#chat_id)
+
+Example:
+```
+Request: {URL}/v1/chat/create/chat?handle=test
+
+Response: 
+
+{
+  "chat_created": true,
+  "chat_id": "2000000000000000000"
+}
+```
 
 ##### group
 
-...
+Path : `{URL}/v1/chat/create/group`
+
+- [Input](#Input):
+
+  - [name](#name) 
+  - [handle](#handle)   # NOT required, only if you need a public group
+
+- [Output](#Output):
+
+  - [chat_id](#chat_id)
+
+Example:
+```
+Request: {URL}/v1/chat/create/group?name=test_group&handle=test_group
+
+Response: 
+
+{
+  "group_created": true,
+  "chat_id": "3000000000000000000"
+}
+```
 
 ##### channel
 
@@ -662,47 +964,266 @@ None
 
 ##### group
 
-...
+Path : `{URL}/v1/chat/join/group`
+
+Used to join a PUBLIC group and return ALL info about that specific group
+
+- [Input](#Input):
+
+  - [handle](#handle)
+
+- [Output](#Output):
+
+  - [chat_id](#chat_id)
+  - [name](#name)
+  - [members](#users)
+  - messages:
+    - [message_id](#message_id)
+    - [text](#text)
+    - [sender](#sender)
+    - [date](#date)
+
+Example:
+```
+Request: {URL}/v1/chat/join/group?handle=test_group
+
+Response: 
+
+{
+  "group_joined": true,
+  "group_name": "test_group",
+  "chat_id": "3000000000000000000",
+  "members": [
+    {
+      "user_id": "1000000000000000000",
+      "handle": "test"
+    },
+    {
+      "user_id": "1000000000000000001",
+      "handle": "test2"
+    }
+  ],
+  "messages": [
+    {
+      "message_id": "5000000000000000000",
+      "text": "Test message in group",
+      "sender": "1000000000000000000",
+      "date": "2025-04-10T07:23:20.999Z"
+    }
+  ]
+}
+```
 
 ##### channel
 
 None
 
-## Socket.io
+### comms/
 
-- [receive_message](#receive_message)
+  - [join](#join)
+  - [leave](#leave)
 
-### receive_message 
-DA CAMBIARE
+#### join
 
-Riceve messaggi mandati sia da altri utenti che da un'altra websocket attiva dello stesso utente
+Join a voice/video chat. A Socket needs to be open in order to use this method.
 
-#### Richiesta
+Path : `{URL}/v1/chat/join/comms`
 
-No
+- [Input](#Input):
 
-#### Risposta
+  - [chat_id](#chat_id)
 
-##### - 1. 
-
+Example:
 ```
+Request: {URL}/v1/chat/join/comms?chat_id=3000000000000000000
+
+Response: 
+
 {
-  "type": "receive_message",
-  "message_id": {message_id}
-  "chat_id":{chat_id},
-  "text":{text},
-  "sender":{sender},
-  "date": {date_time}
+  "comms_joined": true
 }
 ```
 
-I campi contrassegnati da {valore} saranno sostituiti secondo l'esempio:
+#### leave
 
-da fare perchè sincero no voglia (al massimo conviene fare tipo un dictionary alla fine con la spiegazione generale e rimandare a quello ogni volta che viene nominato uno di questi termini, cosa molto frequente)
+Leave a voice/video chat. A Socket needs to be open in order to use this method.
+
+Path : `{URL}/v1/chat/leave/comms`
+
+- [Output](#Output):
+
+  - [chat_id](#chat_id)
+
+Example:
+```
+Request: {URL}/v1/chat/leave/comms
+
+Response: 
+
+{
+  "comms_left": true,
+  "chat_id": 3000000000000000000
+}
+```
+
+## Socket.io
+
+### Authentication
+
+Socket.io requires authentication using a session ID. The session ID must be provided during the handshake process. If the session ID is invalid or missing, the connection will be rejected.
+
+Only ONE connection is allowed for every [session_id](#session_id).
+
+Example:
+```
+{
+  "auth": {
+    "sessionId": "aNF9pLg8OWpIwXgCDKfh4gtYO7ZB7CsV"
+  }
+}
+```
+
+Base events like connection and disconnect are excluded.
+
+  Events list:
+    Emitted:
+    - [receive_message](#receive_message)
+    - [group_created](#group_created)
+    - [group_member_joined](#group_member_joined)
+    - [member_joined_group](#member_joined_group)
+    - [member_left_comms](#member_left_comms)
+    - [candidate](#candidate)
+    Received:
+      - [candidate](#candidate)
+
+
+
+### receive_message
+
+Receives messages sent by other users or other active sockets of the same user.
+
+- **Output**:
+  ```json
+  {
+    "type": "receive_message",
+    "message_id": "5000000000000000000",
+    "chat_id": "3000000000000000000",
+    "text": "Hello!",
+    "sender": "1000000000000000000",
+    "date": "2025-04-10T07:23:20.999Z"
+  }
+  ```
+
+---
+
+### group_created
+
+Notifies all members of a group that a new group has been created.
+
+- **Output**:
+  ```json
+  {
+    "type": "group_created",
+    "chat_id": "3000000000000000000",
+    "name": "test_group",
+    "description": "Group description",
+    "members": ["1000000000000000000", "1000000000000000001"],
+    "admins": ["1000000000000000000"],
+    "date": "2025-04-10T07:23:20.999Z"
+  }
+  ```
+
+---
+
+### group_member_joined
+
+Notifies all members of a group that a new member has joined.
+
+- **Output**:
+  ```json
+  {
+    "type": "group_member_joined",
+    "chat_id": "3000000000000000000",
+    "new_member": {
+      "user_id": "1000000000000000002",
+      "handle": "new_user"
+    }
+  }
+  ```
+
+---
+
+### member_joined_group
+
+Notifies the new member that they have joined a group.
+
+- **Output**:
+  ```json
+  {
+    "type": "member_joined_group",
+    "chat_id": "3000000000000000000",
+    "name": "test_group",
+    "description": "Group description",
+    "members": ["1000000000000000000", "1000000000000000001"],
+    "admins": ["1000000000000000000"],
+    "date": "2025-04-10T07:23:20.999Z"
+  }
+  ```
+
+---
+
+### member_left_comms
+
+Notifies all members of a communication room that a member has left.
+
+- **Output**:
+  ```json
+  {
+    "type": "member_left_comms",
+    "chat_id": "3000000000000000000",
+    "user_id": "1000000000000000000"
+  }
+  ```
+
+---
+
+### candidate
+
+Used for WebRTC signaling to send ICE candidates.
+
+- **Input**:
+  ```json
+  {
+    "type": "candidate",
+    "to": "3000000000000000000",
+    "candidate": { "candidate": "candidate-data" }
+  }
+  ```
+
+- **Output**:
+  Sent to the specified room:
+  ```json
+  {
+    "type": "candidate",
+    "to": "3000000000000000000",
+    "candidate": { "candidate": "candidate-data" }
+  }
+  ```
 
 ## Dashboard
 
+Presente una dashboard sulla porta 3000 (DEFAULT) da cui è possibile vedere una vista generale delle socket aperte, del numero di file di log e delle sessioni redis attive.
+
 ### Screenshots
+
+#### Main
+![Main](docs/img/dashboard_main.png)
+#### Sockets
+![Sockets](docs/img/dashboard_sockets.png)
+#### Logs
+![Logs](docs/img/dashboard_logs.png)
+#### Sessions
+![Sessions](docs/img/dashboard_sessions.png)
 
 ## Dictionary
 
@@ -725,7 +1246,8 @@ Indica che il metodo ritornerà dei parametri in output nella risposta. È possi
 #### Variables
 
 - [access_type](#access_type)
-- [session_id](#session_id)
+- [session_id](#session_id) DEPRECATED
+- [token](#token)
 - [email](#email)
 - [password](#password)
 - [name](#name)
@@ -737,11 +1259,17 @@ Indica che il metodo ritornerà dei parametri in output nella risposta. È possi
 - [text](#text)
 - [sender](#sender)
 - [date](#date)
+- [users](#users)
+- [type](#type)
 
 ##### access_type
 Indicates whether an email is registered, returning either "signup" or "login"
 
-##### session_id
+##### session_id  
+DEPRECATED
+Unique identifier for a user's authenticated session
+
+##### token
 Unique identifier for a user's authenticated session
 
 ##### email
@@ -751,9 +1279,13 @@ User's email address used for account identification
 User's account password for authentication
 
 ##### name
+
 User's first name or given name
+OR
+Group's name
 
 ##### surname
+
 User's last name or family name
 
 ##### handle
@@ -782,6 +1314,21 @@ The [user_id](#user_id) of the person who sent the message, used to identify the
 ##### date
 
 The timestamp indicating when the message was sent, stored in ISO 8601 format (e.g., "2025-03-10T17:07:41.058Z").
+
+##### latest_update_datetime
+
+The timestamp of the last received message or action from init, update or socket.io
+
+##### users
+
+List of all members in a group or channel.
+
+##### type
+
+Type of chat:
+  1) user
+  2) group
+  3) channel (NO)
 
 ### Errors
 
