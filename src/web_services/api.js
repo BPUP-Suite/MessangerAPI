@@ -1263,7 +1263,7 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
 
   if (validated) {
     try {
-      const [members_ids,comms_ids,is_speaking,active_screen_shares] = await io.get_users_info_room(chat_id);
+      const [members_ids,comms_ids,is_speaking,webcam_on,active_screen_shares] = await io.get_users_info_room(chat_id);
       
       for (let i = 0; i < members_ids.length; i++) {
         try{
@@ -1274,6 +1274,7 @@ api.get(comms_members_path, isAuthenticated, async (req, res) => {
             handle: handle,
             from: comms_id,
             is_speaking: is_speaking[i],
+            webcam_on: webcam_on[i],
             active_screen_share: active_screen_shares[i]
           });
 

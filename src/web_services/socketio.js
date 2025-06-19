@@ -117,6 +117,7 @@ io.use(async (socket, next) => {
       comms_id: null,
       connected_at: new Date(),
       is_speaking: false,
+      webcam_on: false,
       active_screen_shares: [],
     });
 
@@ -170,32 +171,28 @@ io.on("connection", (socket) => {
     send_to_a_room(data.to, data, "not_speaking");
   });
 
-  socket.on("speaking", (data) => {
-    // Update speaking status
-    const socketData = activeSockets.get(socket.id);
-    if (socketData) {
-      socketData.is_speaking = true;
-      activeSockets.set(socket.id, socketData);
-    }
-    send_to_a_room(data.to, data, "speaking");
-  });
-
-  socket.on("not_speaking", (data) => {
-    // Update speaking status
-    const socketData = activeSockets.get(socket.id);
-    if (socketData) {
-      socketData.is_speaking = false;
-      activeSockets.set(socket.id, socketData);
-    }
-    send_to_a_room(data.to, data, "not_speaking");
-  });
-
   socket.on("mid_to_uuid_mapping", (data) => {
-    send_to_comms_id(
-      data.to,
-      data,
-      "mid_to_uuid_mapping"
-    );
+    send_to_comms_id(data.to, data, "mid_to_uuid_mapping");
+  });
+
+  socket.on("webcam_on", (data) => {
+    // Update speaking status
+    const socketData = activeSockets.get(socket.id);
+    if (socketData) {
+      socketData.webcam_on = true;
+      activeSockets.set(socket.id, socketData);
+    }
+    send_to_a_room(data.to, data, "webcam_on");
+  });
+
+  socket.on("webcam_off", (data) => {
+    // Update speaking status
+    const socketData = activeSockets.get(socket.id);
+    if (socketData) {
+      socketData.webcam_on = false;
+      activeSockets.set(socket.id, socketData);
+    }
+    send_to_a_room(data.to, data, "webcam_off");
   });
 
   // End of IO
@@ -389,6 +386,7 @@ function leave_comms(socket_id) {
       // Clear the active screen shares array
       socketData.active_screen_shares = [];
       socketData.is_speaking = false; // Reset speaking status
+      socketData.webcam_on = false; // Reset webcam status
       activeSockets.set(socket_id, socketData);
 
       debug(
@@ -532,6 +530,10 @@ async function get_users_info_room(chat_id) {
       const socketData = activeSockets.get(socket.id);
       return socketData ? socketData.is_speaking : false;
     });
+    const webcam_on = sockets.map((socket) => {
+      const socketData = activeSockets.get(socket.id);
+      return socketData ? socketData.webcam_on : false;
+    });
     const screen_shares = sockets.map((socket) => {
       const socketData = activeSockets.get(socket.id);
       return socketData ? socketData.active_screen_shares : [];
@@ -543,7 +545,7 @@ async function get_users_info_room(chat_id) {
       `Retrieved ${members_ids.length} user_ids, ${comms_ids.length} comms_ids, ${is_speaking.length} speaking states, and ${screen_shares.length} screen shares from room ${chat_id}`,
       JSON.stringify(members_ids)
     );
-    return [members_ids, comms_ids, is_speaking, screen_shares];
+    return [members_ids, comms_ids, is_speaking, webcam_on, screen_shares];
   } catch (err) {
     error(
       "getUserIdsInRoom",
