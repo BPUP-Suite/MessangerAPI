@@ -122,6 +122,16 @@ function readMaxSessionPerUser(){
     return readVariable("MAX_SESSION_PER_USER",false) || 10;
 }
 
+function readJWTSecret() {
+    const secret = readVariable
+        ("JWT_SECRET", true);
+    if (secret.length < 32) {
+        throw new Error("JWT_SECRET must be at least 32 characters long");
+    }
+    return secret;
+}
+
+
 
 module.exports = {
     readPostgresqlDb,
@@ -145,5 +155,6 @@ module.exports = {
     readDomain,
     readDashboardPort,
     readVersion,
-    readMaxSessionPerUser
+    readMaxSessionPerUser,
+    readJWTSecret,
 };

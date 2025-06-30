@@ -10,6 +10,7 @@
     "express-session": "^1.18.1",
     "fs": "^0.0.1-security",
     "http": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
     "luxon": "^3.5.0",
     "path": "^0.12.7",
     "pg": "^8.13.3",
