@@ -542,7 +542,7 @@ api.get(login_path, async (req, res) => {
         });
         return;
       } else {
-        code = 401;
+        code = 400;
         errorDescription = "Login failed";
       }
     } catch (err) {
