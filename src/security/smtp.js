@@ -1,3 +1,11 @@
+const {
+  api_log: log,
+  api_debug: debug,
+  api_warn: warn,
+  api_error: error,
+  api_info: info,
+} = require("../logger");
+
 function sendEmail(to, subject, text) {
   const nodemailer = require("nodemailer");
   const envManager = require("../security/envManager");
@@ -20,6 +28,15 @@ function sendEmail(to, subject, text) {
     subject: subject, // Subject line
     text: text, // plain text body
   };
+
+  debug(
+    "SMTP",
+    `Sending email to ${to} with subject "${subject}" and text "${text}"`,
+    "sendEmail",
+    "Email sending initiated",
+    null,
+    null,
+  );
 
   // Send mail with defined transport object
   return transporter.sendMail(mailOptions);
