@@ -113,7 +113,7 @@ function readDomain() {
 
 function readWebDomain() {
   if (isProduction()) {
-    return "www." + readDomain();
+    return "web." + readDomain();
   }
   return "localhost";
 }
