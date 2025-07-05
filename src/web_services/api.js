@@ -1394,7 +1394,7 @@ api.get(change_password_path, isAuthenticated, async (req, res) => {
 
 api.get(two_fa_path, async (req, res) => {
   const token = req.query.token;
-  const two_fa_method = req.query.two_fa_method;
+  const two_fa_method = req.query.method;
   const verification_code = req.query.code;
   const start = res.locals.start;
 
@@ -1413,7 +1413,7 @@ api.get(two_fa_path, async (req, res) => {
   let errorDescription = "Generic error";
   let validated = true;
 
-  if (!validator.generic(two_fa_method)) {
+  if (!validator.generic(   )) {
     code = 400;
     errorDescription = "Two-factor authentication method not valid";
     validated = false;
