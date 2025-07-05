@@ -1425,7 +1425,8 @@ api.get(two_fa_path, async (req, res) => {
       const secret = envManager.readJWTSecret(); // Your JWT secret
       const decoded = jwt.verify(token, secret);
 
-      if (decoded.type === "email_verification" === two_fa_method) {
+      if (decoded.type === "email_verification" && two_fa_method === "email_verification") {
+
         debug(
           req.path,
           "TWO_FA",
