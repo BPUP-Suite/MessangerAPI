@@ -16,6 +16,7 @@ const {
 
 const validator = require("../database/validator");
 const database = require("../database/database");
+const smtp = require("../security/smtp");
 
 const {
   Response,
@@ -28,6 +29,9 @@ const {
   SessionResponse,
   QRCodeResponse,
   CheckQRCodeResponse,
+  ForgotPasswordResponse,
+  ResetPasswordResponse,
+  ChangePasswordResponse,
   HandleResponse,
   SearchResponse,
   InitResponse,
@@ -83,6 +87,10 @@ const qr_code_path = auth_base + "qr_code/";
 const generate_qr_code_path = qr_code_path + "generate";
 const scan_qr_code_path = qr_code_path + "scan";
 const check_qr_code_path = qr_code_path + "check";
+
+const forgot_password_path = auth_base + "forgot-password";
+const reset_password_path = auth_base + "reset-password";
+const change_password_path = auth_base + "change-password";
 
 const data_base = user_base + "data/";
 
@@ -269,6 +277,22 @@ setInterval(() => {
 
 // END OF QR CODE LOGIN SESSIONS MAP
 
+// RESET PASSWORD TOKEN MAP
+
+// Reset password token map
+const resetPasswordTokens = new Map(); // token -> { email: null, expires_at: Date }
+// Cleanup expired tokens every 5 minutes
+setInterval(() => {
+  const now = new Date();
+  for (const [token, data] of resetPasswordTokens.entries()) {
+    if (data.expires_at < now) {
+      resetPasswordTokens.delete(token);
+      debug("RESET_PASSWORD_CLEANUP", "Expired token removed", token);
+    }
+  }
+}, 5 * 60 * 1000); // 5 minutes
+// END OF RESET PASSWORD TOKEN MAP
+
 api.use(metricsDurationMiddleware);
 api.use(apiCallMiddleware);
 
@@ -381,6 +405,8 @@ api.get(signup_path, async (req, res) => {
   const surname = req.query.surname;
   const handle = req.query.handle;
   const password = req.query.password;
+  const privacy_policy_accepted = req.query.privacy_policy_accepted;
+  const terms_of_service_accepted = req.query.terms_of_service_accepted;
 
   const sanitizedQuery = { ...req.query };
   if (sanitizedQuery.password) {
@@ -421,6 +447,14 @@ api.get(signup_path, async (req, res) => {
   } else if (!validator.password(password)) {
     code = 400;
     errorDescription = "Password not valid";
+    validated = false;
+  } else if (!privacy_policy_accepted) {
+    code = 400;
+    errorDescription = "Privacy policy not accepted";
+    validated = false;
+  } else if (!terms_of_service_accepted) {
+    code = 400;
+    errorDescription = "Terms of service not accepted";
     validated = false;
   }
 
@@ -680,14 +714,16 @@ api.get(generate_qr_code_path, async (req, res) => {
     const payload = {
       type: "qr_login",
       created_at: Date.now(),
-      exp: Math.floor(Date.now() / 1000) + 5 * 60, // 5 minutes
+      exp: Math.floor(Date.now() / 1000) + envManager.readQRCodeExpiringTime(), // 5 minutes
     };
 
     const secret = envManager.readJWTSecret(); // Your JWT secret
     qr_token = jwt.sign(payload, secret);
 
     // Store in Map with null session_id initially
-    const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const expires_at = new Date(
+      Date.now() + envManager.readQRCodeExpiringTime() * 1000
+    ); // 5 minutes
     qrLoginSessions.set(qr_token, {
       session_id: null,
       user_id: null,
@@ -914,6 +950,246 @@ api.get(check_qr_code_path, async (req, res) => {
   );
 
   return res.status(code).json(checkQRResponse.toJson());
+});
+
+api.get(forgot_password_path, async (req, res) => {
+  const email = req.query.email;
+  const start = res.locals.start;
+  debug("", req.path, "REQUEST", "", "", JSON.stringify(req.query));
+  const type = "forgot_password";
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = "Generic error";
+  let validated = true;
+
+  if (!validator.email(email)) {
+    code = 400;
+    errorDescription = "Email not valid";
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      const user_id = database.get_user_id_from_email(email);
+
+      if (user_id) {
+        //generate a JWT token with the email and an expiration time
+
+        const payload = {
+          user_id: user_id,
+          type: "forgot_password",
+          created_at: Date.now(),
+          exp:
+            Math.floor(Date.now() / 1000) +
+            envManager.readResetPasswordTokenExpiringTime(), // 1 hour
+        };
+        const secret = envManager.readJWTSecret(); // Your JWT secret
+        const token = jwt.sign(payload, secret);
+        // Store the token in the database or send it via email
+        confirmation = true;
+        code = 200;
+        errorDescription = "";
+
+        const expires_at = new Date(
+          Date.now() + envManager.readResetPasswordTokenExpiringTime() * 1000
+        );
+        resetPasswordTokens.set(token, {
+          user_id: user_id,
+          expires_at: new Date(Date.now() + expires_at),
+        });
+
+        // Send the token via email
+        const subject = "Reset your password";
+        const text = `To reset your password, please click on the following link: https://${envManager.readWebDomain()}/welcome/reset-password?token=${token}&email=${email}\n\nIf you did not request this, please ignore this email.`;
+        const html = `<p>To reset your password, please click on the following link:
+        <a href="https://${envManager.readWebDomain()}/welcome/reset-password?token=${token}&email=${email}">Reset Password</a></p>
+        <p>If you did not request this, please ignore this email.</p>`;
+        await smtp.sendEmail(email, subject, text, html);
+      } else {
+        code = 400;
+        errorDescription = "Email not valid";
+      }
+    } catch (err) {
+      error(req.path, "JWT", "jwt.sign", code, err);
+      errorDescription = "Error generating reset password token";
+    }
+  }
+
+  const forgotPasswordResponse = new ForgotPasswordResponse(
+    type,
+    confirmation,
+    errorDescription
+  );
+  debug(
+    Date.now() - start,
+    req.path,
+    "RESPONSE",
+    "",
+    code,
+    JSON.stringify(forgotPasswordResponse.toJson())
+  );
+  return res.status(code).json(forgotPasswordResponse.toJson());
+});
+
+api.get(reset_password_path, async (req, res) => {
+  const token = req.query.token;
+  const password = req.query.password;
+  const email = req.query.email;
+
+  const start = res.locals.start;
+  debug("", req.path, "REQUEST", "", "", JSON.stringify(req.query));
+  const type = "reset_password";
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = "Generic error";
+  let validated = true;
+
+  if (!validator.generic(token)) {
+    code = 400;
+    errorDescription = "Token not valid";
+    validated = false;
+  } else if (!validator.password(password)) {
+    code = 400;
+    errorDescription = "Password not valid";
+    validated = false;
+  } else if (!validator.email(email)) {
+    code = 400;
+    errorDescription = "Email not valid";
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      // Verify the JWT token
+      const secret = envManager.readJWTSecret(); // Your JWT secret
+      const decoded = jwt.verify(token, secret);
+      if (decoded.type === "forgot_password") {
+        // Check if the token exists in the Map
+        if (!resetPasswordTokens.has(token)) {
+          code = 400;
+          errorDescription = "Password reset failed.";
+        } else if (resetPasswordTokens.get(token).expires_at < new Date()) {
+          // If the token has expired
+          code = 401;
+          errorDescription = "Token expired.";
+        } else {
+          // If the token is valid and not expired, logic to handle the reset password
+          const user_id = resetPasswordTokens.get(token).user_id;
+
+          if (user_id === database.get_user_id_from_email(email)) {
+            code = 400;
+            errorDescription = "Password reset failed.";
+          } else {
+            // Update the password in the database
+            confirmation = await database.reset_password(user_id, password);
+            if (confirmation) {
+              code = 200;
+              errorDescription = "";
+              resetPasswordTokens.delete(token); // Remove token from Map after successful reset
+              destroyAllUserSessionsExcept(database.get, null); // invalidate all sessions of the user except the current one
+            } else {
+              code = 500;
+              errorDescription = "Password reset failed.";
+            }
+          }
+        }
+      } else {
+        code = 400;
+        errorDescription = "Password reset failed.";
+      }
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        code = 401;
+        errorDescription = "Token expired.";
+      } else if (err.name === "JsonWebTokenError") {
+        code = 400;
+        errorDescription = "Password reset failed.";
+      } else {
+        error(req.path, "JWT", "jwt.verify", code, err);
+      }
+    }
+  }
+
+  const resetPasswordResponse = new ResetPasswordResponse(
+    type,
+    confirmation,
+    errorDescription
+  );
+  debug(
+    Date.now() - start,
+    req.path,
+    "RESPONSE",
+    "",
+    code,
+    JSON.stringify(resetPasswordResponse.toJson())
+  );
+  return res.status(code).json(resetPasswordResponse.toJson());
+});
+
+api.get(change_password_path, isAuthenticated, async (req, res) => {
+  const user_id = req.session.user_id;
+  const old_password = req.query.old_password;
+  const new_password = req.query.new_password;
+  const start = res.locals.start;
+  debug(
+    "",
+    req.path,
+    "REQUEST",
+    req.session.user_id,
+    "",
+    JSON.stringify(req.query)
+  );
+  const type = "change_password";
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = "Generic error";
+  let validated = true;
+  if (!validator.generic(old_password)) {
+    code = 400;
+    errorDescription = "Old password not valid";
+    validated = false;
+  } else if (!validator.generic(new_password)) {
+    code = 400;
+    errorDescription = "New password not valid";
+    validated = false;
+  }
+  if (validated) {
+    try {
+      confirmation = await database.change_password(
+        user_id,
+        old_password,
+        new_password
+      );
+      if (confirmation) {
+        code = 200;
+        errorDescription = "";
+
+        // invalid every session of the user except the current one
+        destroyAllUserSessionsExcept(user_id, req.sessionID);
+      } else {
+        code = 400;
+        errorDescription = "Change password failed";
+      }
+    } catch (err) {
+      error(req.path, "DATABASE", "database.change_password", code, err);
+      errorDescription = "Database error";
+    }
+  }
+  const changePasswordResponse = new ChangePasswordResponse(
+    type,
+    confirmation,
+    errorDescription
+  );
+  debug(
+    Date.now() - start,
+    req.path,
+    "RESPONSE",
+    req.session.user_id,
+    code,
+    JSON.stringify(changePasswordResponse.toJson())
+  );
+
+  return res.status(code).json(changePasswordResponse.toJson());
 });
 
 // Path: .../data
@@ -2153,6 +2429,10 @@ postToGetWrapper(session_path);
 postToGetWrapper(generate_qr_code_path);
 postToGetWrapper(scan_qr_code_path);
 postToGetWrapper(check_qr_code_path);
+
+postToGetWrapper(forgot_password_path);
+postToGetWrapper(reset_password_path);
+postToGetWrapper(change_password_path);
 
 postToGetWrapper(handle_availability_path);
 

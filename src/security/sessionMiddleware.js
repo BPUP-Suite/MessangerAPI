@@ -211,6 +211,43 @@ function destroyReqSession(req) {
   });
 }
 
+/**
+ * Destroy all sessions for a given user_id except the specified session_id.
+ * If session_id is null, destroy all sessions for that user_id.
+ * @param {string} user_id
+ * @param {string|null} session_id
+ * @returns {Promise<number>} Number of sessions destroyed
+ */
+async function destroyAllUserSessionsExcept(user_id, session_id = null) {
+  if (!user_id) return 0;
+
+  const sessionKeysPattern = "sess:*";
+  const keys = await redis.keys(sessionKeysPattern);
+  let destroyedCount = 0;
+
+  for (const key of keys) {
+    const sessionData = await redis.get(key);
+    if (!sessionData) continue;
+
+    try {
+      const parsedData = JSON.parse(sessionData);
+      const keySessionId = key.split(':')[1];
+      if (
+        parsedData.user_id === user_id &&
+        (session_id === null || keySessionId !== session_id)
+      ) {
+        await destroySessionById(keySessionId);
+        destroyedCount++;
+        logger.debug(`[SESSION] Destroyed session ${keySessionId.substring(0, 8)}... for user ${user_id}`);
+      }
+    } catch (err) {
+      logger.error(`[SESSION] Error parsing session data: ${err.message}`);
+    }
+  }
+
+  return destroyedCount;
+}
+
 logger.log('[SESSION] Session middleware started');
 
 module.exports = {
@@ -219,4 +256,5 @@ module.exports = {
   verifySession,
   destroySession,
   enforceSessionLimit,
+  destroyAllUserSessionsExcept,
 };

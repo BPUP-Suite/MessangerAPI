@@ -1,18 +1,24 @@
 // Database connection and query functions
 // This module provides a simple way to connect to a PostgreSQL database and execute queries.
 
-const { Pool } = require('pg');
-const { SignupUser, LoginUser, Message} = require('./object');
+const { Pool } = require("pg");
+const { SignupUser, LoginUser, Message } = require("./object");
 
-const logger = require('../logger'); //DEPRECATED
-const { postgres_log:log, postgres_debug:debug, postgres_warn:warn, postgres_error:error, postgres_info:info } = require('../logger');
+const logger = require("../logger"); //DEPRECATED
+const {
+  postgres_log: log,
+  postgres_debug: debug,
+  postgres_warn: warn,
+  postgres_error: error,
+  postgres_info: info,
+} = require("../logger");
 
-const encrypter = require('../security/encrypter');
-const envManager = require('../security/envManager');
+const encrypter = require("../security/encrypter");
+const envManager = require("../security/envManager");
 
-log('STARTING','Postgresql database starting...',null);
+log("STARTING", "Postgresql database starting...", null);
 
-debug('ENV MANAGER','Getting PostgreSQL credentials...',null);
+debug("ENV MANAGER", "Getting PostgreSQL credentials...", null);
 
 const POSTGRES_USER = envManager.readPostgresqlUser();
 const POSTGRES_HOST = envManager.readPostgresqlHost();
@@ -20,49 +26,58 @@ const POSTGRES_DB = envManager.readPostgresqlDb();
 const POSTGRES_PASSWORD = envManager.readPostgresqlPassword();
 const POSTGRES_PORT = envManager.readPostgresqlPort();
 
-debug('ENV MANAGER','PostgreSQL credentials acquired',null);
+debug("ENV MANAGER", "PostgreSQL credentials acquired", null);
 
-debug('ENV MANAGER',`POSTGRES_USER: ${POSTGRES_USER}`,null);
-debug('ENV MANAGER',`POSTGRES_HOST: ${POSTGRES_HOST}`,null);
-debug('ENV MANAGER',`POSTGRES_DB: ${POSTGRES_DB}`,null);
-debug('ENV MANAGER',`POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}`,null);
-debug('ENV MANAGER',`POSTGRES_PORT: ${POSTGRES_PORT}`,null);
+debug("ENV MANAGER", `POSTGRES_USER: ${POSTGRES_USER}`, null);
+debug("ENV MANAGER", `POSTGRES_HOST: ${POSTGRES_HOST}`, null);
+debug("ENV MANAGER", `POSTGRES_DB: ${POSTGRES_DB}`, null);
+debug("ENV MANAGER", `POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}`, null);
+debug("ENV MANAGER", `POSTGRES_PORT: ${POSTGRES_PORT}`, null);
 
-debug('STARTING','Creating PostgreSQL pool...',null);
+debug("STARTING", "Creating PostgreSQL pool...", null);
 const pool = new Pool({
-  user: POSTGRES_USER,   
+  user: POSTGRES_USER,
   host: POSTGRES_HOST,
   database: POSTGRES_DB,
   password: POSTGRES_PASSWORD,
-  port: POSTGRES_PORT
-});    
-debug('STARTING','PostgreSQL pool created',null);
+  port: POSTGRES_PORT,
+});
+debug("STARTING", "PostgreSQL pool created", null);
 
 // Metrics
-const {dbQueryDuration } = require('../dashboard/metrics');
-
+const { dbQueryDuration } = require("../dashboard/metrics");
 
 async function query(text, params) {
-
   const end = dbQueryDuration.startTimer();
   const start = Date.now();
 
-  logger.debug(`[POSTGRES] Executing query: ${text} with parameters: ${JSON.stringify(params)}`);
+  logger.debug(
+    `[POSTGRES] Executing query: ${text} with parameters: ${JSON.stringify(
+      params
+    )}`
+  );
   const client = await pool.connect();
   try {
     const res = await client.query(text, params);
 
     const duration = Date.now() - start;
-    end({ query_type: text});
+    end({ query_type: text });
 
-    logger.debug(`[POSTGRES] |${duration}ms| Query executed: ${text} with parameters: ${JSON.stringify(params)}, result: ${JSON.stringify(res.rows).substring(0, 200) + "..."}`);
+    logger.debug(
+      `[POSTGRES] |${duration}ms| Query executed: ${text} with parameters: ${JSON.stringify(
+        params
+      )}, result: ${JSON.stringify(res.rows).substring(0, 200) + "..."}`
+    );
     return res.rows;
   } catch (error) {
-
     const duration = Date.now() - start;
-    end({ query_type: text});
+    end({ query_type: text });
 
-    logger.error(`[POSTGRES] |${duration}ms| Error executing query: ${text} with parameters: ${JSON.stringify(params)}. Error: ${error}`);
+    logger.error(
+      `[POSTGRES] |${duration}ms| Error executing query: ${text} with parameters: ${JSON.stringify(
+        params
+      )}. Error: ${error}`
+    );
     throw error;
   } finally {
     client.release();
@@ -70,42 +85,44 @@ async function query(text, params) {
 }
 
 async function testConnection() {
-    try {
-      const result = await query('SELECT 1', []);
-      if (result && result.length > 0) {
-        logger.log('[POSTGRES] Postgresql database connection is healthy.');
-        return true;
-      } else {
-        logger.error('[POSTGRES] Postgresql database connection test failed: no result.');
-        return false;
-      }
-    } catch (error) {
-      logger.error('[POSTGRES] Postgresql database connection test failed: ' + error);
+  try {
+    const result = await query("SELECT 1", []);
+    if (result && result.length > 0) {
+      logger.log("[POSTGRES] Postgresql database connection is healthy.");
+      return true;
+    } else {
+      logger.error(
+        "[POSTGRES] Postgresql database connection test failed: no result."
+      );
       return false;
     }
+  } catch (error) {
+    logger.error(
+      "[POSTGRES] Postgresql database connection test failed: " + error
+    );
+    return false;
   }
+}
 
 // API Methods
 
 // No Authentication needed
 
 async function check_email_existence(email) {
+  const QUERY = "SELECT email FROM public.users WHERE email = $1";
 
-    const QUERY = "SELECT email FROM public.users WHERE email = $1";
-    
-    let confirmation = true;
+  let confirmation = true;
 
-    try{
-      const result = await query(QUERY, [email]);
-      if (result.length === 0) {
-          confirmation = false;
-      }
-    }catch(err){
-      logger.error("[POSTGRES] database.check_email_existence: " + err);
+  try {
+    const result = await query(QUERY, [email]);
+    if (result.length === 0) {
+      confirmation = false;
     }
+  } catch (err) {
+    logger.error("[POSTGRES] database.check_email_existence: " + err);
+  }
 
-
-    return confirmation;
+  return confirmation;
 }
 
 async function check_handle_availability(handle) {
@@ -113,13 +130,12 @@ async function check_handle_availability(handle) {
 
   let confirmation = true;
 
-  try{
+  try {
     const result = await query(QUERY, [handle]);
     if (result.length > 0) {
-        confirmation = false;
+      confirmation = false;
     }
-  }
-  catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.check_handle_availability: " + err);
     confirmation = null;
   }
@@ -128,58 +144,65 @@ async function check_handle_availability(handle) {
 }
 
 async function add_user_to_db(signupUser) {
-    
-    let confirmation = false
-    const password = encrypter.generatePasswordHash(signupUser.password)
+  let confirmation = false;
+  const password = encrypter.generatePasswordHash(signupUser.password);
 
-    const QUERY = `WITH new_user AS (INSERT INTO public.users(email, name, surname, password) VALUES($1, $2, $3, $4) RETURNING user_id) INSERT INTO public.handles(user_id, handle) VALUES((SELECT user_id FROM new_user), $5);`
-    debug('','' + QUERY)
-    try {
-      await query(QUERY, [signupUser.email, signupUser.name, signupUser.surname, password, signupUser.handle]);
-      confirmation = true
-    } catch (err) {
-      logger.error("[POSTGRES] database.add_user_to_db: " + err)
-      confirmation = false
-    }
-    return confirmation
+  const QUERY = `WITH new_user AS (INSERT INTO public.users(email, name, surname, password, privacy_policy_accepted, terms_of_service_accepted) VALUES($1, $2, $3, $4, $5, $6) RETURNING user_id) INSERT INTO public.handles(user_id, handle) VALUES((SELECT user_id FROM new_user), $5);`;
+  debug("", "" + QUERY);
+  try {
+    await query(QUERY, [
+      signupUser.email,
+      signupUser.name,
+      signupUser.surname,
+      password,
+      signupUser.handle,
+      true,
+      true,
+    ]);
+    confirmation = true;
+  } catch (err) {
+    logger.error("[POSTGRES] database.add_user_to_db: " + err);
+    confirmation = false;
+  }
+  return confirmation;
 }
 
 async function login(loginUser) {
+  const QUERY = "SELECT user_id, password FROM public.users WHERE email = $1";
+  let user_id = null;
 
-    const QUERY = "SELECT user_id, password FROM public.users WHERE email = $1";
-    let user_id = null;
+  try {
+    const result = await query(QUERY, [loginUser.email]);
+    password = result[0].password;
 
-    try{
-      const result = await query(QUERY, [loginUser.email]);
-      password = result[0].password;
-  
-      if(encrypter.checkPasswordHash(loginUser.password, password)){
-        user_id = result[0].user_id;
-      }
-    }catch(err){
-      logger.error("[POSTGRES] database.login: " + err);
+    if (encrypter.checkPasswordHash(loginUser.password, password)) {
+      user_id = result[0].user_id;
     }
+  } catch (err) {
+    logger.error("[POSTGRES] database.login: " + err);
+  }
 
-    return user_id;
+  return user_id;
 }
 
 // Authentication needed
 
 // needs this to work: CREATE EXTENSION IF NOT EXISTS pg_trgm;
-async function search(handle){
-  const QUERY = "SELECT handle, user_id, group_id, channel_id FROM handles WHERE handle ILIKE '%' || $1 || '%' ORDER BY similarity(handle, $1) DESC LIMIT 10;";
+async function search(handle) {
+  const QUERY =
+    "SELECT handle, user_id, group_id, channel_id FROM handles WHERE handle ILIKE '%' || $1 || '%' ORDER BY similarity(handle, $1) DESC LIMIT 10;";
 
   let results = [];
 
-  try{
+  try {
     const result = await query(QUERY, [handle]);
-    // transfrom result in a handle list 
+    // transfrom result in a handle list
     // TBD: get images of users (or another method that passes images on request by socket managed by client)
 
     // Transform results to include handle type
-    results = result.map(row => {
+    results = result.map((row) => {
       let type = null;
-      
+
       if (row.user_id !== null && row.user_id !== undefined) {
         type = "user";
       } else if (row.group_id !== null && row.group_id !== undefined) {
@@ -187,32 +210,31 @@ async function search(handle){
       } else if (row.channel_id !== null && row.channel_id !== undefined) {
         type = "channel";
       }
-      
+
       return {
         handle: row.handle,
-        type: type
+        type: type,
       };
     });
-
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.search: " + err);
   }
 
   return results;
 }
-async function search_users(handle){
-  const QUERY = "SELECT handle FROM handles WHERE handle ILIKE '%' || $1 || '%' AND user_id IS NOT NULL ORDER BY similarity(handle, $1) DESC LIMIT 10;";
+async function search_users(handle) {
+  const QUERY =
+    "SELECT handle FROM handles WHERE handle ILIKE '%' || $1 || '%' AND user_id IS NOT NULL ORDER BY similarity(handle, $1) DESC LIMIT 10;";
 
   let list = [];
 
-  try{
+  try {
     const result = await query(QUERY, [handle]);
-    // transfrom result in a handle list 
+    // transfrom result in a handle list
     // TBD: get images of users (or another method that passes images on request by socket managed by client)
 
-    list = result.map(row => row.handle); 
-
-  }catch(err){
+    list = result.map((row) => row.handle);
+  } catch (err) {
     logger.error("[POSTGRES] database.search_users: " + err);
   }
 
@@ -220,30 +242,31 @@ async function search_users(handle){
 }
 
 async function get_members_as_handle(chat_id) {
+  let members = [];
 
-    let members = [];
+  const members_id = get_members_as_user_id(chat_id);
+  if (
+    members_id === null ||
+    members_id === undefined ||
+    members_id.length === 0
+  ) {
+    logger.debug("[POSTGRES] No members found for chat: " + chat_id);
+    return null;
+  }
+  // Get the handles of the members
 
-    const members_id = get_members_as_user_id(chat_id);
-    if(members_id === null || members_id === undefined || members_id.length === 0){
-      logger.debug("[POSTGRES] No members found for chat: " + chat_id);
-      return null;
-    }
-    // Get the handles of the members
-
-    for(let i = 0; i < members_id.length; i++){
-      members.push(await get_handle_from_id(members_id[i]));
-    }
+  for (let i = 0; i < members_id.length; i++) {
+    members.push(await get_handle_from_id(members_id[i]));
+  }
 
   return members;
-
 }
 
 async function get_members_as_user_id(chat_id) {
-
   let QUERY = "";
   let personal = false;
 
-  switch(get_chat_type(chat_id)){
+  switch (get_chat_type(chat_id)) {
     case "personal":
       QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1";
       personal = true;
@@ -260,95 +283,96 @@ async function get_members_as_user_id(chat_id) {
 
   let members_id = [];
 
-  try{
+  try {
     const result = await query(QUERY, [chat_id]);
 
-    if(personal){
+    if (personal) {
       members_id = [result[0].user1, result[0].user2];
       logger.debug("[POSTGRES] Members found for personal chat: " + members_id);
-    }else{
+    } else {
       members_id = result[0].members;
     }
-  }catch(error){
+  } catch (error) {
     logger.error("[POSTGRES] database.get_members_as_handle: " + error);
   }
 
   return members_id;
+}
 
-  }
-  
 // IO Methods
 
 async function client_init(user_id) {
-
   const handle = await get_handle_from_id(user_id);
 
   // Get user info
 
-  const QUERY_INFO = "SELECT name, surname, email FROM public.users WHERE user_id = $1";
+  const QUERY_INFO =
+    "SELECT name, surname, email FROM public.users WHERE user_id = $1";
   let user_info = null;
 
-  try{
+  try {
     const result = await query(QUERY_INFO, [user_id]);
     user_info = result[0];
-  }
-  catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.client_init: " + err);
   }
 
   // if no data are found, return the empty json
-  if(user_info === null || user_info === undefined |  user_info.length === 0){
+  if (
+    user_info === null ||
+    (user_info === undefined) | (user_info.length === 0)
+  ) {
     return null;
   }
 
   const email = user_info.email;
-  const name  = user_info.name;
+  const name = user_info.name;
   const surname = user_info.surname;
 
   let json = {
-    "localUser": {
-      "handle": handle,
-      "email": email,
-      "name": name,
-      "surname": surname,
-      "user_id": user_id
-    }
+    localUser: {
+      handle: handle,
+      email: email,
+      name: name,
+      surname: surname,
+      user_id: user_id,
+    },
   };
 
   // Get user chats
   const chats = await get_chats(user_id);
 
-  if(chats === null || chats === undefined || chats.length === 0){
+  if (chats === null || chats === undefined || chats.length === 0) {
     logger.debug("[POSTGRES] No chats found for user: " + user_id);
-  }else{
+  } else {
     json["chats"] = chats;
 
     // Get user chat messages
 
     let messages = null;
 
-    for(let i = 0; i < chats.length; i++){
+    for (let i = 0; i < chats.length; i++) {
       messages = await get_chat_messages(chats[i].chat_id);
-      if(messages != null && messages != undefined &&  messages.length != 0){
+      if (messages != null && messages != undefined && messages.length != 0) {
         json["chats"][i]["messages"] = messages;
       }
     }
   }
-  
-  // Get groups 
+
+  // Get groups
   const groups = await get_groups(user_id);
-  if(groups === null || groups === undefined || groups.length === 0){
+  if (groups === null || groups === undefined || groups.length === 0) {
     logger.debug("[POSTGRES] No groups found for user: " + user_id);
-  }else{
+  } else {
     json["groups"] = groups;
 
     // Get group messages
 
     let messages = null;
 
-    for(let i = 0; i < groups.length; i++){
+    for (let i = 0; i < groups.length; i++) {
       messages = await get_chat_messages(groups[i].chat_id);
-      if(messages != null && messages != undefined &&  messages.length != 0){
+      if (messages != null && messages != undefined && messages.length != 0) {
         json["groups"][i]["messages"] = messages;
       }
     }
@@ -358,149 +382,157 @@ async function client_init(user_id) {
 
   //TDB: get channels from the database
 
-
   return json;
 }
 
-async function get_chat_messages(chat_id){
-  const QUERY = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1";
+async function get_chat_messages(chat_id) {
+  const QUERY =
+    "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1";
   let messages = null;
 
-  try{
+  try {
     const result = await query(QUERY, [chat_id]);
     messages = result;
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.get_chat_messages: " + err);
   }
 
   return messages;
 }
 
-async function get_chats(user_id){
-  const QUERY_CHATS = "SELECT chat_id,user1,user2 FROM public.chats WHERE user1 = $1 OR user2 = $1";
+async function get_chats(user_id) {
+  const QUERY_CHATS =
+    "SELECT chat_id,user1,user2 FROM public.chats WHERE user1 = $1 OR user2 = $1";
   let chats = null;
 
-  try{
+  try {
     const result = await query(QUERY_CHATS, [user_id]);
     chats = result;
-  }
-  catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.get_chats: " + err);
   }
 
   // if no data are found, return only the info json
-  if(chats === null || chats === undefined |  chats.length === 0){
+  if (chats === null || (chats === undefined) | (chats.length === 0)) {
     logger.debug("[POSTGRES] No chats found for user: " + user_id);
     return null;
   }
 
-  // Remap of the chats array to a json object using a list for users 
-  const chatPromises = chats.map(async chat => {
+  // Remap of the chats array to a json object using a list for users
+  const chatPromises = chats.map(async (chat) => {
     return {
       chat_id: chat.chat_id,
       users: [
         {
-          "handle": await get_handle_from_id(chat.user1)
+          handle: await get_handle_from_id(chat.user1),
         },
         {
-          "handle": await get_handle_from_id(chat.user2)
-        }
-      ]
+          handle: await get_handle_from_id(chat.user2),
+        },
+      ],
     };
   });
 
   return await Promise.all(chatPromises);
 }
 
-async function get_groups(user_id){
-
-  const QUERY_GROUPS = "SELECT name,chat_id,members FROM public.groups WHERE members @> ARRAY[$1]::bigint[]";
+async function get_groups(user_id) {
+  const QUERY_GROUPS =
+    "SELECT name,chat_id,members FROM public.groups WHERE members @> ARRAY[$1]::bigint[]";
   let groups = null;
-  try{
+  try {
     const result = await query(QUERY_GROUPS, [user_id]);
     groups = result;
-  }
-  catch(error){
+  } catch (error) {
     logger.error("[POSTGRES] database.get_groups: " + error);
   }
 
   // if no data are found, return only the info json
-  if(groups === null || groups === undefined |  groups.length === 0){
+  if (groups === null || (groups === undefined) | (groups.length === 0)) {
     logger.debug("[POSTGRES] No groups found for user: " + user_id);
     return null;
   }
   // Remap of the groups array to a json object using a list for users
 
-  const groupPromises = groups.map(async group => {
+  const groupPromises = groups.map(async (group) => {
     // Map all members to their user_id and handle
-    const usersPromises = group.members.map(async memberId => {
+    const usersPromises = group.members.map(async (memberId) => {
       return {
-        "user_id": memberId,
-        "handle": await get_handle_from_id(memberId)
+        user_id: memberId,
+        handle: await get_handle_from_id(memberId),
       };
     });
-    
+
     return {
       name: group.name,
       chat_id: group.chat_id,
-      users: await Promise.all(usersPromises)
+      users: await Promise.all(usersPromises),
     };
   });
 
   return await Promise.all(groupPromises);
-
 }
 
 // sicuramente da ottimizzare insieme al client_init
 async function client_update(datetime, user_id) {
-
   const date = new Date();
-  let json = {date: date};
+  let json = { date: date };
 
   // Find chats with new messages since the provided datetime
   const QUERY_CHATS_WITH_NEW_MESSAGES = `SELECT c.chat_id, c.user1, c.user2 FROM public.chats c WHERE (c.user1 = $1 OR c.user2 = $1) AND EXISTS (SELECT 1 FROM public.messages m WHERE m.chat_id = c.chat_id AND m.date > $2)`;
-  
+
   let chatsWithNewMessages = null;
 
   try {
-    const result = await query(QUERY_CHATS_WITH_NEW_MESSAGES, [user_id, datetime]);
+    const result = await query(QUERY_CHATS_WITH_NEW_MESSAGES, [
+      user_id,
+      datetime,
+    ]);
     chatsWithNewMessages = result;
-  } catch(error) {
+  } catch (error) {
     logger.error("[POSTGRES] database.client_update finding chats: " + error);
     return null;
   }
 
   // If no chats with new messages, return just null
-  if(!chatsWithNewMessages || chatsWithNewMessages.length === 0) {
-    logger.debug("[POSTGRES] No updated chats found for user since: " + datetime);
+  if (!chatsWithNewMessages || chatsWithNewMessages.length === 0) {
+    logger.debug(
+      "[POSTGRES] No updated chats found for user since: " + datetime
+    );
   } else {
     // Format chats with new messages
-    const chatPromises = chatsWithNewMessages.map(async chat => {
+    const chatPromises = chatsWithNewMessages.map(async (chat) => {
       return {
         chat_id: chat.chat_id,
         users: [
           {
-            "handle": await get_handle_from_id(chat.user1)
+            handle: await get_handle_from_id(chat.user1),
           },
           {
-            "handle": await get_handle_from_id(chat.user2)
-          }
-        ]
+            handle: await get_handle_from_id(chat.user2),
+          },
+        ],
       };
     });
 
     json["chats"] = await Promise.all(chatPromises);
 
     // Get new messages for each chat
-    for(let i = 0; i < chatsWithNewMessages.length; i++) {
-      const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
+    for (let i = 0; i < chatsWithNewMessages.length; i++) {
+      const QUERY_MESSAGES =
+        "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
       try {
-        const result = await query(QUERY_MESSAGES, [chatsWithNewMessages[i].chat_id, datetime]);
-        if(result && result.length > 0) {
+        const result = await query(QUERY_MESSAGES, [
+          chatsWithNewMessages[i].chat_id,
+          datetime,
+        ]);
+        if (result && result.length > 0) {
           json["chats"][i]["messages"] = result;
         }
-      } catch(err) {
-        logger.error("[POSTGRES] database.client_update getting messages: " + err);
+      } catch (err) {
+        logger.error(
+          "[POSTGRES] database.client_update getting messages: " + err
+        );
       }
     }
   }
@@ -513,51 +545,61 @@ async function client_update(datetime, user_id) {
     (g.date_created > $2 OR g.last_modification > $2 OR EXISTS 
       (SELECT 1 FROM public.messages m WHERE m.chat_id = g.chat_id AND m.date > $2))
   `;
-  
+
   let updatedGroups = null;
 
   try {
     const result = await query(QUERY_UPDATED_GROUPS, [user_id, datetime]);
     updatedGroups = result;
-  } catch(error) {
-    logger.error("[POSTGRES] database.client_update finding updated groups: " + error);
+  } catch (error) {
+    logger.error(
+      "[POSTGRES] database.client_update finding updated groups: " + error
+    );
     return json; // Return what we have so far
   }
 
   // If no updated groups, just continue
-  if(!updatedGroups || updatedGroups.length === 0) {
-    logger.debug("[POSTGRES] No updated groups found for user since: " + datetime);
+  if (!updatedGroups || updatedGroups.length === 0) {
+    logger.debug(
+      "[POSTGRES] No updated groups found for user since: " + datetime
+    );
   } else {
     // Format updated groups
-    const groupPromises = updatedGroups.map(async group => {
+    const groupPromises = updatedGroups.map(async (group) => {
       // Map all members to their user_id and handle
-      const usersPromises = group.members.map(async memberId => {
+      const usersPromises = group.members.map(async (memberId) => {
         return {
-          "user_id": memberId,
-          "handle": await get_handle_from_id(memberId)
+          user_id: memberId,
+          handle: await get_handle_from_id(memberId),
         };
       });
-      
+
       return {
         name: group.name,
         chat_id: group.chat_id,
         description: group.description,
-        users: await Promise.all(usersPromises)
+        users: await Promise.all(usersPromises),
       };
     });
 
     json["groups"] = await Promise.all(groupPromises);
 
     // Get new messages for each group (only if there are new messages)
-    for(let i = 0; i < updatedGroups.length; i++) {
-      const QUERY_MESSAGES = "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
+    for (let i = 0; i < updatedGroups.length; i++) {
+      const QUERY_MESSAGES =
+        "SELECT message_id, text, sender, date FROM public.messages WHERE chat_id = $1 AND date > $2";
       try {
-        const result = await query(QUERY_MESSAGES, [updatedGroups[i].chat_id, datetime]);
-        if(result && result.length > 0) {
+        const result = await query(QUERY_MESSAGES, [
+          updatedGroups[i].chat_id,
+          datetime,
+        ]);
+        if (result && result.length > 0) {
           json["groups"][i]["messages"] = result;
         }
-      } catch(err) {
-        logger.error("[POSTGRES] database.client_update getting group messages: " + err);
+      } catch (err) {
+        logger.error(
+          "[POSTGRES] database.client_update getting group messages: " + err
+        );
       }
     }
   }
@@ -568,36 +610,34 @@ async function client_update(datetime, user_id) {
   return json;
 }
 
-async function send_message(message){
-
-  const chat_id= message.chat_id;
+async function send_message(message) {
+  const chat_id = message.chat_id;
   const sender = message.sender;
   const text = message.text;
   const date = new Date();
 
-  let QUERY = 'INSERT INTO public.messages (chat_id, text, sender, date) VALUES ($1, $2, $3, $4) RETURNING message_id';;
+  let QUERY =
+    "INSERT INTO public.messages (chat_id, text, sender, date) VALUES ($1, $2, $3, $4) RETURNING message_id";
   let recipient_list = [];
 
-  switch(get_chat_type(chat_id)){
+  switch (get_chat_type(chat_id)) {
     case "personal":
-
       recipient_list.push(sender);
 
       const recipient = await get_recipient(chat_id, sender);
 
-      if(recipient === null){
+      if (recipient === null) {
         return { message_data: null, recipient_list: null };
       }
 
       recipient_list.push(recipient);
       break;
 
-    case "group": 
-
+    case "group":
       // sender is already inside the list of members
       recipient_list = await get_members_as_user_id(chat_id);
       break;
-      
+
     case "channel": // not implemented yet
       return { message_data: null, recipient_list: null };
     default:
@@ -606,27 +646,30 @@ async function send_message(message){
 
   let message_id = null;
 
-  try{
+  try {
     const result = await query(QUERY, [chat_id, text, sender, date]);
     message_id = result[0].message_id;
-
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.send_message: " + err);
     return { message_data: null, recipient_list: null };
   }
 
-  if(message_id != null && message_id != undefined && message_id != ''){
-
-    logger.debug("[POSTGRES] Creating response message... message_id: "+ message_id + " chat_id: "+chat_id );
-    const message_data = { 
+  if (message_id != null && message_id != undefined && message_id != "") {
+    logger.debug(
+      "[POSTGRES] Creating response message... message_id: " +
+        message_id +
+        " chat_id: " +
+        chat_id
+    );
+    const message_data = {
       chat_id: chat_id,
       message_id: message_id,
       sender: sender,
       text: text,
-      date: date
+      date: date,
     };
 
-    return { message_data, recipient_list};
+    return { message_data, recipient_list };
   }
 
   return { message_data: null, recipient_list: null };
@@ -635,81 +678,89 @@ async function send_message(message){
 // Create new chat
 
 async function create_chat(chat) {
-  
   const user1 = chat.user1;
   const user2 = chat.user2;
 
-  const QUERY = "INSERT INTO public.chats(user1, user2) VALUES ($1, $2) RETURNING chat_id";
+  const QUERY =
+    "INSERT INTO public.chats(user1, user2) VALUES ($1, $2) RETURNING chat_id";
   let chat_id = null;
 
-  try{
+  try {
     const result = await query(QUERY, [user1, user2]);
     chat_id = result[0].chat_id;
-  }
-  catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.create_chat: " + err);
   }
 
   return chat_id;
-
 }
 
 // Create new group
 
 async function create_group(group) {
-  
   const name = group.name;
   const description = group.description;
   const members = group.members;
   const admins = group.admins;
   const date = new Date();
 
-  const QUERY = "INSERT INTO public.groups(name, description, members, admins, date_created, last_modification) VALUES ($1, $2, $3, $4, $5, $5) RETURNING chat_id";
+  const QUERY =
+    "INSERT INTO public.groups(name, description, members, admins, date_created, last_modification) VALUES ($1, $2, $3, $4, $5, $5) RETURNING chat_id";
   let chat_id = null;
 
-  try{  
+  try {
     // Insert the group into the database
-    const result = await query(QUERY, [name, description, members, admins, date]);
+    const result = await query(QUERY, [
+      name,
+      description,
+      members,
+      admins,
+      date,
+    ]);
     chat_id = result[0].chat_id;
     logger.debug("[POSTGRES] Group created with ID: " + chat_id);
 
-    const HANDLE_QUERY = "INSERT INTO public.handles(group_id, handle) VALUES ($1, $2)";
+    const HANDLE_QUERY =
+      "INSERT INTO public.handles(group_id, handle) VALUES ($1, $2)";
     const handle = group.handle;
 
-    if(handle != null && handle != undefined && handle != ""  && handle != "undefined" && handle != "null"){ // if handle is null (or similar) do not insert it into the database because group is private
-        // Insert the group handle into the database
-        await query(HANDLE_QUERY, [chat_id, handle]);
-        logger.debug("[POSTGRES] Group handle inserted: " + handle);
+    if (
+      handle != null &&
+      handle != undefined &&
+      handle != "" &&
+      handle != "undefined" &&
+      handle != "null"
+    ) {
+      // if handle is null (or similar) do not insert it into the database because group is private
+      // Insert the group handle into the database
+      await query(HANDLE_QUERY, [chat_id, handle]);
+      logger.debug("[POSTGRES] Group handle inserted: " + handle);
     }
-
-  }
-  catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.create_group: " + err);
   }
 
   return { chat_id: chat_id, date: date };
-
 }
 
 // Insert the new members into the group
 
 async function add_members_to_group(chat_id, members) {
-
   const date = new Date();
 
-  const QUERY = "UPDATE public.groups SET members = array_append(members, $1), last_modification = $3 WHERE chat_id = $2";
+  const QUERY =
+    "UPDATE public.groups SET members = array_append(members, $1), last_modification = $3 WHERE chat_id = $2";
   let confirmation = false;
 
-  try{
+  try {
     await query(QUERY, [members, chat_id, date]);
     confirmation = true;
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.add_members_to_group: " + err);
   }
 
   return { confirmation: confirmation, date: date };
 }
-
 
 // Utilities
 
@@ -717,141 +768,134 @@ async function get_user_id_from_handle(handle) {
   const QUERY = "SELECT user_id FROM public.handles WHERE handle = $1";
   let user_id = null;
 
-  try{
+  try {
     const result = await query(QUERY, [handle]);
     user_id = result[0].user_id;
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.get_user_id_from_handle: " + err);
   }
-  
+
   return user_id;
 }
 
 async function get_chat_id_from_handle(handle) {
-
-  const QUERY = "SELECT group_id,channel_id FROM public.handles WHERE handle = $1";
+  const QUERY =
+    "SELECT group_id,channel_id FROM public.handles WHERE handle = $1";
   let chat_id = null;
 
-  try{
+  try {
     const result = await query(QUERY, [handle]);
     chat_id = result[0].group_id;
 
-    if(chat_id === null || chat_id === undefined || chat_id === ''){
+    if (chat_id === null || chat_id === undefined || chat_id === "") {
       chat_id = result[0].channel_id;
     }
-    
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.get_chat_id_from_handle: " + err);
   }
 
   return chat_id;
 }
 
-
 async function get_handle_from_id(id) {
-
-  const QUERY = "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
+  const QUERY =
+    "SELECT handle FROM public.handles WHERE user_id = $1 OR group_id = $1 OR channel_id = $1";
   let handle = null;
 
-  try{
-    
+  try {
     const result = await query(QUERY, [id]);
     handle = result[0].handle;
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.get_handle_from_id: " + err);
   }
-  
+
   return handle;
 }
 
 async function get_recipient(chat_id, sender) {
-
-  const QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND (user1 = $2 OR user2 = $2)";
+  const QUERY =
+    "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND (user1 = $2 OR user2 = $2)";
   let recipient = null;
 
-  try{
+  try {
     const result = await query(QUERY, [chat_id, sender]);
-    if(result[0].user1 === sender){
+    if (result[0].user1 === sender) {
       recipient = result[0].user2;
-    }else{
+    } else {
       recipient = result[0].user1;
     }
-
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.get_recipient: " + err);
   }
 
   return recipient;
-
 }
 
-function get_chat_type(id){
-
-  if(id == null || id === undefined || id === ''){
+function get_chat_type(id) {
+  if (id == null || id === undefined || id === "") {
     return null;
   }
 
-  if (id.charAt(0) === '2') {
-    return "personal"; 
+  if (id.charAt(0) === "2") {
+    return "personal";
   }
-  if (id.charAt(0) === '3') {
+  if (id.charAt(0) === "3") {
     return "group";
   }
-  if (id.charAt(0) === '4') {
+  if (id.charAt(0) === "4") {
     return "channel";
   }
-  
+
   return null;
 }
 
-async function get_group_name_from_chat_id(chat_id){
+async function get_group_name_from_chat_id(chat_id) {
   const QUERY = "SELECT name FROM public.groups WHERE chat_id = $1";
   let name = null;
 
-  try{
+  try {
     const result = await query(QUERY, [chat_id]);
     name = result[0].name;
-  }catch(err){
+  } catch (err) {
     logger.error("[POSTGRES] database.get_group_name_from_chat_id: " + err);
   }
 
   return name;
 }
 
-async function check_chat_existance(handle,other_handle) {
-  
-  const QUERY = "SELECT chat_id FROM public.chats WHERE (user1 = $1 AND user2 = $2) OR (user1 = $2 AND user2 = $1)";
+async function check_chat_existance(handle, other_handle) {
+  const QUERY =
+    "SELECT chat_id FROM public.chats WHERE (user1 = $1 AND user2 = $2) OR (user1 = $2 AND user2 = $1)";
   let confirmation = false;
 
   let user_id = null;
   let other_user_id = null;
-  try{
+  try {
     user_id = await get_user_id_from_handle(handle);
     other_user_id = await get_user_id_from_handle(other_handle);
     const result = await query(QUERY, [user_id, other_user_id]);
 
-    if(result.length != 0){
+    if (result.length != 0) {
       confirmation = true;
     }
-
-  }
-  catch(error){
+  } catch (error) {
     logger.debug("[POSTGRES] database.check_chat_existance: " + error);
   }
 
   return confirmation;
 }
 
-async function is_member(user_id,chat_id){
-
+async function is_member(user_id, chat_id) {
   let QUERY = "";
 
-  switch(get_chat_type(chat_id)){
+  switch (get_chat_type(chat_id)) {
     case "personal":
-      QUERY = "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND $2 = user1 OR $2 = user2";
+      QUERY =
+        "SELECT user1, user2 FROM public.chats WHERE chat_id = $1 AND $2 = user1 OR $2 = user2";
       break;
     case "group":
-      QUERY = "SELECT members FROM public.groups WHERE chat_id = $1 AND $2 = ANY(members)";
+      QUERY =
+        "SELECT members FROM public.groups WHERE chat_id = $1 AND $2 = ANY(members)";
       break;
     case "channel":
       QUERY = "";
@@ -862,20 +906,92 @@ async function is_member(user_id,chat_id){
 
   let confirmation = false;
 
-  if(QUERY != null){
+  if (QUERY != null) {
     let result = null;
-    try{
+    try {
       result = await query(QUERY, [chat_id, user_id]);
-      if(result.length != 0){
+      if (result.length != 0) {
         confirmation = true;
       }
-    }catch(error){
+    } catch (error) {
       logger.error("[POSTGRES] database.is_member: " + error);
     }
   }
 
   return confirmation;
+}
 
+async function change_password(user_id, old_password, new_password) {
+  const QUERY = "SELECT password FROM public.users WHERE user_id = $1";
+  let confirmation = false;
+  let error_message = null;
+
+  try {
+    const result = await query(QUERY, [user_id]);
+    if (result.length === 0) {
+      error_message = "User not found.";
+      return { confirmation, error_message };
+    }
+
+    const current_password = result[0].password;
+
+    if (!encrypter.checkPasswordHash(old_password, current_password)) {
+      error_message = "Old password is incorrect.";
+      return { confirmation, error_message };
+    }
+
+    const new_password_hash = encrypter.generatePasswordHash(new_password);
+    const UPDATE_QUERY =
+      "UPDATE public.users SET password = $1 WHERE user_id = $2";
+
+    await query(UPDATE_QUERY, [new_password_hash, user_id]);
+    confirmation = true;
+  } catch (error) {
+    logger.error("[POSTGRES] database.change_password: " + error);
+    error_message = "Database error.";
+  }
+
+  return { confirmation, error_message };
+}
+
+async function reset_password(email, new_password) {
+  const QUERY = "SELECT user_id FROM public.users WHERE email = $1";
+  let confirmation = false;
+  let error_message = null;
+
+  try {
+    const result = await query(QUERY, [email]);
+    if (result.length === 0) {
+      error_message = "Email not found.";
+      return { confirmation, error_message };
+    }
+
+    const user_id = result[0].user_id;
+    const new_password_hash = encrypter.generatePasswordHash(new_password);
+    const UPDATE_QUERY =
+      "UPDATE public.users SET password = $1 WHERE user_id = $2";
+
+    await query(UPDATE_QUERY, [new_password_hash, user_id]);
+    confirmation = true;
+  } catch (error) {
+    logger.error("[POSTGRES] database.reset_password: " + error);
+    error_message = "Database error.";
+  }
+  return { confirmation, error_message };
+}
+
+function get_user_id_from_email(email) {
+  const QUERY = "SELECT user_id FROM public.users WHERE email = $1";
+  let user_id = null;
+  try {
+    const result = query(QUERY, [email]);
+    if (result.length > 0) {
+      user_id = result[0].user_id;
+    }
+  } catch (err) {
+    logger.error("[POSTGRES] database.get_user_id_from_email: " + err);
+  }
+  return user_id;
 }
 
 module.exports = {
@@ -890,6 +1006,7 @@ module.exports = {
   search,
   search_users,
   get_user_id_from_handle,
+  get_user_id_from_email,
   get_chat_id_from_handle,
   get_handle_from_id,
   create_chat,
@@ -900,5 +1017,7 @@ module.exports = {
   get_group_name_from_chat_id,
   check_chat_existance,
   get_chat_messages,
-  is_member
+  is_member,
+  change_password,
+  reset_password,
 };

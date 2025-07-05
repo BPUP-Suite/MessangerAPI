@@ -105,6 +105,22 @@ class CheckQRCodeResponse extends Response {
   }
 }
 
+class ForgotPasswordResponse extends Response {
+  constructor(type, confirmation, error_message) {
+    super(type, confirmation, error_message);
+  }
+}
+class ResetPasswordResponse extends Response {
+  constructor(type, confirmation, error_message) {
+    super(type, confirmation, error_message);
+  }
+}
+class ChangePasswordResponse extends Response {
+  constructor(type, confirmation, error_message) {
+    super(type, confirmation, error_message);
+  }
+}
+
 class HandleResponse extends Response {
   constructor(type, handle_available, error_message) {
     super(type, handle_available, error_message);
@@ -286,6 +302,9 @@ module.exports = {
   SessionResponse,
   QRCodeResponse,
   CheckQRCodeResponse,
+  ForgotPasswordResponse,
+  ResetPasswordResponse,
+  ChangePasswordResponse,
   HandleResponse,
   UserIDResponse,
   SearchResponse,
