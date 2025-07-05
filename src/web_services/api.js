@@ -1426,6 +1426,14 @@ api.get(two_fa_path, async (req, res) => {
       const decoded = jwt.verify(token, secret);
 
       if (decoded.type === "email_verification") {
+        debug(
+          req.path,
+          "TWO_FA",
+          "Email verification token received",
+          code,
+          null
+        );
+
         // Check if the token exists in the Map
         if (!emailVerificationTokens.has(token)) {
           code = 400;
@@ -1496,6 +1504,13 @@ api.get(two_fa_path, async (req, res) => {
           }
         }
       } else if (decoded.type === "2fa") {
+        debug(
+          req.path,
+          "TWO_FA",
+          "2FA token received",
+          code,
+          null
+        );
         // Check if the token is in the Map for two-factor authentication
         const twoFAToken = twoFATokens.get(token);
         if (!twoFAToken) {
