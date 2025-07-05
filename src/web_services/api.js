@@ -1413,7 +1413,7 @@ api.get(two_fa_path, async (req, res) => {
   let errorDescription = "Generic error";
   let validated = true;
 
-  if (!validator.generic(   )) {
+  if (!validator.generic(two_fa_method)) {
     code = 400;
     errorDescription = "Two-factor authentication method not valid";
     validated = false;
