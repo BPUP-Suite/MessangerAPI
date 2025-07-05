@@ -1448,7 +1448,8 @@ api.get(two_fa_path, async (req, res) => {
             const user_id = emailVerificationTokens.get(token).user_id;
 
             // Update the user's email verification status in the database
-            confirmation = await database.verify_email(user_id);
+            const email = await database.get_email_from_user_id(user_id);
+            confirmation = await database.verify_email(email);
             if (confirmation) {
               code = 200;
               errorDescription = "";
@@ -1458,7 +1459,7 @@ api.get(two_fa_path, async (req, res) => {
                 "TWO_FA",
                 "Email verified successfully",
                 code,
-                user_id
+                email
               );
               // Set the session user_id to the verified user_id
               req.session.user_id = user_id;

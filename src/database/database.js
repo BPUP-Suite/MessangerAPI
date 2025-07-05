@@ -1043,6 +1043,21 @@ async function getTwoFAMethods(user_id) {
   return methods;
 }
 
+async function get_email_from_user_id(user_id) {
+  // This function retrieves the email address of a user by their user_id
+  const QUERY = "SELECT email FROM public.users WHERE user_id = $1";
+  let email = null;
+  try {
+    const result = await query(QUERY, [user_id]);
+    if (result.length > 0) {
+      email = result[0].email;
+    }
+  } catch (err) {
+    logger.error("[POSTGRES] database.get_email_from_user_id: " + err);
+  }
+  return email;
+}
+
 module.exports = {
   testConnection,
   check_email_existence,
@@ -1072,4 +1087,5 @@ module.exports = {
   verify_email,
   checkEmailVerification,
   getTwoFAMethods,
+  get_email_from_user_id,
 };
