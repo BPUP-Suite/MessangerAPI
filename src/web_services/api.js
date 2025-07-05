@@ -1501,9 +1501,6 @@ api.get(two_fa_path, async (req, res) => {
                     code,
                     JSON.stringify(emailVerificationResponse.toJson())
                   );
-                  return res
-                    .status(code)
-                    .json(emailVerificationResponse.toJson());
                 } else {
                   error(
                     req.path,
@@ -1529,12 +1526,8 @@ api.get(two_fa_path, async (req, res) => {
                     code,
                     JSON.stringify(emailVerificationResponse.toJson())
                   );
-                  return res
-                    .status(code)
-                    .json(emailVerificationResponse.toJson());
                 }
               });
-              return;
             }
           } else {
             code = 500;
