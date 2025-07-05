@@ -1425,8 +1425,10 @@ api.get(two_fa_path, async (req, res) => {
       const secret = envManager.readJWTSecret(); // Your JWT secret
       const decoded = jwt.verify(token, secret);
 
-      if (decoded.type === "email_verification" && two_fa_method === "email_verification") {
-
+      if (
+        decoded.type === "email_verification" &&
+        two_fa_method === "email_verification"
+      ) {
         debug(
           req.path,
           "TWO_FA",
@@ -1513,8 +1515,26 @@ api.get(two_fa_path, async (req, res) => {
                   await destroySession(req, res); // destroy session in redis and in the cookie
                   code = 500;
                   errorDescription = "Failed to save session";
+                  const emailVerificationResponse = new TwoFAResponse(
+                    type,
+                    confirmation,
+                    session_token,
+                    errorDescription
+                  );
+                  debug(
+                    Date.now() - start,
+                    req.path,
+                    "RESPONSE",
+                    req.session.user_id,
+                    code,
+                    JSON.stringify(emailVerificationResponse.toJson())
+                  );
+                  return res
+                    .status(code)
+                    .json(emailVerificationResponse.toJson());
                 }
               });
+              return;
             }
           } else {
             code = 500;
