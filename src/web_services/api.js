@@ -564,7 +564,7 @@ api.get(login_path, async (req, res) => {
         code = 200;
 
         if (!(await database.checkEmailVerification(email))) {
-          two_fa_methods.push("email");
+          two_fa_methods.push("email_verification");
 
           debug(
             req.path,
@@ -1425,7 +1425,7 @@ api.get(two_fa_path, async (req, res) => {
       const secret = envManager.readJWTSecret(); // Your JWT secret
       const decoded = jwt.verify(token, secret);
 
-      if (decoded.type === "email_verification") {
+      if (decoded.type === "email_verification" === two_fa_method) {
         debug(
           req.path,
           "TWO_FA",
