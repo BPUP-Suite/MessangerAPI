@@ -147,7 +147,7 @@ async function add_user_to_db(signupUser) {
   let confirmation = false;
   const password = encrypter.generatePasswordHash(signupUser.password);
 
-  const QUERY = `WITH new_user AS (INSERT INTO public.users(email, name, surname, password, privacy_policy_accepted, terms_of_service_accepted) VALUES($1, $2, $3, $4, $5, $6) RETURNING user_id) INSERT INTO public.handles(user_id, handle) VALUES((SELECT user_id FROM new_user), $5);`;
+  const QUERY = `WITH new_user AS (INSERT INTO public.users(email, name, surname, password, privacy_policy_accepted, terms_of_service_accepted) VALUES($1, $2, $3, $4, $5, $6) RETURNING user_id) INSERT INTO public.handles(user_id, handle) VALUES((SELECT user_id FROM new_user), $7);`;
   debug("", "" + QUERY);
   try {
     await query(QUERY, [
@@ -155,9 +155,9 @@ async function add_user_to_db(signupUser) {
       signupUser.name,
       signupUser.surname,
       password,
+      true,
+      true,
       signupUser.handle,
-      true,
-      true,
     ]);
     confirmation = true;
   } catch (err) {
