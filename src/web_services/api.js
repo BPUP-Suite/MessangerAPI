@@ -591,7 +591,9 @@ api.get(login_path, async (req, res) => {
           const expires_at = new Date(
             Date.now() + envManager.readEmailVerificationExpiringTime() * 1000
           ); // 10 minutes
-          const verification_code = crypto.randomBytes(6).toString("hex"); // Generate a random 6-digit code
+          const verification_code = Math.floor(
+            100000 + Math.random() * 900000
+          ).toString(); // Generate a random 6-digit numeric code
           emailVerificationTokens.set(token, {
             user_id: user_id,
             expires_at: expires_at,
@@ -664,19 +666,21 @@ api.get(login_path, async (req, res) => {
               // If there is only one method, we can directly set the token
 
               if (two_fa_methods[0] === "email") {
-                const code = crypto.randomBytes(6).toString("hex"); // Generate a random 6-digit code
+                const verification_code = Math.floor(
+                  100000 + Math.random() * 900000
+                ).toString(); // Generate a random 6-digit numeric code
 
                 twoFATokens.set(token, {
                   user_id: user_id,
                   expires_at: expires_at,
                   method: "email",
-                  code: code,
+                  code: verification_code,
                 });
 
                 // Send the email with the code
                 const subject = "Two-factor authentication code";
-                const text = `Your two-factor authentication code is: ${code}`;
-                const html = `<p>Your two-factor authentication code is: <strong>${code}</strong></p>`;
+                const text = `Your two-factor authentication code is: ${verification_code}`;
+                const html = `<p>Your two-factor authentication code is: <strong>${verification_code}</strong></p>`;
                 await smtp.sendEmail(email, subject, text, html);
               } else if (two_fa_methods[0] === "authenticator") {
                 // For authenticator apps, we just set the token without sending an email
