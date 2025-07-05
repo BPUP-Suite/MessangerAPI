@@ -954,30 +954,20 @@ async function change_password(user_id, old_password, new_password) {
   return { confirmation, error_message };
 }
 
-async function reset_password(email, new_password) {
-  const QUERY = "SELECT user_id FROM public.users WHERE email = $1";
+async function reset_password(user_id, new_password) {
   let confirmation = false;
-  let error_message = null;
 
   try {
-    const result = await query(QUERY, [email]);
-    if (result.length === 0) {
-      error_message = "Email not found.";
-      return { confirmation, error_message };
-    }
-
-    const user_id = result[0].user_id;
     const new_password_hash = encrypter.generatePasswordHash(new_password);
-    const UPDATE_QUERY =
-      "UPDATE public.users SET password = $1 WHERE user_id = $2";
+    const QUERY = "UPDATE public.users SET password = $1 WHERE user_id = $2";
 
-    await query(UPDATE_QUERY, [new_password_hash, user_id]);
+    await query(QUERY, [new_password_hash, user_id]);
     confirmation = true;
   } catch (error) {
     logger.error("[POSTGRES] database.reset_password: " + error);
     error_message = "Database error.";
   }
-  return { confirmation, error_message };
+  return confirmation;
 }
 
 async function get_user_id_from_email(email) {
