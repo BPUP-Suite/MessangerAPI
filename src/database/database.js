@@ -982,6 +982,51 @@ async function get_user_id_from_email(email) {
   return user_id;
 }
 
+async function verify_email(email) {
+  // This function is used to verify an email address with email_verified set to true
+  // And add this method as the main 2FA method on otp_active_methods TEXT[]
+  let confirmation = false;
+  try {
+    // Set email_verified to true and add 'email' to otp_active_methods if not already present
+    const QUERY = `
+      UPDATE public.users
+      SET email_verified = TRUE,
+          otp_active_methods = (
+            CASE
+              WHEN NOT ('email' = ANY(otp_active_methods)) THEN array_append(otp_active_methods, 'email')
+              ELSE otp_active_methods
+            END
+          )
+      WHERE email = $1
+      RETURNING user_id
+    `;
+    const result = await query(QUERY, [email]);
+    if (result.length > 0) {
+      confirmation = true;
+    }
+  } catch (err) {
+    logger.error("[POSTGRES] database.verify_email: " + err);
+  }
+  return confirmation;
+}
+
+async function checkEmailVerification(email) {
+  // This function checks if the email is verified
+  const QUERY = "SELECT email_verified FROM public.users WHERE email = $1";
+  let isVerified = false;
+
+  try {
+    const result = await query(QUERY, [email]);
+    if (result.length > 0) {
+      isVerified = result[0].email_verified;
+    }
+  } catch (err) {
+    logger.error("[POSTGRES] database.checkEmailVerification: " + err);
+  }
+
+  return isVerified;
+}
+
 module.exports = {
   testConnection,
   check_email_existence,
@@ -1008,4 +1053,6 @@ module.exports = {
   is_member,
   change_password,
   reset_password,
+  verify_email,
+  checkEmailVerification,
 };

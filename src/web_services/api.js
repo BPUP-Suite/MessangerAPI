@@ -32,6 +32,7 @@ const {
   ForgotPasswordResponse,
   ResetPasswordResponse,
   ChangePasswordResponse,
+  TwoFAResponse,
   HandleResponse,
   SearchResponse,
   InitResponse,
@@ -92,6 +93,8 @@ const check_qr_code_path = qr_code_path + "check";
 const forgot_password_path = auth_base + "forgot-password";
 const reset_password_path = auth_base + "reset-password";
 const change_password_path = auth_base + "change-password";
+
+const two_fa_path = auth_base + "2fa";
 
 const data_base = user_base + "data/";
 
@@ -279,7 +282,6 @@ setInterval(() => {
 // END OF QR CODE LOGIN SESSIONS MAP
 
 // RESET PASSWORD TOKEN MAP
-
 // Reset password token map
 const resetPasswordTokens = new Map(); // token -> { email: null, expires_at: Date }
 // Cleanup expired tokens every 5 minutes
@@ -293,6 +295,35 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000); // 5 minutes
 // END OF RESET PASSWORD TOKEN MAP
+
+// EMAIL VERIFICATION TOKEN MAP
+const emailVerificationTokens = new Map(); // token -> { user_id: null, expires_at: Date, code: null }
+// Cleanup expired tokens every 5 minutes
+setInterval(() => {
+  const now = new Date();
+  for (const [token, data] of emailVerificationTokens.entries()) {
+    if (data.expires_at < now) {
+      emailVerificationTokens.delete(token);
+      debug("EMAIL_VERIFICATION_CLEANUP", "Expired token removed", token);
+    }
+  }
+}, 5 * 60 * 1000); // 5 minutes
+// END OF EMAIL VERIFICATION TOKEN MAP
+
+// 2FA TOKEN MAP
+const twoFATokens = new Map(); // token -> { user_id: null, expires_at: Date, method: null, code: null }
+// Cleanup expired tokens every 5 minutes
+setInterval(() => {
+  const now = new Date();
+
+  for (const [token, data] of twoFATokens.entries()) {
+    if (data.expires_at < now) {
+      twoFATokens.delete(token);
+      debug("TWO_FA_CLEANUP", "Expired token removed", token);
+    }
+  }
+}, 5 * 60 * 1000); // 5 minutes
+// END OF 2FA TOKEN MAP
 
 api.use(metricsDurationMiddleware);
 api.use(apiCallMiddleware);
@@ -510,6 +541,7 @@ api.get(login_path, async (req, res) => {
   let validated = true;
   let user_id = null;
   let token = null;
+  let two_fa_methods = [];
 
   if (!validator.email(email)) {
     code = 400;
@@ -531,21 +563,149 @@ api.get(login_path, async (req, res) => {
         errorDescription = "";
         code = 200;
 
-        debug("", req.path, "SESSION", "Session opened.", code, user_id);
-        req.session.user_id = user_id;
-        debug("", req.path, "SESSION", "Session set.", code, user_id);
+        if (!(await database.checkEmailVerification(email))) {
+          two_fa_methods.push("email");
 
-        req.session.save(async (err) => {
-          if (req.session.user_id && !err) {
-            debug("", req.path, "SESSION", "Session saved.", code, user_id);
-            await enforceSessionLimit(req, res);
-            token = req.sessionID;
+          debug(
+            req.path,
+            "TWO_FA",
+            "Email verification required",
+            code,
+            user_id
+          );
+
+          // Generate a JWT token for the email verification
+
+          const payload = {
+            user_id: user_id,
+            type: "email_verification",
+            created_at: Date.now(),
+            exp:
+              Math.floor(Date.now() / 1000) +
+              envManager.readEmailVerificationExpiringTime(), // 10 minutes
+          };
+          const secret = envManager.readJWTSecret(); // Your JWT secret
+          token = jwt.sign(payload, secret);
+
+          // Store the token in the Map
+          const expires_at = new Date(
+            Date.now() + envManager.readEmailVerificationExpiringTime() * 1000
+          ); // 10 minutes
+          const code = crypto.randomBytes(6).toString("hex"); // Generate a random 6-digit code
+          emailVerificationTokens.set(token, {
+            user_id: user_id,
+            expires_at: expires_at,
+            code: code,
+          });
+
+          // Send the email verification code to the user
+
+          const subject = "Verify your email address";
+          const text = `Your verification code is: ${code}`;
+          const html = `<p>Your verification code is: <strong>${code}</strong></p>`;
+          // Send the email using the SMTP service
+          await smtp.sendEmail(email, subject, text, html);
+
+          debug(
+            req.path,
+            "TWO_FA",
+            "Email verification token generated and email sent",
+            code,
+            user_id,
+            token
+          );
+
+          // If email verification is required, we don't set the session yet
+          const loginResponse = new LoginResponse(
+            type,
+            confirmation,
+            errorDescription,
+            token,
+            two_fa_methods
+          );
+          debug(
+            Date.now() - start,
+            req.path,
+            "RESPONSE",
+            "",
+            code,
+            JSON.stringify(loginResponse.toJson())
+          );
+          return res.status(code).json(loginResponse.toJson());
+        } else {
+          two_fa_methods = await database.getTwoFAMethods(user_id);
+          if (two_fa_methods.length > 0) {
+            debug(
+              req.path,
+              "TWO_FA",
+              "Two-factor authentication required",
+              code,
+              user_id
+            );
+
+            // Generate a JWT token for the two-factor authentication
+            const payload = {
+              user_id: user_id,
+              type: "2fa",
+              created_at: Date.now(),
+              exp:
+                Math.floor(Date.now() / 1000) +
+                envManager.readTwoFATokenExpiringTime(), // 5 minutes
+            };
+            const secret = envManager.readJWTSecret(); // Your JWT secret
+            token = jwt.sign(payload, secret);
+
+            // Store the token in the Map
+            const expires_at = new Date(
+              Date.now() + envManager.readTwoFATokenExpiringTime() * 1000
+            ); // 5 minutes
+
+            if (two_fa_methods.length === 1) {
+              // If there is only one method, we can directly set the token
+
+              if (two_fa_methods[0] === "email") {
+                const code = crypto.randomBytes(6).toString("hex"); // Generate a random 6-digit code
+
+                twoFATokens.set(token, {
+                  user_id: user_id,
+                  expires_at: expires_at,
+                  method: "email",
+                  code: code,
+                });
+
+                // Send the email with the code
+                const subject = "Two-factor authentication code";
+                const text = `Your two-factor authentication code is: ${code}`;
+                const html = `<p>Your two-factor authentication code is: <strong>${code}</strong></p>`;
+                await smtp.sendEmail(email, subject, text, html);
+              } else if (two_fa_methods[0] === "authenticator") {
+                // For authenticator apps, we just set the token without sending an email
+                twoFATokens.set(token, {
+                  user_id: user_id,
+                  expires_at: expires_at,
+                  method: "authenticator",
+                  code: null, // No code to send for authenticator apps
+                });
+              }
+            } else {
+              // If there are multiple methods, we just set the token without doing nothing specific
+              twoFATokens.set(token, {
+                user_id: user_id,
+                expires_at: expires_at,
+                method: null, // No specific method yet
+                code: null, // No code to send for multiple methods
+              });
+            }
+
+            // If two-factor authentication is required, we don't set the session yet
             const loginResponse = new LoginResponse(
               type,
               confirmation,
               errorDescription,
-              token
+              token,
+              two_fa_methods
             );
+
             debug(
               Date.now() - start,
               req.path,
@@ -554,27 +714,56 @@ api.get(login_path, async (req, res) => {
               code,
               JSON.stringify(loginResponse.toJson())
             );
-            res.status(code).json(loginResponse.toJson());
+            return res.status(code).json(loginResponse.toJson());
           } else {
-            error(
-              req.path,
-              "SESSION",
-              "Error while saving session",
-              code,
-              err.message
-            );
-            await destroySession(req, res); // destroy session in redis and in the cookie
-            code = 500;
-            errorDescription = "Failed to save session";
-            const loginResponse = new LoginResponse(
-              type,
-              false,
-              errorDescription,
-              token
-            );
-            res.status(code).json(loginResponse.toJson());
+            debug("", req.path, "SESSION", "Session opened.", code, user_id);
+            req.session.user_id = user_id;
+            debug("", req.path, "SESSION", "Session set.", code, user_id);
+
+            req.session.save(async (err) => {
+              if (req.session.user_id && !err) {
+                debug("", req.path, "SESSION", "Session saved.", code, user_id);
+                await enforceSessionLimit(req, res);
+                token = req.sessionID;
+                const loginResponse = new LoginResponse(
+                  type,
+                  confirmation,
+                  errorDescription,
+                  token,
+                  two_fa_methods
+                );
+                debug(
+                  Date.now() - start,
+                  req.path,
+                  "RESPONSE",
+                  "",
+                  code,
+                  JSON.stringify(loginResponse.toJson())
+                );
+                res.status(code).json(loginResponse.toJson());
+              } else {
+                error(
+                  req.path,
+                  "SESSION",
+                  "Error while saving session",
+                  code,
+                  err.message
+                );
+                await destroySession(req, res); // destroy session in redis and in the cookie
+                code = 500;
+                errorDescription = "Failed to save session";
+                const loginResponse = new LoginResponse(
+                  type,
+                  false,
+                  errorDescription,
+                  token,
+                  two_fa_methods
+                );
+                res.status(code).json(loginResponse.toJson());
+              }
+            });
           }
-        });
+        }
         return;
       } else {
         code = 400;
@@ -591,7 +780,8 @@ api.get(login_path, async (req, res) => {
     type,
     confirmation,
     errorDescription,
-    token
+    token,
+    two_fa_methods
   );
   debug(
     Date.now() - start,
@@ -1196,6 +1386,232 @@ api.get(change_password_path, isAuthenticated, async (req, res) => {
   );
 
   return res.status(code).json(changePasswordResponse.toJson());
+});
+
+api.get(two_fa_path, async (req, res) => {
+  const token = req.query.token;
+  const two_fa_method = req.query.two_fa_method;
+  const verification_code = req.query.code;
+  const start = res.locals.start;
+
+  const session_token = null;
+  debug(
+    "",
+    req.path,
+    "REQUEST",
+    req.session.user_id,
+    "",
+    JSON.stringify(req.query)
+  );
+  const type = "authenticated";
+  let code = 500;
+  let confirmation = false;
+  let errorDescription = "Generic error";
+  let validated = true;
+
+  if (!validator.generic(two_fa_method)) {
+    code = 400;
+    errorDescription = "Two-factor authentication method not valid";
+    validated = false;
+  } else if (
+    // Check if the user has the two-factor authentication method enabled
+    !(await database.getTwoFAMethods(user_id).includes(two_fa_method))
+  ) {
+    code = 400;
+    errorDescription = "Two-factor authentication method not valid";
+    validated = false;
+  }
+
+  if (validated) {
+    try {
+      // Verify the JWT token
+      const secret = envManager.readJWTSecret(); // Your JWT secret
+      const decoded = jwt.verify(token, secret);
+
+      if (decoded.type === "email_verification") {
+        // Check if the token exists in the Map
+        if (!emailVerificationTokens.has(token)) {
+          code = 400;
+          errorDescription = "Email verification failed.";
+        } else if (emailVerificationTokens.get(token).expires_at < new Date()) {
+          // If the token has expired
+          code = 401;
+          errorDescription = "Token expired.";
+        } else {
+          // If the token is valid and not expired, logic to handle the email verification
+          if (verification_code === emailVerificationTokens.get(token).code) {
+            const user_id = emailVerificationTokens.get(token).user_id;
+
+            // Update the user's email verification status in the database
+            confirmation = await database.verify_email(user_id);
+            if (confirmation) {
+              code = 200;
+              errorDescription = "";
+              emailVerificationTokens.delete(token); // Remove token from Map after successful verification
+              debug(
+                req.path,
+                "TWO_FA",
+                "Email verified successfully",
+                code,
+                user_id
+              );
+              // Set the session user_id to the verified user_id
+              req.session.user_id = user_id;
+              debug(
+                req.path,
+                "SESSION",
+                "Email verification session set.",
+                code,
+                user_id
+              );
+
+              req.session.save(async (err) => {
+                if (req.session.user_id && !err) {
+                  debug(
+                    req.path,
+                    "SESSION",
+                    "Email verification session saved.",
+                    code,
+                    user_id
+                  );
+                  await enforceSessionLimit(req, res);
+                  session_token = req.sessionID;
+                  confirmation = true;
+                } else {
+                  error(
+                    req.path,
+                    "SESSION",
+                    "Error while saving session",
+                    code,
+                    err.message
+                  );
+                  await destroySession(req, res); // destroy session in redis and in the cookie
+                  code = 500;
+                  errorDescription = "Failed to save session";
+                }
+              });
+
+              return;
+            }
+          } else {
+            code = 500;
+            errorDescription = "Email verification failed.";
+          }
+        }
+      } else if (decoded.type === "2fa") {
+        // Check if the token is in the Map for two-factor authentication
+        const twoFAToken = twoFATokens.get(token);
+        if (!twoFAToken) {
+          code = 400;
+          errorDescription = "Two-factor authentication failed.";
+        } else if (twoFAToken.expires_at < new Date()) {
+          // If the token has expired
+          code = 401;
+          errorDescription = "Token expired.";
+        } else {
+          // If the token is valid and not expired, logic to handle the two-factor authentication
+          const user_id = twoFAToken.user_id;
+
+          // Check if the two-factor authentication method is valid
+          if (twoFAToken.method !== two_fa_method) {
+            code = 400;
+            errorDescription = "Two-factor authentication method not valid";
+          } else {
+            if (two_fa_method === "email") {
+              // For email verification, we check the code sent to the user's email
+              if (verification_code === twoFAToken.code) {
+                confirmation = true;
+              }
+            } else if (two_fa_method === "authenticator") {
+              // For authenticator apps, we can use a library like speakeasy to verify the code
+              // For now not working
+              confirmation = false;
+            }
+            if (confirmation) {
+              code = 200;
+              errorDescription = "";
+              twoFATokens.delete(token); // Remove token from Map after successful verification
+              debug(
+                req.path,
+                "TWO_FA",
+                "Two-factor authentication verified successfully",
+                code,
+                user_id
+              );
+              // Set the session user_id to the verified user_id
+              req.session.user_id = user_id;
+              debug(
+                req.path,
+                "SESSION",
+                "Two-factor authentication session set.",
+                code,
+                user_id
+              );
+
+              req.session.save(async (err) => {
+                if (req.session.user_id && !err) {
+                  debug(
+                    req.path,
+                    "SESSION",
+                    "Two-factor authentication session saved.",
+                    code,
+                    user_id
+                  );
+                  await enforceSessionLimit(req, res);
+                  session_token = req.sessionID;
+                  confirmation = true;
+                } else {
+                  error(
+                    req.path,
+                    "SESSION",
+                    "Error while saving session",
+                    code,
+                    err.message
+                  );
+                  await destroySession(req, res); // destroy session in redis and in the cookie
+                  code = 500;
+                  errorDescription = "Failed to save session";
+                }
+              });
+              return;
+            } else {
+              code = 500;
+              errorDescription = "Two-factor authentication failed.";
+            }
+          }
+        }
+      } else {
+        code = 400;
+        errorDescription = "Invalid token type";
+      }
+    } catch (err) {
+      error(
+        req.path,
+        "DATABASE",
+        "database.getTwoFAMethods",
+        code,
+
+        err
+      );
+
+      errorDescription = "Database error";
+    }
+  }
+  const twoFAResponse = new TwoFAResponse(
+    type,
+    confirmation,
+    session_token,
+    errorDescription
+  );
+  debug(
+    Date.now() - start,
+    req.path,
+    "RESPONSE",
+    req.session.user_id,
+    code,
+    JSON.stringify(twoFAResponse.toJson())
+  );
+  return res.status(code).json(twoFAResponse.toJson());
 });
 
 // Path: .../data
@@ -2439,6 +2855,8 @@ postToGetWrapper(check_qr_code_path);
 postToGetWrapper(forgot_password_path);
 postToGetWrapper(reset_password_path);
 postToGetWrapper(change_password_path);
+
+postToGetWrapper(two_fa_path);
 
 postToGetWrapper(handle_availability_path);
 

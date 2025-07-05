@@ -47,14 +47,16 @@ class SignupUser {
   }
 }
 class LoginResponse extends Response {
-  constructor(type, type_response, error_message, token) {
+  constructor(type, type_response, error_message, token, two_fa_methods = []) {
     super(type, type_response, error_message);
     this.token = token;
+    this.two_fa_methods = two_fa_methods;
   }
   toJson() {
     return {
       ...super.toJson(),
       token: this.token,
+      two_fa_methods: this.two_fa_methods,
     };
   }
 }
@@ -118,6 +120,19 @@ class ResetPasswordResponse extends Response {
 class ChangePasswordResponse extends Response {
   constructor(type, confirmation, error_message) {
     super(type, confirmation, error_message);
+  }
+}
+
+class TwoFAResponse extends Response {
+  constructor(type, confirmation, session_token, error_message) {
+    super(type, confirmation, error_message);
+    this.token = session_token;
+  }
+  toJson() {
+    return {
+      ...super.toJson(),
+      token: this.token,
+    };
   }
 }
 
@@ -305,6 +320,7 @@ module.exports = {
   ForgotPasswordResponse,
   ResetPasswordResponse,
   ChangePasswordResponse,
+  TwoFAResponse,
   HandleResponse,
   UserIDResponse,
   SearchResponse,

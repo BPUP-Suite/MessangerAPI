@@ -148,6 +148,9 @@ function readQRCodeExpiringTime() {
 function readResetPasswordTokenExpiringTime() {
   return Number(readVariable("RESET_PASSWORD_TOKEN_EXPIRING_TIME", false)) || 1800; // Default 30 minutes
 }
+function readEmailVerificationExpiringTime() {
+  return Number(readVariable("EMAIL_VERIFICATION_EXPIRING_TIME", false)) || 600; // Default 10 minutes
+}
 function readTwoFATokenExpiringTime() {
   return Number(readVariable("TWO_FA_TOKEN_EXPIRING_TIME", false)) || 300; // Default 5 minutes
 }
@@ -194,6 +197,7 @@ module.exports = {
   readJWTSecret,
   readQRCodeExpiringTime,
   readResetPasswordTokenExpiringTime,
+  readEmailVerificationExpiringTime,
   readTwoFATokenExpiringTime,
   readSMTPServer,
   readSMTPPort,
