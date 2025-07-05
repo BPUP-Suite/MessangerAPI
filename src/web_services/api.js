@@ -1417,13 +1417,6 @@ api.get(two_fa_path, async (req, res) => {
     code = 400;
     errorDescription = "Two-factor authentication method not valid";
     validated = false;
-  } else if (
-    // Check if the user has the two-factor authentication method enabled
-    !(await database.getTwoFAMethods(user_id).includes(two_fa_method))
-  ) {
-    code = 400;
-    errorDescription = "Two-factor authentication method not valid";
-    validated = false;
   }
 
   if (validated) {
