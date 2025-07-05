@@ -987,12 +987,13 @@ async function verify_email(email) {
   // And add this method as the main 2FA method on otp_active_methods TEXT[]
   let confirmation = false;
   try {
-    // Set email_verified to true and add 'email' to otp_active_methods if not already present
+    // Set email_verified to true e aggiungi 'email' a otp_active_methods, gestendo anche il caso NULL
     const QUERY = `
       UPDATE public.users
       SET email_verified = TRUE,
           otp_active_methods = (
             CASE
+              WHEN otp_active_methods IS NULL THEN ARRAY['email']
               WHEN NOT ('email' = ANY(otp_active_methods)) THEN array_append(otp_active_methods, 'email')
               ELSE otp_active_methods
             END
