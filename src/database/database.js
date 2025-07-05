@@ -1027,6 +1027,22 @@ async function checkEmailVerification(email) {
   return isVerified;
 }
 
+async function getTwoFAMethods(user_id) {
+  // This function retrieves the active 2FA methods for a user
+  const QUERY =
+    "SELECT otp_active_methods FROM public.users WHERE user_id = $1";
+  let methods = [];
+  try {
+    const result = await query(QUERY, [user_id]);
+    if (result.length > 0) {
+      methods = result[0].otp_active_methods;
+    }
+  } catch (err) {
+    logger.error("[POSTGRES] database.getTwoFAMethods: " + err);
+  }
+  return methods;
+}
+
 module.exports = {
   testConnection,
   check_email_existence,
@@ -1055,4 +1071,5 @@ module.exports = {
   reset_password,
   verify_email,
   checkEmailVerification,
+  getTwoFAMethods,
 };
