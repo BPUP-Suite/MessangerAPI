@@ -970,7 +970,7 @@ api.get(forgot_password_path, async (req, res) => {
 
   if (validated) {
     try {
-      const user_id = database.get_user_id_from_email(email);
+      const user_id = await database.get_user_id_from_email(email);
 
       if (user_id) {
         //generate a JWT token with the email and an expiration time
@@ -1076,7 +1076,7 @@ api.get(reset_password_path, async (req, res) => {
           // If the token is valid and not expired, logic to handle the reset password
           const user_id = resetPasswordTokens.get(token).user_id;
 
-          if (user_id === database.get_user_id_from_email(email)) {
+          if (user_id === await database.get_user_id_from_email(email)) {
             code = 400;
             errorDescription = "Password reset failed.";
           } else {

@@ -980,11 +980,11 @@ async function reset_password(email, new_password) {
   return { confirmation, error_message };
 }
 
-function get_user_id_from_email(email) {
+async function get_user_id_from_email(email) {
   const QUERY = "SELECT user_id FROM public.users WHERE email = $1";
   let user_id = null;
   try {
-    const result = query(QUERY, [email]);
+    const result = await query(QUERY, [email]);
     if (result.length > 0) {
       user_id = result[0].user_id;
     }
