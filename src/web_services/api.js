@@ -591,18 +591,18 @@ api.get(login_path, async (req, res) => {
           const expires_at = new Date(
             Date.now() + envManager.readEmailVerificationExpiringTime() * 1000
           ); // 10 minutes
-          const code = crypto.randomBytes(6).toString("hex"); // Generate a random 6-digit code
+          const verification_code = crypto.randomBytes(6).toString("hex"); // Generate a random 6-digit code
           emailVerificationTokens.set(token, {
             user_id: user_id,
             expires_at: expires_at,
-            code: code,
+            code: verification_code,
           });
 
           // Send the email verification code to the user
 
           const subject = "Verify your email address";
-          const text = `Your verification code is: ${code}`;
-          const html = `<p>Your verification code is: <strong>${code}</strong></p>`;
+          const text = `Your verification code is: ${verification_code}`;
+          const html = `<p>Your verification code is: <strong>${verification_code}</strong></p>`;
           // Send the email using the SMTP service
           await smtp.sendEmail(email, subject, text, html);
 
@@ -610,7 +610,7 @@ api.get(login_path, async (req, res) => {
             req.path,
             "TWO_FA",
             "Email verification token generated and email sent",
-            code,
+            verification_code,
             user_id,
             token
           );
