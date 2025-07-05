@@ -1483,6 +1483,24 @@ api.get(two_fa_path, async (req, res) => {
                   await enforceSessionLimit(req, res);
                   session_token = req.sessionID;
                   confirmation = true;
+
+                  const emailVerificationResponse = new TwoFAResponse(
+                    type,
+                    confirmation,
+                    session_token,
+                    errorDescription
+                  );
+                  debug(
+                    Date.now() - start,
+                    req.path,
+                    "RESPONSE",
+                    req.session.user_id,
+                    code,
+                    JSON.stringify(emailVerificationResponse.toJson())
+                  );
+                  return res
+                    .status(code)
+                    .json(emailVerificationResponse.toJson());
                 } else {
                   error(
                     req.path,
@@ -1496,22 +1514,6 @@ api.get(two_fa_path, async (req, res) => {
                   errorDescription = "Failed to save session";
                 }
               });
-
-              const emailVerificationResponse = new TwoFAResponse(
-                type,
-                confirmation,
-                session_token,
-                errorDescription
-              );
-              debug(
-                Date.now() - start,
-                req.path,
-                "RESPONSE",
-                req.session.user_id,
-                code,
-                JSON.stringify(emailVerificationResponse.toJson())
-              );
-              return res.status(code).json(emailVerificationResponse.toJson());
             }
           } else {
             code = 500;
