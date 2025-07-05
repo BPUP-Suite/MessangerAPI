@@ -1149,16 +1149,16 @@ api.get(change_password_path, isAuthenticated, async (req, res) => {
     code = 400;
     errorDescription = "Old password not valid";
     validated = false;
-  } else if (!validator.generic(new_password)) {
+  } else if (!validator.password(new_password)) {
     code = 400;
     errorDescription = "New password not valid";
     validated = false;
-  }else if (old_password === new_password) {
+  } else if (old_password === new_password) {
     code = 400;
     errorDescription = "New password cannot be the same as old password";
     validated = false;
   }
-  
+
   if (validated) {
     try {
       confirmation = await database.change_password(

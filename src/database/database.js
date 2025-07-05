@@ -924,20 +924,19 @@ async function is_member(user_id, chat_id) {
 async function change_password(user_id, old_password, new_password) {
   const QUERY = "SELECT password FROM public.users WHERE user_id = $1";
   let confirmation = false;
-  let error_message = null;
 
   try {
     const result = await query(QUERY, [user_id]);
     if (result.length === 0) {
       error_message = "User not found.";
-      return { confirmation, error_message };
+      return confirmation;
     }
 
     const current_password = result[0].password;
 
     if (!encrypter.checkPasswordHash(old_password, current_password)) {
       error_message = "Old password is incorrect.";
-      return { confirmation, error_message };
+      return confirmation;
     }
 
     const new_password_hash = encrypter.generatePasswordHash(new_password);
@@ -948,10 +947,9 @@ async function change_password(user_id, old_password, new_password) {
     confirmation = true;
   } catch (error) {
     logger.error("[POSTGRES] database.change_password: " + error);
-    error_message = "Database error.";
   }
 
-  return { confirmation, error_message };
+  return confirmation;
 }
 
 async function reset_password(user_id, new_password) {
