@@ -1497,7 +1497,21 @@ api.get(two_fa_path, async (req, res) => {
                 }
               });
 
-              return;
+              const emailVerificationResponse = new TwoFAResponse(
+                type,
+                confirmation,
+                session_token,
+                errorDescription
+              );
+              debug(
+                Date.now() - start,
+                req.path,
+                "RESPONSE",
+                req.session.user_id,
+                code,
+                JSON.stringify(emailVerificationResponse.toJson())
+              );
+              return res.status(code).json(emailVerificationResponse.toJson());
             }
           } else {
             code = 500;
@@ -1505,13 +1519,7 @@ api.get(two_fa_path, async (req, res) => {
           }
         }
       } else if (decoded.type === "2fa") {
-        debug(
-          req.path,
-          "TWO_FA",
-          "2FA token received",
-          code,
-          null
-        );
+        debug(req.path, "TWO_FA", "2FA token received", code, null);
         // Check if the token is in the Map for two-factor authentication
         const twoFAToken = twoFATokens.get(token);
         if (!twoFAToken) {
@@ -1573,6 +1581,22 @@ api.get(two_fa_path, async (req, res) => {
                   await enforceSessionLimit(req, res);
                   session_token = req.sessionID;
                   confirmation = true;
+
+                  const twoFAResponse = new TwoFAResponse(
+                    type,
+                    confirmation,
+                    session_token,
+                    errorDescription
+                  );
+                  debug(
+                    Date.now() - start,
+                    req.path,
+                    "RESPONSE",
+                    req.session.user_id,
+                    code,
+                    JSON.stringify(twoFAResponse.toJson())
+                  );
+                  return res.status(code).json(twoFAResponse.toJson());
                 } else {
                   error(
                     req.path,
