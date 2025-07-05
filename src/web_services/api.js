@@ -835,11 +835,11 @@ api.get(check_qr_code_path, async (req, res) => {
         // If the session_id is set, it means the QR code has been scanned successfully
         else {
           req.session.user_id = user_id;
-          debug("", req.path, "SESSION", "QR Session set.", 200, user_id);
+          debug("", req.path, "SESSION", "QR Session set.", "", user_id);
 
           req.session.save(async (err) => {
             if (req.session.user_id && !err) {
-              debug("", req.path, "SESSION", "QR Session saved.", 200, user_id);
+              debug("", req.path, "SESSION", "QR Session saved.", "", user_id);
               await enforceSessionLimit(req, res);
 
               // Remove token from Map after successful login
@@ -905,7 +905,14 @@ api.get(check_qr_code_path, async (req, res) => {
     }
   }
 
-  return;
+  const checkQRResponse = new CheckQRCodeResponse(
+    type,
+    confirmation,
+    session_id,
+    errorDescription
+  );
+
+  return res.status(code).json(checkQRResponse.toJson());
 });
 
 // Path: .../data
