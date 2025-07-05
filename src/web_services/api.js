@@ -895,6 +895,7 @@ api.get(check_qr_code_path, async (req, res) => {
               return res.status(code).json(checkQRResponse.toJson());
             }
           });
+          return;
         }
       } else {
         code = 404;
