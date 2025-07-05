@@ -1398,7 +1398,7 @@ api.get(two_fa_path, async (req, res) => {
   const verification_code = req.query.code;
   const start = res.locals.start;
 
-  const session_token = null;
+  let session_token = null;
   debug(
     "",
     req.path,
