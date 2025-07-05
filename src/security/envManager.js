@@ -142,14 +142,14 @@ function readJWTSecret() {
 }
 
 function readQRCodeExpiringTime() {
-  return readVariable("QR_CODE_EXPIRING_TIME", false) || 300; // Default 5 minutes
+  return Number(readVariable("QR_CODE_EXPIRING_TIME", false)) || 300; // Default 5 minutes
 }
 
 function readResetPasswordTokenExpiringTime() {
-  return readVariable("RESET_PASSWORD_TOKEN_EXPIRING_TIME", false) || 1800; // Default 30 minutes
+  return Number(readVariable("RESET_PASSWORD_TOKEN_EXPIRING_TIME", false)) || 1800; // Default 30 minutes
 }
 function readTwoFATokenExpiringTime() {
-  return readVariable("TWO_FA_TOKEN_EXPIRING_TIME", false) || 300; // Default 5 minutes
+  return Number(readVariable("TWO_FA_TOKEN_EXPIRING_TIME", false)) || 300; // Default 5 minutes
 }
 
 // SMTP configuration
